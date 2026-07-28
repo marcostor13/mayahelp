@@ -36,12 +36,34 @@
         <h3 class="text-headline-lg-mobile text-on-background mb-4">Conversación</h3>
         <div class="flex flex-col gap-4 mb-6">
           @for (comment of t.comments; track $index) {
-            <div class="p-4 rounded-xl bg-surface border border-surface-variant">
+            <div
+              class="p-4 rounded-xl border"
+              [class.bg-surface]="!comment.isInternal"
+              [class.border-surface-variant]="!comment.isInternal"
+              [class.bg-primary-fixed]="comment.isInternal"
+              [class.border-primary-fixed]="comment.isInternal"
+            >
               <div class="flex justify-between items-center mb-1">
-                <span class="text-label-md text-on-surface">{{ comment.authorName }}</span>
+                <span class="text-label-md text-on-surface flex items-center gap-1">
+                  {{ comment.authorName }}
+                  @if (comment.isInternal) {
+                    <span class="material-symbols-outlined text-[14px] text-primary">auto_awesome</span>
+                    <span class="text-label-xs text-primary uppercase">Sugerencia IA (interna)</span>
+                  }
+                </span>
                 <span class="text-label-xs text-on-surface-variant">{{ comment.createdAt | date: 'short' }}</span>
               </div>
-              <p class="text-body-sm text-on-surface-variant">{{ comment.message }}</p>
+              <p class="text-body-sm text-on-surface-variant whitespace-pre-line">{{ comment.message }}</p>
+              @if (comment.isInternal) {
+                <button
+                  type="button"
+                  (click)="useAiSuggestion(comment)"
+                  class="mt-2 text-primary text-label-xs hover:underline flex items-center gap-1"
+                >
+                  <span class="material-symbols-outlined text-[14px]">content_copy</span>
+                  Usar esta respuesta
+                </button>
+              }
             </div>
           } @empty {
             <p class="text-body-sm text-on-surface-variant">Aún no hay comentarios.</p>

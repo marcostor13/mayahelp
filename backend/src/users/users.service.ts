@@ -77,6 +77,23 @@ export class UsersService {
     return user.save();
   }
 
+  async findOrCreateAiAgent(): Promise<UserDocument> {
+    const existing = await this.userModel.findOne({ isAiAgent: true }).exec();
+    if (existing) {
+      return existing;
+    }
+    const randomPassword = randomBytes(18).toString('base64url');
+    const passwordHash = await bcrypt.hash(randomPassword, 10);
+    const user = new this.userModel({
+      name: 'Agente IA',
+      email: 'ai-agent@mayahelp.internal',
+      passwordHash,
+      role: Role.AGENT,
+      isAiAgent: true,
+    });
+    return user.save();
+  }
+
   async update(id: string, dto: UpdateUserDto): Promise<UserDocument> {
     const user = await this.userModel
       .findByIdAndUpdate(id, dto, { new: true })

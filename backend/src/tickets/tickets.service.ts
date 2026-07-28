@@ -10,6 +10,7 @@ import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { FilterTicketDto } from './dto/filter-ticket.dto';
 import { CountersService } from '../common/counters/counters.service';
+import { TicketAutoReplyService } from './ticket-auto-reply.service';
 import { AuthenticatedUser } from '../auth/types/authenticated-user.interface';
 import { Role } from '../common/enums/role.enum';
 import { TicketStatus } from '../common/enums/ticket.enum';
@@ -22,6 +23,7 @@ export class TicketsService {
   constructor(
     @InjectModel(Ticket.name) private ticketModel: Model<TicketDocument>,
     private readonly countersService: CountersService,
+    private readonly autoReplyService: TicketAutoReplyService,
   ) {}
 
   async create(dto: CreateTicketDto, requester: AuthenticatedUser) {
@@ -33,7 +35,7 @@ export class TicketsService {
     const sequence = await this.countersService.next(TICKET_COUNTER_KEY);
     const code = `TCK-${TICKET_CODE_BASE + sequence}`;
 
-    return this.ticketModel.create({
+    const ticket = await this.ticketModel.create({
       code,
       subject: dto.subject,
       description: dto.description,
@@ -41,6 +43,9 @@ export class TicketsService {
       client: clientId,
       priority: dto.priority,
     });
+
+    await this.autoReplyService.maybeReply(ticket);
+    return ticket;
   }
 
   async findAll(filter: FilterTicketDto, requester: AuthenticatedUser) {
@@ -81,6 +86,12 @@ export class TicketsService {
       throw new NotFoundException('Ticket no encontrado');
     }
     this.assertAccess(ticket, requester);
+
+    if (requester.role === Role.CLIENT) {
+      const plain = ticket.toObject();
+      plain.comments = plain.comments.filter((comment) => !comment.isInternal);
+      return plain;
+    }
     return ticket;
   }
 
@@ -118,9 +129,14 @@ export class TicketsService {
       author: new Types.ObjectId(requester.userId),
       authorName: requester.email,
       message,
+      isInternal: false,
       createdAt: new Date(),
     });
     await ticket.save();
+
+    if (requester.role === Role.CLIENT) {
+      await this.autoReplyService.maybeReply(ticket);
+    }
     return ticket;
   }
 

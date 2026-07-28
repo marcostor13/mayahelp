@@ -18,6 +18,24 @@ export interface AiTicketDraft {
   priority: 'baja' | 'media' | 'alta';
 }
 
+export interface ReplyContext {
+  subject: string;
+  description: string;
+  comments: { authorName: string; message: string }[];
+}
+
+export interface ReferenceArticle {
+  title: string;
+  content: string;
+}
+
+const REPLY_SYSTEM_PROMPT = `Eres un agente de soporte técnico de MayaHelp respondiendo a un cliente.
+Escribe en español, con tono cordial y profesional, una respuesta clara y concreta al problema del
+ticket. Si alguno de los artículos de ayuda que se te dan resuelve el problema, básate en ellos y
+puedes mencionarlos. Si no tienes información suficiente para resolverlo con certeza, dilo con
+honestidad y pide los datos que faltan en vez de inventar una solución. Responde solo con el texto
+del mensaje para el cliente, sin encabezados ni JSON.`;
+
 const SYSTEM_PROMPT = `Eres un asistente que ayuda a redactar tickets de soporte técnico claros y accionables
 a partir de la descripción informal de un usuario. Respondes ÚNICAMENTE con un objeto JSON válido,
 sin texto adicional, con esta forma exacta:
@@ -84,6 +102,39 @@ export class AiService {
 
     const raw = completion.choices[0]?.message?.content ?? '';
     return this.parseDraft(raw, freeText, categories);
+  }
+
+  async suggestReply(
+    context: ReplyContext,
+    articles: ReferenceArticle[],
+  ): Promise<string> {
+    const articlesBlock =
+      articles.length > 0
+        ? articles
+            .map((a, i) => `[Artículo ${i + 1}] ${a.title}\n${a.content}`)
+            .join('\n\n')
+        : 'No hay artículos del Centro de Ayuda relacionados.';
+
+    const conversation =
+      context.comments.length > 0
+        ? context.comments
+            .map((c) => `${c.authorName}: ${c.message}`)
+            .join('\n')
+        : '(sin comentarios previos)';
+
+    const userPrompt = `Asunto: ${context.subject}\n\nDescripción del problema:\n${context.description}\n\nConversación hasta ahora:\n${conversation}\n\nArtículos de ayuda relevantes:\n${articlesBlock}`;
+
+    const completion = await this.getClient().chat.completions.create({
+      model: this.textModel,
+      temperature: 0.4,
+      max_tokens: 500,
+      messages: [
+        { role: 'system', content: REPLY_SYSTEM_PROMPT },
+        { role: 'user', content: userPrompt },
+      ],
+    });
+
+    return completion.choices[0]?.message?.content?.trim() ?? '';
   }
 
   private parseDraft(

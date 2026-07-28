@@ -1,5 +1,5 @@
 import { IsEnum, IsOptional, IsString } from 'class-validator';
-import type { CategoryType } from '../schemas/category.schema';
+import type { AutoReplyMode, CategoryType } from '../schemas/category.schema';
 
 export class CreateCategoryDto {
   @IsString()
@@ -15,4 +15,8 @@ export class CreateCategoryDto {
   @IsString()
   @IsOptional()
   description?: string;
+
+  @IsEnum(['off', 'draft', 'auto'])
+  @IsOptional()
+  autoReplyMode?: AutoReplyMode;
 }

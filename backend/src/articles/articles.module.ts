@@ -10,5 +10,6 @@ import { ArticlesController } from './articles.controller';
   ],
   controllers: [ArticlesController],
   providers: [ArticlesService],
+  exports: [ArticlesService],
 })
 export class ArticlesModule {}

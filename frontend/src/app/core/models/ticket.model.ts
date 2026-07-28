@@ -7,6 +7,7 @@ export interface TicketComment {
   author: string;
   authorName: string;
   message: string;
+  isInternal: boolean;
   createdAt: string;
 }
 

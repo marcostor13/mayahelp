@@ -5,9 +5,12 @@ import { TicketsService } from './tickets.service';
 import { TicketsController } from './tickets.controller';
 import { BulkImportService } from './bulk-import.service';
 import { BulkImportController } from './bulk-import.controller';
+import { TicketAutoReplyService } from './ticket-auto-reply.service';
 import { CountersModule } from '../common/counters/counters.module';
 import { UsersModule } from '../users/users.module';
 import { CategoriesModule } from '../categories/categories.module';
+import { ArticlesModule } from '../articles/articles.module';
+import { AiModule } from '../ai/ai.module';
 
 @Module({
   imports: [
@@ -15,9 +18,11 @@ import { CategoriesModule } from '../categories/categories.module';
     CountersModule,
     UsersModule,
     CategoriesModule,
+    ArticlesModule,
+    AiModule,
   ],
   controllers: [TicketsController, BulkImportController],
-  providers: [TicketsService, BulkImportService],
+  providers: [TicketsService, BulkImportService, TicketAutoReplyService],
   exports: [TicketsService],
 })
 export class TicketsModule {}

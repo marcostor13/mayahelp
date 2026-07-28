@@ -15,6 +15,9 @@ export class TicketComment {
   @Prop({ required: true, trim: true })
   message: string;
 
+  @Prop({ default: false })
+  isInternal: boolean;
+
   @Prop({ default: () => new Date() })
   createdAt: Date;
 }

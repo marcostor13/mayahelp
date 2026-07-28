@@ -6,7 +6,7 @@ import { TicketService } from '../../../core/services/ticket.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { AttachmentService } from '../../../core/services/attachment.service';
 import { ExportService } from '../../../core/services/export.service';
-import { Ticket, TicketPriority, TicketStatus } from '../../../core/models/ticket.model';
+import { Ticket, TicketComment, TicketPriority, TicketStatus } from '../../../core/models/ticket.model';
 import { Attachment } from '../../../core/models/attachment.model';
 
 @Component({
@@ -79,6 +79,10 @@ export class TicketDetail implements OnInit {
       this.newComment = '';
       this.sending.set(false);
     });
+  }
+
+  useAiSuggestion(comment: TicketComment): void {
+    this.newComment = comment.message;
   }
 
   onFileSelected(event: Event): void {
