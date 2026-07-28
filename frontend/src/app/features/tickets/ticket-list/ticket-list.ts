@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { TicketService } from '../../../core/services/ticket.service';
 import { CategoryService } from '../../../core/services/category.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { Ticket, TicketPriority, TicketStatus } from '../../../core/models/ticket.model';
 import { Category } from '../../../core/models/category.model';
 
@@ -33,7 +34,13 @@ export class TicketList implements OnInit {
   constructor(
     private readonly ticketService: TicketService,
     private readonly categoryService: CategoryService,
+    protected readonly auth: AuthService,
   ) {}
+
+  get canBulkImport(): boolean {
+    const role = this.auth.currentUser()?.role;
+    return role === 'admin' || role === 'agent';
+  }
 
   ngOnInit(): void {
     this.categoryService.list('ticket').subscribe((categories) => this.categories.set(categories));

@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard, guestGuard } from './core/guards/auth.guard';
+import { roleGuard } from './core/guards/role.guard';
 
 export const routes: Routes = [
   {
@@ -31,6 +32,12 @@ export const routes: Routes = [
         path: 'tickets/new',
         loadComponent: () =>
           import('./features/tickets/ticket-create/ticket-create').then((m) => m.TicketCreate),
+      },
+      {
+        path: 'tickets/bulk-import',
+        canActivate: [roleGuard(['admin', 'agent'])],
+        loadComponent: () =>
+          import('./features/tickets/bulk-import/bulk-import').then((m) => m.BulkImport),
       },
       {
         path: 'tickets/:id',

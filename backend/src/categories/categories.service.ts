@@ -9,6 +9,10 @@ import {
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 @Injectable()
 export class CategoriesService {
   constructor(
@@ -22,6 +26,15 @@ export class CategoriesService {
   findAll(type?: CategoryType) {
     const filter = type ? { type } : {};
     return this.categoryModel.find(filter).sort({ name: 1 }).exec();
+  }
+
+  async findByName(name: string, type: CategoryType) {
+    return this.categoryModel
+      .findOne({
+        type,
+        name: { $regex: `^${escapeRegExp(name)}$`, $options: 'i' },
+      })
+      .exec();
   }
 
   async findById(id: string) {

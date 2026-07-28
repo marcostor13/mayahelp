@@ -68,7 +68,7 @@ Variables de entorno nuevas requeridas en `backend/.env` (agregadas como placeho
 - [x] Plan documentado y confirmado con el usuario (este archivo)
 - [x] D1–D4 resueltas (ver tabla arriba)
 - [x] 1. Adjuntos (backend: schema, R2 storage service, endpoints; frontend: upload en creación y detalle de ticket)
-- [ ] 2. Carga masiva
+- [x] 2. Carga masiva (backend: parseo CSV/XLSX, resolución/creación de clientes, reporte de errores; frontend: página `/tickets/bulk-import` con plantilla descargable)
 - [ ] 3. Export a Markdown
 - [ ] 4. Creación con IA
 - [ ] 5. Respuesta automática con IA

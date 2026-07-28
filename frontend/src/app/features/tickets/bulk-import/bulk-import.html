@@ -1,0 +1,98 @@
+<a routerLink="/tickets" class="text-primary text-label-md hover:underline flex items-center gap-1 mb-stack-md w-fit">
+  <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+  Volver a tickets
+</a>
+
+<h1 class="text-headline-xl text-on-background mb-1">Carga masiva de tickets</h1>
+<p class="text-body-md text-on-surface-variant mb-stack-lg">
+  Sube un archivo CSV o Excel para crear varios tickets de una sola vez.
+</p>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-stack-lg">
+  <div class="lg:col-span-2 bg-surface-container-lowest rounded-2xl p-6 md:p-8 ambient-shadow-sm flex flex-col gap-stack-md">
+    <label
+      for="bulk-file"
+      class="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-outline-variant rounded-lg px-4 py-10 cursor-pointer hover:border-primary transition-colors text-center"
+    >
+      <span class="material-symbols-outlined text-primary text-4xl">upload_file</span>
+      @if (selectedFile(); as file) {
+        <span class="text-body-md text-on-surface">{{ file.name }}</span>
+      } @else {
+        <span class="text-body-md text-on-surface-variant">Haz clic para elegir un archivo .csv o .xlsx</span>
+      }
+    </label>
+    <input id="bulk-file" type="file" class="hidden" accept=".csv,.xlsx,.xls" (change)="onFileSelected($event)" />
+
+    @if (error()) {
+      <p class="text-body-sm text-error">{{ error() }}</p>
+    }
+
+    <button
+      type="button"
+      [disabled]="!selectedFile() || submitting()"
+      (click)="submit()"
+      class="self-start bg-primary-container text-on-primary text-label-md py-3 px-6 rounded-lg hover:bg-primary transition-colors shadow-sm disabled:opacity-60"
+    >
+      {{ submitting() ? 'Procesando...' : 'Importar tickets' }}
+    </button>
+
+    @if (result(); as r) {
+      <div class="mt-4 border-t border-surface-variant pt-4">
+        <div class="flex gap-stack-md mb-4">
+          <div class="bg-surface-container-low rounded-xl px-4 py-3 text-center">
+            <p class="text-headline-lg text-primary">{{ r.created }}</p>
+            <p class="text-label-xs text-on-surface-variant uppercase">Creados</p>
+          </div>
+          <div class="bg-surface-container-low rounded-xl px-4 py-3 text-center">
+            <p class="text-headline-lg" [class.text-error]="r.failed > 0">{{ r.failed }}</p>
+            <p class="text-label-xs text-on-surface-variant uppercase">Con error</p>
+          </div>
+        </div>
+
+        @if (r.errors.length > 0) {
+          <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="border-b border-surface-variant text-on-surface-variant text-label-xs uppercase">
+                  <th class="pb-2 pr-4">Fila</th>
+                  <th class="pb-2">Motivo</th>
+                </tr>
+              </thead>
+              <tbody class="text-body-sm">
+                @for (err of r.errors; track err.row) {
+                  <tr class="border-b border-surface-variant/50">
+                    <td class="py-2 pr-4 text-on-surface">{{ err.row }}</td>
+                    <td class="py-2 text-error">{{ err.reason }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    }
+  </div>
+
+  <aside class="bg-surface-container-lowest rounded-2xl p-6 ambient-shadow-sm h-fit flex flex-col gap-4">
+    <h3 class="text-headline-lg-mobile text-on-background flex items-center gap-2">
+      <span class="material-symbols-outlined text-primary">description</span>
+      Formato esperado
+    </h3>
+    <p class="text-body-sm text-on-surface-variant">
+      Columnas: <code>subject</code>, <code>description</code>, <code>category</code>,
+      <code>priority</code> (opcional: baja/media/alta), <code>client_name</code>,
+      <code>client_email</code>, <code>client_company</code> (opcional).
+    </p>
+    <p class="text-body-sm text-on-surface-variant">
+      Si el cliente no existe, se crea automáticamente. La categoría debe coincidir con una ya existente.
+    </p>
+    <button
+      type="button"
+      (click)="downloadTemplate()"
+      class="text-primary text-label-md hover:underline flex items-center gap-1 w-fit"
+    >
+      <span class="material-symbols-outlined text-[18px]">download</span>
+      Descargar plantilla CSV
+    </button>
+  </aside>
+</div>

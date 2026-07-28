@@ -6,6 +6,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
+import { randomBytes } from 'node:crypto';
 import { User, UserDocument } from './schemas/user.schema';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -49,6 +50,31 @@ export class UsersService {
       .findOne({ email: email.toLowerCase() })
       .select('+passwordHash')
       .exec();
+  }
+
+  async findByEmail(email: string): Promise<UserDocument | null> {
+    return this.userModel.findOne({ email: email.toLowerCase() }).exec();
+  }
+
+  async findOrCreateClient(
+    email: string,
+    name: string,
+    company?: string,
+  ): Promise<UserDocument> {
+    const existing = await this.findByEmail(email);
+    if (existing) {
+      return existing;
+    }
+    const randomPassword = randomBytes(18).toString('base64url');
+    const passwordHash = await bcrypt.hash(randomPassword, 10);
+    const user = new this.userModel({
+      name,
+      email: email.toLowerCase(),
+      passwordHash,
+      role: Role.CLIENT,
+      company,
+    });
+    return user.save();
   }
 
   async update(id: string, dto: UpdateUserDto): Promise<UserDocument> {
