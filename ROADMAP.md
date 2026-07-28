@@ -151,6 +151,9 @@ que la plataforma aguanta volumen y deja de tener superficie de abuso.
   5 cada 10 min (crea tickets, usuarios y sube archivos sin auth); login 10 cada 5 min; registro 10
   por hora. El `ThrottlerGuard` va **antes** del de auth para que una avalancha sin credenciales no
   llegue ni al JWT ni a la base.
+  Se activó `trust proxy = 1` en Express: detrás de Traefik (Coolify) `req.ip` era la IP del proxy
+  para todo el mundo, así que el limitador habría contado a todos los usuarios como uno solo. Se
+  confía en un solo salto — confiar en más permitiría falsear la IP vía `X-Forwarded-For`.
   ⚠️ El almacenamiento del throttler es en memoria: con más de una réplica en Coolify el límite es
   por instancia. Si se escala horizontalmente hay que pasarlo a Redis.
 - **Historial de auditoría.** Colección nueva `ticketevents` (append-only, en su propia colección
