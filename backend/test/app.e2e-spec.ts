@@ -17,9 +17,13 @@ describe('AppController (e2e)', () => {
   });
 
   it('/health (GET)', () => {
-    return request(app.getHttpServer()).get('/health').expect(200).expect((res) => {
-      expect(res.body.status).toBe('ok');
-    });
+    return request(app.getHttpServer())
+      .get('/health')
+      .expect(200)
+      .expect((res) => {
+        const body = res.body as { status: string };
+        expect(body.status).toBe('ok');
+      });
   });
 
   afterEach(async () => {
