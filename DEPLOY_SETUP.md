@@ -52,16 +52,30 @@ COOLIFY_TOKEN=...
 
 ---
 
-## 3. Conectar GitHub como *Source* en Coolify (requisito para el webhook nativo)
+## 3. Disparo del deploy: GitHub Actions → Coolify
 
-Elegiste que el deploy se dispare por el **webhook nativo de Coolify** (no vía GitHub Actions). Para eso Coolify necesita tener GitHub conectado como fuente **antes** de crear los recursos:
+La API pública de Coolify (v4.1.2) no expone gestión de *Sources*/GitHub App ni el secreto del webhook nativo — solo vive en su UI, y conectar una GitHub App real requiere un flujo OAuth interactivo que no se puede automatizar con un token. Por eso el trigger real es: **GitHub Actions**, tras pasar lint/build/test de ambas apps en `main`, llama a `GET {COOLIFY_URL}/api/v1/deploy?uuid=<app_uuid>` con el `COOLIFY_TOKEN` (guardado como secret cifrado del repo, `COOLIFY_TOKEN`). Ver `.github/workflows/ci.yml`, job `deploy`.
 
-1. En Coolify: **Settings → Sources** (o **Keys & Tokens → GitHub Apps**, según versión).
-2. **Add GitHub App** (o "+ Add Source" → GitHub).
-3. Sigue el flujo de instalación de la GitHub App de Coolify: te redirige a GitHub para autorizarla.
-4. Cuando te pida repositorios, dale acceso **al repositorio `mayahelp`** (o "All repositories" si prefieres no repetir esto luego). Si el repo aún no existe porque lo voy a crear yo, puedes autorizar "All repositories" para no tener que volver a este paso.
+Si en algún momento quieres el webhook nativo real (Cloudflare/GitHub App), la alternativa es: Coolify → cada aplicación → pestaña **Webhooks**, copiar la URL+secreto que muestra, y crear el webhook en el repo de GitHub apuntando ahí.
 
-Si ya tienes una GitHub App de Coolify instalada de un proyecto anterior, puedes reutilizarla — solo confirma que tiene acceso al repo `mayahelp` una vez creado.
+---
+
+## 3.1 Cloudflare Tunnel: exponer las apps (específico de esta infraestructura)
+
+Este servidor expone Coolify vía **Cloudflare Tunnel** (`cloudflared`), no con una IP pública directa. Eso implica dos cosas no obvias que costó diagnosticar:
+
+- El puerto 80 del host **no es Traefik** — hay otro nginx del sistema escuchando ahí. Apuntar el túnel a `http://localhost:80` sirve la página default de nginx, no la app.
+- `cloudflared` no comparte la red Docker `coolify`, así que tampoco sirve apuntar por nombre de contenedor (`http://mayahelp-backend:3000` → 502).
+
+Lo que sí funciona (mismo patrón que otras apps de este mismo túnel, ej. `kingroof`, `viatika-back`): publicar el puerto del contenedor a un puerto propio del host vía `ports_mappings` en Coolify, y apuntar el túnel ahí.
+
+Configuración actual:
+- `mayahelp-backend`: `ports_mappings = 8010:3000` → ingress del túnel `apimayahelp.marcostorresalarcon.com` → `http://localhost:8010`
+- `mayahelp-frontend`: `ports_mappings = 8011:80` → ingress del túnel `mayahelp.marcostorresalarcon.com` → `http://localhost:8011`
+
+Si se recrean estas apps desde cero, hay que repetir: (1) setear `ports_mappings` en Coolify (API o UI, campo "Ports Mappings"), (2) redeploy para que el puerto quede publicado, (3) actualizar el ingress del túnel (Cloudflare Zero Trust → Networks → Tunnels → `acb6beb0-5c3f-4de8-9293-47898fbee030` → Public Hostname) apuntando al nuevo puerto. El DNS (CNAME hacia `<tunnel-id>.cfargotunnel.com`) no hace falta tocarlo, ya existe para ambos hostnames.
+
+Para diagnosticar/editar el túnel vía API se necesita un token de Cloudflare con `Account.Cloudflare Tunnel:Read/Edit` (además de `Zone.DNS:Edit` si hace falta tocar registros DNS), generado en **Cloudflare Dashboard → My Profile → API Tokens**.
 
 ---
 
@@ -72,7 +86,7 @@ Ya definidos:
 - Backend: `apimayahelp.marcostorresalarcon.com`
 - Frontend: `mayahelp.marcostorresalarcon.com`
 
-Asegúrate de que ambos registros DNS (tipo `A` o `CNAME`) apunten a la IP/host de tu servidor Coolify **antes** del primer deploy, para que Coolify pueda emitir el certificado SSL (Let's Encrypt) automáticamente. Si Coolify corre detrás de un proxy/Cloudflare, desactiva el proxy naranja hasta que el certificado se emita.
+Como este servidor usa Cloudflare Tunnel (ver 3.1), el DNS correcto es un **CNAME proxied (nube naranja)** hacia `<tunnel-id>.cfargotunnel.com` — no un `A` a una IP directa. El certificado SSL lo emite Cloudflare, no Let's Encrypt/Coolify.
 
 ---
 
