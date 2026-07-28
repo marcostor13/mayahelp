@@ -42,3 +42,17 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
       - run: npm run build -- --configuration production
+
+  deploy:
+    needs: [backend, frontend]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    env:
+      COOLIFY_URL: https://localcoolify.marcostorresalarcon.com
+      COOLIFY_BACKEND_UUID: pry79jef5nh089mluu36l41m
+      COOLIFY_FRONTEND_UUID: v8fkhe77hmvjsii970qgschv
+    steps:
+      - name: Trigger backend deploy
+        run: curl -sf -X GET "$COOLIFY_URL/api/v1/deploy?uuid=$COOLIFY_BACKEND_UUID" -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}"
+      - name: Trigger frontend deploy
+        run: curl -sf -X GET "$COOLIFY_URL/api/v1/deploy?uuid=$COOLIFY_FRONTEND_UUID" -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}"
