@@ -1,0 +1,82 @@
+<div class="min-h-screen bg-background flex items-center justify-center p-6">
+  <div class="w-full max-w-md bg-surface-container-lowest rounded-2xl ambient-shadow-md p-8">
+    <div class="flex items-center gap-3 mb-stack-lg">
+      <div class="w-10 h-10 rounded-md bg-primary flex items-center justify-center text-on-primary font-bold">M</div>
+      <div>
+        <h1 class="text-headline-lg font-bold text-primary">MayaHelp</h1>
+        <p class="text-body-sm text-on-surface-variant">Soporte Técnico</p>
+      </div>
+    </div>
+
+    <h2 class="text-headline-xl text-on-surface mb-1">Crea tu cuenta</h2>
+    <p class="text-body-md text-on-surface-variant mb-stack-lg">Regístrate para abrir y dar seguimiento a tus tickets.</p>
+
+    <form (ngSubmit)="submit()" class="flex flex-col gap-stack-md">
+      <div>
+        <label class="block text-label-md text-on-background mb-stack-sm" for="name">Nombre completo</label>
+        <input
+          id="name"
+          name="name"
+          type="text"
+          required
+          [(ngModel)]="name"
+          class="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+          placeholder="Ej. María Gómez"
+        />
+      </div>
+      <div>
+        <label class="block text-label-md text-on-background mb-stack-sm" for="company">Empresa (opcional)</label>
+        <input
+          id="company"
+          name="company"
+          type="text"
+          [(ngModel)]="company"
+          class="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+          placeholder="Acme Corp"
+        />
+      </div>
+      <div>
+        <label class="block text-label-md text-on-background mb-stack-sm" for="email">Correo electrónico</label>
+        <input
+          id="email"
+          name="email"
+          type="email"
+          required
+          [(ngModel)]="email"
+          class="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+          placeholder="tu@correo.com"
+        />
+      </div>
+      <div>
+        <label class="block text-label-md text-on-background mb-stack-sm" for="password">Contraseña</label>
+        <input
+          id="password"
+          name="password"
+          type="password"
+          required
+          minlength="8"
+          [(ngModel)]="password"
+          class="w-full bg-surface-container-lowest border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+          placeholder="Mínimo 8 caracteres"
+        />
+      </div>
+
+      @if (error()) {
+        <p class="text-body-sm text-error">{{ error() }}</p>
+      }
+
+      <button
+        type="submit"
+        [disabled]="loading()"
+        class="w-full bg-primary-container text-on-primary text-label-md py-3 px-4 rounded-lg hover:bg-primary transition-colors shadow-sm disabled:opacity-60"
+      >
+        {{ loading() ? 'Creando cuenta...' : 'Crear cuenta' }}
+      </button>
+    </form>
+
+    <p class="text-body-sm text-on-surface-variant mt-stack-lg text-center">
+      ¿Ya tienes cuenta?
+      <a routerLink="/login" class="text-primary font-medium hover:underline">Inicia sesión</a>
+    </p>
+  </div>
+</div>

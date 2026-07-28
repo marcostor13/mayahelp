@@ -1,0 +1,94 @@
+<h1 class="text-headline-xl text-on-background mb-stack-lg">Crear Nuevo Ticket</h1>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-stack-lg">
+  <div class="lg:col-span-2 bg-surface-container-lowest rounded-2xl p-6 md:p-8 ambient-shadow-sm">
+    <h3 class="text-headline-lg text-on-background mb-6 flex items-center gap-2">
+      <span class="material-symbols-outlined text-primary">description</span>
+      Detalles del Problema
+    </h3>
+
+    <form (ngSubmit)="submit()" class="flex flex-col gap-stack-md">
+      <div>
+        <label class="block text-label-md text-on-background mb-stack-sm" for="asunto">Asunto del Problema</label>
+        <input
+          id="asunto"
+          name="asunto"
+          type="text"
+          required
+          [(ngModel)]="subject"
+          placeholder="Ej. Falla de conexión en el servidor principal"
+          class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+        />
+      </div>
+
+      <div>
+        <label class="block text-label-md text-on-background mb-stack-sm" for="descripcion">Descripción Detallada</label>
+        <textarea
+          id="descripcion"
+          name="descripcion"
+          required
+          rows="6"
+          [(ngModel)]="description"
+          placeholder="Describe el problema con el mayor detalle posible..."
+          class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none"
+        ></textarea>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-stack-md">
+        <div>
+          <label class="block text-label-md text-on-background mb-stack-sm" for="categoria">Categoría</label>
+          <select
+            id="categoria"
+            name="categoria"
+            required
+            [(ngModel)]="category"
+            class="w-full appearance-none bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all cursor-pointer"
+          >
+            <option value="" disabled selected>Selecciona categoría...</option>
+            @for (option of categories(); track option._id) {
+              <option [value]="option._id">{{ option.name }}</option>
+            }
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-label-md text-on-background mb-stack-sm" for="prioridad">Prioridad</label>
+          <select
+            id="prioridad"
+            name="prioridad"
+            [(ngModel)]="priority"
+            class="w-full appearance-none bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all cursor-pointer"
+          >
+            <option value="baja">Baja</option>
+            <option value="media">Media</option>
+            <option value="alta">Alta</option>
+          </select>
+        </div>
+      </div>
+
+      @if (error()) {
+        <p class="text-body-sm text-error">{{ error() }}</p>
+      }
+
+      <button
+        type="submit"
+        [disabled]="submitting()"
+        class="self-start bg-primary-container text-on-primary text-label-md py-3 px-6 rounded-lg hover:bg-primary transition-colors shadow-sm disabled:opacity-60"
+      >
+        {{ submitting() ? 'Enviando...' : 'Crear Ticket' }}
+      </button>
+    </form>
+  </div>
+
+  <aside class="bg-surface-container-lowest rounded-2xl p-6 ambient-shadow-sm h-fit">
+    <h3 class="text-headline-lg-mobile text-on-background mb-4 flex items-center gap-2">
+      <span class="material-symbols-outlined text-primary">tips_and_updates</span>
+      Consejos
+    </h3>
+    <ul class="text-body-sm text-on-surface-variant flex flex-col gap-3 list-disc pl-4">
+      <li>Sé específico en el asunto: facilita la clasificación del ticket.</li>
+      <li>Incluye pasos para reproducir el problema si aplica.</li>
+      <li>Elige la prioridad "Alta" solo si el problema bloquea tu operación.</li>
+    </ul>
+  </aside>
+</div>

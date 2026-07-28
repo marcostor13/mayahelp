@@ -1,0 +1,119 @@
+<div class="bg-background text-on-background min-h-screen flex selection:bg-primary-fixed selection:text-on-primary-fixed">
+  <!-- Sidebar (desktop) -->
+  <nav class="hidden md:flex h-screen w-64 fixed left-0 top-0 bg-tertiary-fixed shadow-sm flex-col py-stack-lg z-50">
+    <div class="px-container-padding flex items-center gap-3 mb-stack-lg">
+      <div class="w-10 h-10 rounded-md bg-primary flex items-center justify-center text-on-primary font-bold">M</div>
+      <div>
+        <h1 class="text-headline-lg font-bold text-primary">MayaHelp</h1>
+        <p class="text-body-sm text-on-surface-variant">Soporte Técnico</p>
+      </div>
+    </div>
+
+    <div class="px-container-padding mb-stack-lg">
+      <a
+        routerLink="/tickets/new"
+        class="w-full bg-primary-container text-on-primary text-label-md py-3 px-4 rounded-lg hover:bg-primary transition-colors flex items-center justify-center gap-2 shadow-sm"
+      >
+        <span class="material-symbols-outlined icon-fill text-[20px]">add</span>
+        Nuevo Ticket
+      </a>
+    </div>
+
+    <ul class="flex flex-col flex-1 px-3 gap-1">
+      @for (item of visibleNavItems(); track item.path) {
+        <li>
+          <a
+            [routerLink]="item.path"
+            routerLinkActive="border-l-4 border-primary bg-surface-container text-primary font-bold"
+            [routerLinkActiveOptions]="{ exact: false }"
+            class="flex items-center gap-3 px-4 py-3 rounded-xl text-on-secondary-container hover:bg-surface-container-low transition-colors duration-200 ease-in-out text-label-md"
+          >
+            <span class="material-symbols-outlined">{{ item.icon }}</span>
+            {{ item.label }}
+          </a>
+        </li>
+      }
+    </ul>
+
+    <div class="px-3 mt-auto">
+      <a
+        routerLink="/settings"
+        class="flex items-center gap-3 px-4 py-3 rounded-xl text-on-secondary-container hover:bg-surface-container-low transition-colors duration-200 ease-in-out text-label-md"
+      >
+        <span class="material-symbols-outlined">settings</span>
+        Ajustes
+      </a>
+    </div>
+  </nav>
+
+  <!-- Main column -->
+  <div class="flex-1 md:ml-64 flex flex-col min-h-screen">
+    <!-- Topbar -->
+    <header class="bg-surface shadow-sm sticky top-0 z-40 flex justify-between items-center h-16 px-container-padding">
+      <div class="flex-1 md:hidden flex items-center gap-2">
+        <div class="w-8 h-8 rounded-md bg-primary flex items-center justify-center text-on-primary font-bold text-sm">M</div>
+        <h2 class="text-headline-lg-mobile font-black text-primary">MayaHelp</h2>
+      </div>
+
+      <div class="hidden md:flex flex-1 items-center max-w-md">
+        <div class="relative w-full">
+          <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
+          <input
+            class="w-full pl-10 pr-4 py-2 bg-surface-container-low border border-surface-variant rounded-full text-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-on-surface"
+            placeholder="Buscar tickets, clientes..."
+            type="text"
+          />
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button class="text-on-surface-variant hover:bg-surface-container-low rounded-full p-2 scale-95 active:scale-90 transition-transform">
+          <span class="material-symbols-outlined">notifications</span>
+        </button>
+        <div class="ml-2 pl-4 border-l border-surface-variant flex items-center gap-3">
+          <div class="text-right hidden sm:block">
+            <p class="text-label-md text-on-surface m-0 leading-tight">{{ auth.currentUser()?.name }}</p>
+            <p class="text-label-xs text-on-surface-variant m-0 capitalize">{{ auth.currentUser()?.role }}</p>
+          </div>
+          <div class="w-8 h-8 rounded-full bg-primary-fixed flex items-center justify-center text-label-md text-primary font-bold">
+            {{ initials() }}
+          </div>
+          <button
+            (click)="logout()"
+            class="text-on-surface-variant hover:bg-surface-container-low rounded-full p-2 scale-95 active:scale-90 transition-transform"
+            title="Cerrar sesión"
+          >
+            <span class="material-symbols-outlined">logout</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Routed content -->
+    <main class="flex-1 p-4 md:p-6 lg:p-8 max-w-[1440px] mx-auto w-full pb-24 md:pb-8">
+      <router-outlet />
+    </main>
+  </div>
+
+  <!-- Mobile bottom nav -->
+  <nav class="md:hidden fixed bottom-0 left-0 w-full bg-surface-container-lowest border-t border-surface-variant flex justify-around items-center h-16 px-4 z-50 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
+    @for (item of visibleNavItems(); track item.path) {
+      <a
+        [routerLink]="item.path"
+        routerLinkActive="text-primary"
+        class="flex flex-col items-center gap-1 text-on-surface-variant w-16 transition-colors"
+      >
+        <span class="material-symbols-outlined">{{ item.icon }}</span>
+        <span class="text-[10px] font-medium tracking-wide">{{ item.label }}</span>
+      </a>
+    }
+  </nav>
+
+  <!-- Mobile FAB -->
+  <a
+    routerLink="/tickets/new"
+    class="md:hidden fixed bottom-20 right-4 w-14 h-14 bg-primary-container text-on-primary rounded-2xl shadow-lg flex items-center justify-center hover:bg-primary transition-colors z-50 ambient-shadow-lg active:scale-95"
+  >
+    <span class="material-symbols-outlined icon-fill text-[28px]">add</span>
+  </a>
+</div>

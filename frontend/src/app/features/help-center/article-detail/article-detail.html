@@ -1,0 +1,17 @@
+@if (loading()) {
+  <p class="text-body-md text-on-surface-variant">Cargando artículo...</p>
+} @else if (article(); as a) {
+  <a routerLink="/help-center" class="text-primary text-label-md hover:underline flex items-center gap-1 mb-stack-md w-fit">
+    <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+    Volver al centro de ayuda
+  </a>
+
+  <div class="bg-surface-container-lowest rounded-2xl p-6 md:p-8 ambient-shadow-sm max-w-3xl">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="material-symbols-outlined text-primary text-3xl">{{ a.icon }}</span>
+      <p class="text-label-xs text-on-surface-variant uppercase">{{ a.category.name }}</p>
+    </div>
+    <h1 class="text-headline-xl text-on-background mb-stack-md">{{ a.title }}</h1>
+    <p class="text-body-md text-on-surface-variant whitespace-pre-line">{{ a.content }}</p>
+  </div>
+}

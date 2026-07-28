@@ -1,0 +1,28 @@
+<h1 class="text-headline-xl text-on-background mb-stack-lg">Ajustes</h1>
+
+@if (auth.currentUser(); as user) {
+  <div class="bg-surface-container-lowest rounded-2xl p-6 md:p-8 ambient-shadow-sm max-w-xl">
+    <div class="flex items-center gap-4 mb-stack-lg">
+      <div class="w-16 h-16 rounded-full bg-primary-fixed flex items-center justify-center text-headline-lg text-primary font-bold">
+        {{ user.name.charAt(0).toUpperCase() }}
+      </div>
+      <div>
+        <h2 class="text-headline-lg text-on-surface">{{ user.name }}</h2>
+        <p class="text-body-sm text-on-surface-variant capitalize">{{ user.role }}</p>
+      </div>
+    </div>
+
+    <dl class="grid grid-cols-1 sm:grid-cols-2 gap-stack-md">
+      <div>
+        <dt class="text-label-xs text-on-surface-variant uppercase mb-1">Correo electrónico</dt>
+        <dd class="text-body-md text-on-surface">{{ user.email }}</dd>
+      </div>
+      @if (user.company) {
+        <div>
+          <dt class="text-label-xs text-on-surface-variant uppercase mb-1">Empresa</dt>
+          <dd class="text-body-md text-on-surface">{{ user.company }}</dd>
+        </div>
+      }
+    </dl>
+  </div>
+}

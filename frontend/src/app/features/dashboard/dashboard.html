@@ -1,0 +1,147 @@
+@if (loading()) {
+  <p class="text-body-md text-on-surface-variant">Cargando panel...</p>
+} @else if (stats(); as data) {
+  <div class="mb-stack-md flex justify-between items-end">
+    <div>
+      <h2 class="text-headline-xl text-on-background mb-1">Hola, {{ auth.currentUser()?.name }}</h2>
+      <p class="text-body-md text-on-surface-variant">Aquí tienes el resumen de tu actividad de hoy.</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-12 gap-gutter md:gap-container-padding">
+    <!-- Tickets abiertos -->
+    <div class="col-span-1 md:col-span-4 bg-surface-container-lowest rounded-xl p-6 ambient-shadow-sm flex flex-col justify-between hover:ambient-shadow-md transition-shadow">
+      <div class="w-12 h-12 rounded-xl bg-primary-fixed flex items-center justify-center text-primary mb-4">
+        <span class="material-symbols-outlined icon-fill">inbox</span>
+      </div>
+      <div>
+        <p class="text-body-sm text-on-surface-variant mb-1">Tickets Abiertos</p>
+        <h3 class="text-headline-xl text-on-surface m-0">{{ data.openTickets }}</h3>
+      </div>
+    </div>
+
+    <!-- Tiempo de respuesta -->
+    <div class="col-span-1 md:col-span-4 bg-surface-container-lowest rounded-xl p-6 ambient-shadow-sm flex flex-col justify-between hover:ambient-shadow-md transition-shadow">
+      <div class="w-12 h-12 rounded-xl bg-surface-variant flex items-center justify-center text-primary mb-4">
+        <span class="material-symbols-outlined icon-fill">timer</span>
+      </div>
+      <div>
+        <p class="text-body-sm text-on-surface-variant mb-1">T. Medio de Respuesta</p>
+        <h3 class="text-headline-xl text-on-surface m-0">{{ formatMinutes(data.avgResponseMinutes) }}</h3>
+      </div>
+    </div>
+
+    <!-- CSAT -->
+    <div class="col-span-1 md:col-span-4 bg-primary-container text-on-primary rounded-xl p-6 ambient-shadow-md flex flex-col justify-between relative overflow-hidden">
+      <div class="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center text-white mb-4">
+        <span class="material-symbols-outlined icon-fill">sentiment_satisfied</span>
+      </div>
+      <div>
+        <p class="text-body-sm mb-1 opacity-90">Satisfacción (CSAT)</p>
+        <h3 class="text-headline-xl m-0">{{ data.csat !== null ? data.csat + '%' : 'Sin datos' }}</h3>
+      </div>
+    </div>
+
+    <!-- Actividad semanal -->
+    <div class="col-span-1 md:col-span-8 bg-surface-container-lowest rounded-xl p-6 ambient-shadow-sm">
+      <h3 class="text-headline-lg text-on-surface m-0 mb-6">Actividad Semanal</h3>
+      <div class="h-48 w-full flex items-end justify-between gap-2 px-2">
+        @for (day of data.weeklyActivity; track day.label) {
+          <div class="w-full flex flex-col items-center gap-2">
+            <div
+              class="w-full bg-surface-variant rounded-t-sm transition-colors"
+              [style.height.%]="(day.count / maxWeeklyCount()) * 100"
+            ></div>
+            <span class="text-xs text-on-surface-variant">{{ day.label }}</span>
+          </div>
+        }
+      </div>
+    </div>
+
+    <!-- Tareas -->
+    @if (auth.currentUser()?.role !== 'client') {
+      <div class="col-span-1 md:col-span-4 bg-surface-container-lowest rounded-xl p-6 ambient-shadow-sm flex flex-col">
+        <h3 class="text-headline-lg text-on-surface m-0 mb-4 text-[18px]">Tareas Pendientes</h3>
+        <div class="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-3 pr-2 mb-3">
+          @for (task of tasks(); track task._id) {
+            <label class="flex items-start gap-3 p-3 rounded-xl border border-surface-variant hover:border-primary-fixed transition-colors cursor-pointer bg-surface">
+              <input
+                type="checkbox"
+                [checked]="task.done"
+                (change)="toggleTask(task)"
+                class="mt-0.5 rounded text-primary focus:ring-primary border-outline-variant"
+              />
+              <p
+                class="text-label-md"
+                [class.line-through]="task.done"
+                [class.text-on-surface-variant]="task.done"
+                [class.text-on-surface]="!task.done"
+              >
+                {{ task.title }}
+              </p>
+            </label>
+          } @empty {
+            <p class="text-body-sm text-on-surface-variant">No tienes tareas pendientes.</p>
+          }
+        </div>
+        <form (ngSubmit)="addTask()" class="flex gap-2">
+          <input
+            [(ngModel)]="newTaskTitle"
+            name="newTaskTitle"
+            placeholder="Nueva tarea..."
+            class="flex-1 bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-sm focus:outline-none focus:border-primary"
+          />
+          <button type="submit" class="text-primary hover:bg-surface-container-low p-2 rounded-full transition-colors">
+            <span class="material-symbols-outlined">add</span>
+          </button>
+        </form>
+      </div>
+    }
+
+    <!-- Tickets recientes -->
+    <div class="col-span-1 md:col-span-12 bg-surface-container-lowest rounded-xl p-6 ambient-shadow-sm">
+      <div class="flex justify-between items-center mb-6">
+        <h3 class="text-headline-lg text-on-surface m-0">Tickets Recientes</h3>
+        <a routerLink="/tickets" class="text-primary text-label-md hover:underline">Ver todos</a>
+      </div>
+      <div class="w-full overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="border-b border-surface-variant text-on-surface-variant text-label-xs uppercase tracking-wider">
+              <th class="pb-3 px-4 font-medium">Asunto</th>
+              <th class="pb-3 px-4 font-medium">Cliente</th>
+              <th class="pb-3 px-4 font-medium">Estado</th>
+              <th class="pb-3 px-4 font-medium">Prioridad</th>
+            </tr>
+          </thead>
+          <tbody class="text-body-sm">
+            @for (ticket of data.recentTickets; track ticket._id) {
+              <tr
+                [routerLink]="['/tickets', ticket._id]"
+                class="border-b border-surface-variant/50 hover:bg-surface-container-low/50 transition-colors cursor-pointer"
+              >
+                <td class="py-4 px-4">
+                  <p class="text-label-md text-on-surface">{{ ticket.subject }}</p>
+                  <p class="text-on-surface-variant text-[12px]">{{ ticket.code }}</p>
+                </td>
+                <td class="py-4 px-4 text-on-surface">{{ ticket.client.name }}</td>
+                <td class="py-4 px-4">
+                  <span class="inline-flex items-center px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-primary-fixed text-on-primary-fixed">
+                    {{ ticket.status }}
+                  </span>
+                </td>
+                <td class="py-4 px-4 text-on-surface-variant font-medium capitalize">{{ ticket.priority }}</td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="4" class="py-6 text-center text-body-sm text-on-surface-variant">
+                  Aún no hay tickets registrados.
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+}

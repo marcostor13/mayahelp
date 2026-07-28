@@ -1,0 +1,162 @@
+@import "tailwindcss";
+
+@theme {
+  /* MayaHelp design tokens (see kitui/mayahelp_system/DESIGN.md) */
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --color-surface: #f8f9ff;
+  --color-surface-dim: #d0dbed;
+  --color-surface-bright: #f8f9ff;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #eff4ff;
+  --color-surface-container: #e6eeff;
+  --color-surface-container-high: #dee9fc;
+  --color-surface-container-highest: #d9e3f6;
+  --color-surface-variant: #d9e3f6;
+  --color-on-surface: #121c2a;
+  --color-on-surface-variant: #4a4455;
+  --color-inverse-surface: #27313f;
+  --color-inverse-on-surface: #eaf1ff;
+  --color-outline: #7b7486;
+  --color-outline-variant: #ccc3d7;
+  --color-surface-tint: #7331df;
+
+  --color-primary: #5300b7;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #6d28d9;
+  --color-on-primary-container: #dac5ff;
+  --color-inverse-primary: #d3bbff;
+  --color-primary-fixed: #ebddff;
+  --color-primary-fixed-dim: #d3bbff;
+  --color-on-primary-fixed: #250059;
+  --color-on-primary-fixed-variant: #5b00c5;
+
+  --color-secondary: #5f5a7c;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #dcd5fd;
+  --color-on-secondary-container: #605b7d;
+  --color-secondary-fixed: #e5deff;
+  --color-secondary-fixed-dim: #c8c2e9;
+  --color-on-secondary-fixed: #1b1735;
+  --color-on-secondary-fixed-variant: #474363;
+
+  --color-tertiary: #3e4143;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #56585a;
+  --color-on-tertiary-container: #cdced0;
+  --color-tertiary-fixed: #e1e2e4;
+  --color-tertiary-fixed-dim: #c5c6c8;
+  --color-on-tertiary-fixed: #191c1e;
+  --color-on-tertiary-fixed-variant: #444749;
+
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+
+  --color-background: #f8f9ff;
+  --color-on-background: #121c2a;
+
+  /* Typography scale */
+  --text-headline-xl: 36px;
+  --text-headline-xl--line-height: 44px;
+  --text-headline-xl--letter-spacing: -0.02em;
+  --text-headline-xl--font-weight: 700;
+
+  --text-headline-lg: 24px;
+  --text-headline-lg--line-height: 32px;
+  --text-headline-lg--letter-spacing: -0.01em;
+  --text-headline-lg--font-weight: 600;
+
+  --text-headline-lg-mobile: 20px;
+  --text-headline-lg-mobile--line-height: 28px;
+  --text-headline-lg-mobile--letter-spacing: -0.01em;
+  --text-headline-lg-mobile--font-weight: 600;
+
+  --text-body-md: 16px;
+  --text-body-md--line-height: 24px;
+  --text-body-md--font-weight: 400;
+
+  --text-body-sm: 14px;
+  --text-body-sm--line-height: 20px;
+  --text-body-sm--font-weight: 400;
+
+  --text-label-md: 14px;
+  --text-label-md--line-height: 20px;
+  --text-label-md--letter-spacing: 0.01em;
+  --text-label-md--font-weight: 600;
+
+  --text-label-xs: 12px;
+  --text-label-xs--line-height: 16px;
+  --text-label-xs--letter-spacing: 0.02em;
+  --text-label-xs--font-weight: 500;
+
+  /* Radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.5rem;
+
+  /* Spacing rhythm */
+  --spacing-base-unit: 4px;
+  --spacing-container-padding: 24px;
+  --spacing-gutter: 16px;
+  --spacing-stack-sm: 8px;
+  --spacing-stack-md: 16px;
+  --spacing-stack-lg: 32px;
+}
+
+@layer base {
+  html {
+    font-family: var(--font-sans);
+  }
+
+  body {
+    @apply bg-background text-on-background;
+  }
+}
+
+.material-symbols-outlined {
+  font-variation-settings:
+    "FILL" 0,
+    "wght" 400,
+    "GRAD" 0,
+    "opsz" 24;
+}
+
+.icon-fill {
+  font-variation-settings:
+    "FILL" 1,
+    "wght" 400,
+    "GRAD" 0,
+    "opsz" 24;
+}
+
+.ambient-shadow-sm {
+  box-shadow: 0px 2px 4px rgba(109, 40, 217, 0.05);
+}
+
+.ambient-shadow-md {
+  box-shadow:
+    0px 4px 6px -1px rgba(109, 40, 217, 0.05),
+    0 2px 4px -1px rgba(109, 40, 217, 0.03);
+}
+
+.ambient-shadow-lg {
+  box-shadow:
+    0px 10px 15px -3px rgba(109, 40, 217, 0.1),
+    0 4px 6px -2px rgba(109, 40, 217, 0.05);
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--color-tertiary-fixed);
+  border-radius: 9999px;
+}
