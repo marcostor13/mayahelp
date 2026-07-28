@@ -72,6 +72,6 @@ Variables de entorno nuevas requeridas en `backend/.env` (agregadas como placeho
 - [x] 3. Export a Markdown (individual `.md` y masivo `.zip`, sin IA por ahora — se enriquecerá cuando esté la integración NVIDIA)
 - [x] 4. Creación con IA (NVIDIA NIM, OpenAI-compatible; degrada con gracia si falta `NVIDIA_API_KEY` en vez de tumbar el backend)
 - [x] 5. Respuesta automática con IA (usuario "Agente IA", modo `off`/`draft`/`auto` por categoría, comentarios internos filtrados para el cliente, botón "Usar esta respuesta" en el frontend)
-- [ ] 6. Notificaciones WhatsApp + email
+- [x] 6. Notificaciones WhatsApp + email (Resend + WhatsApp Cloud API, graceful no-op si faltan credenciales; ⚠️ WhatsApp necesita una plantilla aprobada en Meta Business Manager — ver nota en `backend/.env.example`)
 
 _Última actualización: ver historial de commits de este archivo (`git log -p ROADMAP.md`)._

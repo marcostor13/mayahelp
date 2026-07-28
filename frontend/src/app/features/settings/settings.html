@@ -24,5 +24,35 @@
         </div>
       }
     </dl>
+
+    <hr class="border-surface-variant my-stack-lg" />
+
+    <label class="block text-label-md text-on-background mb-stack-sm" for="phone">
+      Teléfono (WhatsApp)
+    </label>
+    <p class="text-body-sm text-on-surface-variant mb-stack-sm">
+      Usa formato internacional, ej. +5491122334455. Lo usamos para notificarte por WhatsApp sobre tus tickets.
+    </p>
+    <div class="flex gap-2">
+      <input
+        id="phone"
+        name="phone"
+        type="tel"
+        [(ngModel)]="phone"
+        placeholder="+5491122334455"
+        class="flex-1 bg-surface border border-outline-variant rounded-lg px-4 py-2 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+      />
+      <button
+        type="button"
+        [disabled]="saving()"
+        (click)="savePhone()"
+        class="bg-primary-container text-on-primary text-label-md py-2 px-5 rounded-lg hover:bg-primary transition-colors disabled:opacity-60"
+      >
+        {{ saving() ? 'Guardando...' : 'Guardar' }}
+      </button>
+    </div>
+    @if (saved()) {
+      <p class="text-body-sm text-primary mt-2">Guardado.</p>
+    }
   </div>
 }

@@ -11,6 +11,8 @@ import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { FilterTicketDto } from './dto/filter-ticket.dto';
 import { CountersService } from '../common/counters/counters.service';
 import { TicketAutoReplyService } from './ticket-auto-reply.service';
+import { UsersService } from '../users/users.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { AuthenticatedUser } from '../auth/types/authenticated-user.interface';
 import { Role } from '../common/enums/role.enum';
 import { TicketStatus } from '../common/enums/ticket.enum';
@@ -24,6 +26,8 @@ export class TicketsService {
     @InjectModel(Ticket.name) private ticketModel: Model<TicketDocument>,
     private readonly countersService: CountersService,
     private readonly autoReplyService: TicketAutoReplyService,
+    private readonly usersService: UsersService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async create(dto: CreateTicketDto, requester: AuthenticatedUser) {
@@ -43,6 +47,12 @@ export class TicketsService {
       client: clientId,
       priority: dto.priority,
     });
+
+    const client = await this.usersService.findById(clientId);
+    await this.notificationsService.notifyTicketCreated(
+      { name: client.name, email: client.email, phone: client.phone },
+      { _id: ticket.id, code: ticket.code, subject: ticket.subject },
+    );
 
     await this.autoReplyService.maybeReply(ticket);
     return ticket;
@@ -106,6 +116,8 @@ export class TicketsService {
       );
     }
 
+    const statusChanged = Boolean(dto.status) && dto.status !== ticket.status;
+
     Object.assign(ticket, dto);
     if (
       dto.status &&
@@ -115,6 +127,15 @@ export class TicketsService {
       ticket.resolvedAt = new Date();
     }
     await ticket.save();
+
+    if (statusChanged) {
+      const client = await this.usersService.findById(ticket.client.toString());
+      await this.notificationsService.notifyStatusChanged(
+        { name: client.name, email: client.email, phone: client.phone },
+        { _id: ticket.id, code: ticket.code, subject: ticket.subject },
+        ticket.status,
+      );
+    }
     return ticket;
   }
 
@@ -125,9 +146,10 @@ export class TicketsService {
     }
     this.assertAccess(ticket, requester);
 
+    const author = await this.usersService.findById(requester.userId);
     ticket.comments.push({
       author: new Types.ObjectId(requester.userId),
-      authorName: requester.email,
+      authorName: author.name,
       message,
       isInternal: false,
       createdAt: new Date(),
@@ -135,7 +157,26 @@ export class TicketsService {
     await ticket.save();
 
     if (requester.role === Role.CLIENT) {
+      if (ticket.assignedAgent) {
+        const agent = await this.usersService.findById(
+          ticket.assignedAgent.toString(),
+        );
+        await this.notificationsService.notifyNewComment(
+          { name: agent.name, email: agent.email, phone: agent.phone },
+          { _id: ticket.id, code: ticket.code, subject: ticket.subject },
+          author.name,
+          message,
+        );
+      }
       await this.autoReplyService.maybeReply(ticket);
+    } else {
+      const client = await this.usersService.findById(ticket.client.toString());
+      await this.notificationsService.notifyNewComment(
+        { name: client.name, email: client.email, phone: client.phone },
+        { _id: ticket.id, code: ticket.code, subject: ticket.subject },
+        author.name,
+        message,
+      );
     }
     return ticket;
   }

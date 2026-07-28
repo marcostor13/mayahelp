@@ -4,6 +4,7 @@ import { AiService } from '../ai/ai.service';
 import { UsersService } from '../users/users.service';
 import { CategoriesService } from '../categories/categories.service';
 import { ArticlesService } from '../articles/articles.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 const MAX_REFERENCE_ARTICLES = 3;
 
@@ -16,6 +17,7 @@ export class TicketAutoReplyService {
     private readonly usersService: UsersService,
     private readonly categoriesService: CategoriesService,
     private readonly articlesService: ArticlesService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /** Best-effort: never throws, so a failure here never breaks ticket creation/commenting. */
@@ -51,14 +53,27 @@ export class TicketAutoReplyService {
       }
 
       const aiAgent = await this.usersService.findOrCreateAiAgent();
+      const isInternal = category.autoReplyMode === 'draft';
       ticket.comments.push({
         author: aiAgent._id,
         authorName: aiAgent.name,
         message: reply,
-        isInternal: category.autoReplyMode === 'draft',
+        isInternal,
         createdAt: new Date(),
       });
       await ticket.save();
+
+      if (!isInternal) {
+        const client = await this.usersService.findById(
+          ticket.client.toString(),
+        );
+        await this.notificationsService.notifyNewComment(
+          { name: client.name, email: client.email, phone: client.phone },
+          { _id: ticket.id, code: ticket.code, subject: ticket.subject },
+          aiAgent.name,
+          reply,
+        );
+      }
     } catch (error) {
       this.logger.warn(
         `No se pudo generar respuesta automática para el ticket ${ticket.code}: ${(error as Error).message}`,

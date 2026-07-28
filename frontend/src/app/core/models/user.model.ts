@@ -6,6 +6,7 @@ export interface User {
   email: string;
   role: Role;
   company?: string;
+  phone?: string;
 }
 
 export interface AuthResponse {

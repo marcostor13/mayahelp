@@ -26,4 +26,8 @@ export class CreateUserDto {
   @IsString()
   @IsOptional()
   company?: string;
+
+  @IsString()
+  @IsOptional()
+  phone?: string;
 }

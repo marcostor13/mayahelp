@@ -69,6 +69,12 @@ export class AuthService {
     return response.accessToken;
   }
 
+  async updateProfile(payload: { phone?: string }): Promise<User> {
+    const user = await firstValueFrom(this.http.patch<User>(`${this.usersUrl}/me`, payload));
+    this.currentUserSignal.set(user);
+    return user;
+  }
+
   async logout(): Promise<void> {
     try {
       await firstValueFrom(this.http.post(`${this.baseUrl}/logout`, {}));

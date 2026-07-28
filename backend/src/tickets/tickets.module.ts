@@ -11,6 +11,7 @@ import { UsersModule } from '../users/users.module';
 import { CategoriesModule } from '../categories/categories.module';
 import { ArticlesModule } from '../articles/articles.module';
 import { AiModule } from '../ai/ai.module';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { AiModule } from '../ai/ai.module';
     CategoriesModule,
     ArticlesModule,
     AiModule,
+    NotificationsModule,
   ],
   controllers: [TicketsController, BulkImportController],
   providers: [TicketsService, BulkImportService, TicketAutoReplyService],

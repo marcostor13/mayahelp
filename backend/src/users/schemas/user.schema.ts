@@ -21,6 +21,10 @@ export class User {
   @Prop({ trim: true })
   company?: string;
 
+  /** E.164 format (e.g. +5491122334455), used for WhatsApp Cloud API notifications. */
+  @Prop({ trim: true })
+  phone?: string;
+
   @Prop({ default: true })
   isActive: boolean;
 
