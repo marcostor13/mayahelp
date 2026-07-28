@@ -5,6 +5,8 @@ import { UsersService } from '../users/users.service';
 import { CategoriesService } from '../categories/categories.service';
 import { ArticlesService } from '../articles/articles.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { TicketEventsService } from './ticket-events.service';
+import { TicketEventType } from './schemas/ticket-event.schema';
 
 const MAX_REFERENCE_ARTICLES = 3;
 
@@ -18,6 +20,7 @@ export class TicketAutoReplyService {
     private readonly categoriesService: CategoriesService,
     private readonly articlesService: ArticlesService,
     private readonly notificationsService: NotificationsService,
+    private readonly eventsService: TicketEventsService,
   ) {}
 
   /** Best-effort: never throws, so a failure here never breaks ticket creation/commenting. */
@@ -62,6 +65,14 @@ export class TicketAutoReplyService {
         createdAt: new Date(),
       });
       await ticket.save();
+
+      await this.eventsService.record({
+        ticketId: ticket.id,
+        actorId: aiAgent.id,
+        actorName: aiAgent.name,
+        type: TicketEventType.AI_REPLIED,
+        to: category.autoReplyMode,
+      });
 
       if (!isInternal) {
         const client = await this.usersService.findById(

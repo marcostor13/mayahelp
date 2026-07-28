@@ -10,3 +10,13 @@ export enum TicketPriority {
   MEDIA = 'media',
   ALTA = 'alta',
 }
+
+/** Channel the ticket came in through. */
+export enum TicketSource {
+  PORTAL = 'portal',
+  PUBLIC_LINK = 'public_link',
+  BULK_IMPORT = 'bulk_import',
+  WHATSAPP = 'whatsapp',
+  EMAIL = 'email',
+  API = 'api',
+}

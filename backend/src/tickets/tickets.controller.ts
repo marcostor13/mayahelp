@@ -40,6 +40,11 @@ export class TicketsController {
     return this.ticketsService.findById(id, user);
   }
 
+  @Get(':id/events')
+  findEvents(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.ticketsService.findEvents(id, user);
+  }
+
   @Patch(':id')
   @Roles(Role.ADMIN, Role.AGENT)
   update(

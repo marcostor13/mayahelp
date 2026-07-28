@@ -125,6 +125,61 @@ crearlos manualmente en Meta Business Manager.
 - [x] Frontend: sección `/whatsapp-templates` (listar + crear)
 - [ ] Pendiente del usuario: cargar `WHATSAPP_BUSINESS_ACCOUNT_ID` en `.env` y en Coolify para que funcione en producción
 
+## Fase 4 — Cimientos (Fase 0 del `BENCHMARK.md`)
+
+El análisis competitivo (`BENCHMARK.md`) detectó deuda técnica que bloqueaba cualquier feature nueva.
+Esta fase la paga. No agrega funcionalidad de producto salvo el historial de auditoría; su valor es
+que la plataforma aguanta volumen y deja de tener superficie de abuso.
+
+### Qué se hizo
+
+- **Paginación en `GET /tickets`.** La respuesta pasa de `Ticket[]` a
+  `{ items, total, page, limit, totalPages }` — **cambio incompatible** para cualquier consumidor de
+  la API. Default 25 por página, máximo 100 (`common/pagination/pagination.ts`). El listado además
+  ya no trae los comentarios (`.select('-comments')`): no se usaban en la tabla y eran la mayor
+  parte del payload.
+- **Índices en Mongo.** Cada filtro del listado tiene su índice compuesto con `createdAt: -1` para
+  que filtro y orden salgan del mismo índice. Índices de texto en `Ticket` (asunto/descripción/
+  comentarios, con pesos) y `Article` (título/contenido), en español.
+  ⚠️ Mongoose crea los índices al arrancar (`autoIndex`); en una base ya poblada el primer arranque
+  tras este cambio tarda más de lo normal mientras se construye el índice de texto.
+- **Búsqueda.** `$text` como camino principal (usa índice) y substring como *fallback* solo si el
+  texto no devolvió nada — así "factur" sigue encontrando "facturación". La entrada del usuario se
+  escapa: antes, buscar `(` rompía la query. La lógica vive en `tickets/ticket-query.ts`, separada
+  del servicio para poder testearla sin base de datos.
+- **Rate limiting** (`@nestjs/throttler`). Global 120 req/min; `POST /public/observations/:token`
+  5 cada 10 min (crea tickets, usuarios y sube archivos sin auth); login 10 cada 5 min; registro 10
+  por hora. El `ThrottlerGuard` va **antes** del de auth para que una avalancha sin credenciales no
+  llegue ni al JWT ni a la base.
+  ⚠️ El almacenamiento del throttler es en memoria: con más de una réplica en Coolify el límite es
+  por instancia. Si se escala horizontalmente hay que pasarlo a Redis.
+- **Historial de auditoría.** Colección nueva `ticketevents` (append-only, en su propia colección
+  para no hacer crecer el documento del ticket): creación, cambios de estado/prioridad/categoría,
+  asignaciones, comentarios y respuestas de IA. `GET /tickets/:id/events` y una sección "Historial"
+  plegable en el detalle del ticket.
+- **`Ticket.source`.** Canal de entrada (`portal`, `public_link`, `bulk_import`, `whatsapp`,
+  `email`, `api`). Se agrega ahora, antes de que haya histórico sin clasificar; es lo que permitirá
+  medir la adopción de los canales nuevos.
+- **Notificaciones fuera del request.** Email y WhatsApp ya no se `await`-ean dentro de la creación
+  de tickets ni de los comentarios: se disparan y se loguea el fallo. Un timeout de Resend o Meta
+  dejó de sumar su latencia a la respuesta del usuario.
+- **Tests.** 40 tests unitarios sobre las piezas puras (construcción de queries, paginación,
+  generación de Markdown). Se agregó `setupFiles: ["reflect-metadata"]` a Jest para que los DTOs con
+  decoradores puedan importarse desde un test.
+- **OpenAPI.** `GET /api/docs` (Swagger UI), deshabilitado en producción.
+
+### Estado
+
+- [x] F0.1 Paginación en el listado de tickets (backend + paginador en el frontend)
+- [x] F0.2 Índices en `Ticket`, `Article`, `Task`, `Project`, `User`
+- [x] F0.3 Búsqueda por índice de texto con fallback a substring, con la entrada escapada
+- [x] F0.4 Rate limiting global + límites estrictos en endpoints públicos y de auth
+- [x] F0.5 Historial de auditoría (`TicketEvent`) + UI en el detalle del ticket
+- [x] F0.6 Notificaciones fuera del ciclo de request
+- [x] F0.7 Tests unitarios (40)
+- [x] F0.8 Swagger en `/api/docs`
+- [ ] Pendiente: mover el throttler a Redis si se escala a más de una réplica
+
 ## Branding
 
 - Logo oficial (`kitui/mayahelp_logo/screen.png`, wordmark con ícono) copiado a `frontend/public/mayahelp-logo.png`

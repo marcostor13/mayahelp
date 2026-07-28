@@ -6,7 +6,7 @@ import { Ticket, TicketDocument } from './schemas/ticket.schema';
 import { CountersService } from '../common/counters/counters.service';
 import { UsersService } from '../users/users.service';
 import { CategoriesService } from '../categories/categories.service';
-import { TicketPriority } from '../common/enums/ticket.enum';
+import { TicketPriority, TicketSource } from '../common/enums/ticket.enum';
 
 const TICKET_COUNTER_KEY = 'ticket';
 const TICKET_CODE_BASE = 8000;
@@ -163,6 +163,7 @@ export class BulkImportService {
       category: categoryDoc._id,
       client: client._id,
       priority,
+      source: TicketSource.BULK_IMPORT,
     });
   }
 }

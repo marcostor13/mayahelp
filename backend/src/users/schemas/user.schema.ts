@@ -36,3 +36,7 @@ export class User {
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
+
+UserSchema.index({ role: 1, isActive: 1 });
+// Sparse: most users have no phone, and only WhatsApp inbound looks users up by it.
+UserSchema.index({ phone: 1 }, { sparse: true });

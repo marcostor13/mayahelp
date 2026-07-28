@@ -6,7 +6,13 @@ import { TicketService } from '../../../core/services/ticket.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { AttachmentService } from '../../../core/services/attachment.service';
 import { ExportService } from '../../../core/services/export.service';
-import { Ticket, TicketComment, TicketPriority, TicketStatus } from '../../../core/models/ticket.model';
+import {
+  Ticket,
+  TicketComment,
+  TicketEvent,
+  TicketPriority,
+  TicketStatus,
+} from '../../../core/models/ticket.model';
 import { Attachment } from '../../../core/models/attachment.model';
 
 @Component({
@@ -20,6 +26,8 @@ export class TicketDetail implements OnInit {
   protected readonly sending = signal(false);
   protected readonly attachments = signal<Attachment[]>([]);
   protected readonly uploading = signal(false);
+  protected readonly events = signal<TicketEvent[]>([]);
+  protected readonly showHistory = signal(false);
   protected newComment = '';
 
   protected readonly statuses: TicketStatus[] = ['abierto', 'en_proceso', 'resuelto', 'cerrado'];
@@ -43,6 +51,35 @@ export class TicketDetail implements OnInit {
     const id = this.route.snapshot.paramMap.get('id')!;
     this.load(id);
     this.loadAttachments(id);
+    this.loadEvents(id);
+  }
+
+  toggleHistory(): void {
+    this.showHistory.update((open) => !open);
+  }
+
+  /** Human-readable line for one audit entry. */
+  describeEvent(event: TicketEvent): string {
+    switch (event.type) {
+      case 'created':
+        return `creó el ticket (origen: ${event.to ?? 'portal'})`;
+      case 'status_changed':
+        return `cambió el estado de "${event.from}" a "${event.to}"`;
+      case 'priority_changed':
+        return `cambió la prioridad de "${event.from}" a "${event.to}"`;
+      case 'category_changed':
+        return 'cambió la categoría';
+      case 'assigned':
+        return `asignó el ticket a ${event.to}`;
+      case 'unassigned':
+        return 'quitó la asignación del ticket';
+      case 'commented':
+        return 'comentó';
+      case 'ai_replied':
+        return `generó una respuesta con IA (modo ${event.to})`;
+      default:
+        return event.type;
+    }
   }
 
   private load(id: string): void {
@@ -50,6 +87,14 @@ export class TicketDetail implements OnInit {
     this.ticketService.getById(id).subscribe((ticket) => {
       this.ticket.set(ticket);
       this.loading.set(false);
+    });
+  }
+
+  private loadEvents(id: string): void {
+    this.ticketService.events(id).subscribe({
+      next: (events) => this.events.set(events),
+      // Clients may not be able to read the trail; the rest of the page still works.
+      error: () => this.events.set([]),
     });
   }
 

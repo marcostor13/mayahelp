@@ -162,6 +162,11 @@ sección 6.
 
 **Esfuerzo estimado de la Fase 0: 5–7 días.** Es la inversión de mayor retorno del plan.
 
+> ✅ **Fase 0 implementada.** F0.1–F0.8 están resueltas; el detalle de qué se hizo, los dos cambios
+> incompatibles que introduce (el listado de tickets ahora devuelve un objeto paginado, y ya no trae
+> los comentarios) y las dos advertencias operativas (construcción del índice de texto al arrancar,
+> throttler en memoria) están en la sección "Fase 4 — Cimientos" de `ROADMAP.md`.
+
 ---
 
 ## 6. Plan de funcionalidades propuestas
@@ -445,7 +450,7 @@ tradicional la tiene bien resuelta.
 
 | # | Funcionalidad | Impacto | Esfuerzo | Novedad | Prioridad |
 |---|---|---|---|---|---|
-| F0 | Deuda técnica (paginación, índices, throttling, auditoría, tests) | 🔴 Alto | 5–7 d | — | **1** |
+| F0 | Deuda técnica (paginación, índices, throttling, auditoría, tests) | 🔴 Alto | 5–7 d | — | **1** ✅ |
 | F2 | Memoria semántica (KB vectorial, dedup, "ya reportado") | 🔴 Alto | 4–5 d | 🌟🌟🌟 | **2** |
 | F1 | WhatsApp bidireccional + audios | 🔴 Alto | 4–6 d | 🌟🌟🌟 | **3** |
 | F9 | Búsqueda global + ⌘K | 🟠 Medio | 2–3 d | 🌟 | **4** |
@@ -464,7 +469,7 @@ lenta es administrativa.
 
 ### Agrupación en entregas
 
-- **Entrega 1 — Cimientos (≈2 semanas):** F0 + F9. La plataforma aguanta escala y el buscador
+- **Entrega 1 — Cimientos (≈2 semanas):** F0 ✅ + F9. La plataforma aguanta escala y el buscador
   funciona. Sin features nuevas visibles más allá de la búsqueda, pero es lo que habilita el resto.
 - **Entrega 2 — Inteligencia (≈2 semanas):** F2 + F3. La IA deja de responder a ciegas, se detectan
   duplicados y el centro de ayuda empieza a crecer solo.
@@ -487,9 +492,9 @@ lenta es administrativa.
 | F6 | <10 % de SLA incumplidos | `Ticket.slaBreached` |
 | F8 | ≥25 % de respuesta a la encuesta; CSAT visible y distinto de "—" | tickets con `satisfaction` / resueltos |
 
-> Para varias de estas hace falta un campo `Ticket.source: 'portal' | 'public_link' | 'whatsapp' |
-> 'email' | 'bulk_import' | 'api'`. Es un cambio de una línea que hoy no está y que conviene meter en
-> la Fase 0, antes de que haya volumen histórico sin clasificar.
+> ✅ El campo `Ticket.source` (`portal` | `public_link` | `bulk_import` | `whatsapp` | `email` |
+> `api`), del que dependen varias de estas métricas, se agregó en la Fase 0 — antes de que hubiera
+> volumen histórico sin clasificar.
 
 ---
 

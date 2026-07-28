@@ -26,6 +26,9 @@ export class TicketList implements OnInit {
   protected readonly tickets = signal<Ticket[]>([]);
   protected readonly categories = signal<Category[]>([]);
   protected readonly loading = signal(true);
+  protected readonly page = signal(1);
+  protected readonly totalPages = signal(0);
+  protected readonly total = signal(0);
 
   protected statusFilter: TicketStatus | '' = '';
   protected priorityFilter: TicketPriority | '' = '';
@@ -72,7 +75,19 @@ export class TicketList implements OnInit {
     this.load();
   }
 
+  /** Any filter change restarts at page 1 — staying on page 7 of a new result set is never right. */
   load(): void {
+    this.page.set(1);
+    this.fetch();
+  }
+
+  goToPage(page: number): void {
+    if (page < 1 || page > this.totalPages() || page === this.page()) return;
+    this.page.set(page);
+    this.fetch();
+  }
+
+  private fetch(): void {
     this.loading.set(true);
     this.selectedIds.set(new Set());
     this.ticketService
@@ -81,9 +96,12 @@ export class TicketList implements OnInit {
         priority: this.priorityFilter || undefined,
         category: this.categoryFilter || undefined,
         search: this.search || undefined,
+        page: this.page(),
       })
-      .subscribe((tickets) => {
-        this.tickets.set(tickets);
+      .subscribe((result) => {
+        this.tickets.set(result.items);
+        this.total.set(result.total);
+        this.totalPages.set(result.totalPages);
         this.loading.set(false);
       });
   }

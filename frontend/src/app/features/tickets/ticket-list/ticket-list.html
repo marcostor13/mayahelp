@@ -154,6 +154,34 @@
           </tbody>
         </table>
       </div>
+
+      @if (totalPages() > 1) {
+        <div class="flex items-center justify-between gap-4 px-6 py-4 border-t border-surface-variant">
+          <p class="text-body-sm text-on-surface-variant m-0">
+            Página {{ page() }} de {{ totalPages() }} · {{ total() }} tickets
+          </p>
+          <div class="flex items-center gap-2">
+            <button
+              type="button"
+              (click)="goToPage(page() - 1)"
+              [disabled]="page() <= 1"
+              class="flex items-center gap-1 px-3 py-2 rounded-lg text-label-md text-on-surface-variant hover:bg-surface-container-low disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+              Anterior
+            </button>
+            <button
+              type="button"
+              (click)="goToPage(page() + 1)"
+              [disabled]="page() >= totalPages()"
+              class="flex items-center gap-1 px-3 py-2 rounded-lg text-label-md text-on-surface-variant hover:bg-surface-container-low disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Siguiente
+              <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+            </button>
+          </div>
+        </div>
+      }
     </div>
   </div>
 </div>

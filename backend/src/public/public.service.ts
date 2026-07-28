@@ -52,6 +52,7 @@ export class PublicService {
       category: category.id,
       clientId: client.id,
       projectId: project.id,
+      actorName: `${dto.reporterName} (enlace público)`,
     });
 
     for (const file of files.slice(0, MAX_PUBLIC_FILES)) {
