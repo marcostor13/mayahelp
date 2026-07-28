@@ -1,6 +1,9 @@
 # --- deps ---
 FROM node:24-alpine AS deps
 WORKDIR /app
+# Force devDependencies install regardless of any inherited NODE_ENV=production
+# build-arg (e.g. injected by the deploy platform) — @nestjs/cli lives here.
+ENV NODE_ENV=development
 COPY package.json package-lock.json ./
 RUN npm ci
 
