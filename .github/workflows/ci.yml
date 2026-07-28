@@ -53,6 +53,8 @@ jobs:
       COOLIFY_FRONTEND_UUID: v8fkhe77hmvjsii970qgschv
     steps:
       - name: Trigger backend deploy
-        run: curl -sf -X GET "$COOLIFY_URL/api/v1/deploy?uuid=$COOLIFY_BACKEND_UUID" -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}"
+        run: |
+          curl -sf -X GET "$COOLIFY_URL/api/v1/deploy?uuid=$COOLIFY_BACKEND_UUID" -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}"
       - name: Trigger frontend deploy
-        run: curl -sf -X GET "$COOLIFY_URL/api/v1/deploy?uuid=$COOLIFY_FRONTEND_UUID" -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}"
+        run: |
+          curl -sf -X GET "$COOLIFY_URL/api/v1/deploy?uuid=$COOLIFY_FRONTEND_UUID" -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}"
