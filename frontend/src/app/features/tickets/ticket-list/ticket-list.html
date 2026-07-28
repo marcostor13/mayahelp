@@ -84,12 +84,23 @@
             class="w-full pl-10 pr-4 py-2 border border-outline-variant rounded-lg text-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-surface"
           />
         </div>
+        @if (selectedIds().size > 0) {
+          <button
+            type="button"
+            (click)="exportSelected()"
+            class="text-primary text-label-md hover:underline flex items-center gap-1 w-full sm:w-auto justify-center"
+          >
+            <span class="material-symbols-outlined text-[18px]">download</span>
+            Exportar seleccionados ({{ selectedIds().size }})
+          </button>
+        }
       </div>
 
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
           <thead>
             <tr class="bg-surface-container-low border-b border-surface-container-highest">
+              <th class="py-3 pl-6 pr-2 w-10"></th>
               <th class="py-3 px-6 text-label-md text-on-surface-variant whitespace-nowrap">ID</th>
               <th class="py-3 px-6 text-label-md text-on-surface-variant">Asunto / Cliente</th>
               <th class="py-3 px-6 text-label-md text-on-surface-variant">Prioridad</th>
@@ -100,7 +111,7 @@
           <tbody class="divide-y divide-surface-container-highest bg-surface">
             @if (loading()) {
               <tr>
-                <td colspan="5" class="py-8 text-center text-body-sm text-on-surface-variant">Cargando tickets...</td>
+                <td colspan="6" class="py-8 text-center text-body-sm text-on-surface-variant">Cargando tickets...</td>
               </tr>
             } @else {
               @for (ticket of tickets(); track ticket._id) {
@@ -108,6 +119,14 @@
                   [routerLink]="['/tickets', ticket._id]"
                   class="hover:bg-surface-container-lowest transition-colors cursor-pointer"
                 >
+                  <td class="py-4 pl-6 pr-2" (click)="$event.stopPropagation()">
+                    <input
+                      type="checkbox"
+                      [checked]="isSelected(ticket._id)"
+                      (change)="toggleSelected(ticket._id)"
+                      class="h-5 w-5 cursor-pointer rounded border border-outline-variant checked:border-primary checked:bg-primary transition-all"
+                    />
+                  </td>
                   <td class="py-4 px-6 text-label-md text-primary">{{ ticket.code }}</td>
                   <td class="py-4 px-6">
                     <div class="text-body-md font-medium text-on-surface">{{ ticket.subject }}</div>
@@ -126,7 +145,7 @@
                 </tr>
               } @empty {
                 <tr>
-                  <td colspan="5" class="py-8 text-center text-body-sm text-on-surface-variant">
+                  <td colspan="6" class="py-8 text-center text-body-sm text-on-surface-variant">
                     No se encontraron tickets con estos filtros.
                   </td>
                 </tr>

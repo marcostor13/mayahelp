@@ -5,6 +5,7 @@ import { DatePipe } from '@angular/common';
 import { TicketService } from '../../../core/services/ticket.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { AttachmentService } from '../../../core/services/attachment.service';
+import { ExportService } from '../../../core/services/export.service';
 import { Ticket, TicketPriority, TicketStatus } from '../../../core/models/ticket.model';
 import { Attachment } from '../../../core/models/attachment.model';
 
@@ -28,8 +29,15 @@ export class TicketDetail implements OnInit {
     private readonly route: ActivatedRoute,
     private readonly ticketService: TicketService,
     private readonly attachmentService: AttachmentService,
+    private readonly exportService: ExportService,
     protected readonly auth: AuthService,
   ) {}
+
+  exportMarkdown(): void {
+    const current = this.ticket();
+    if (!current) return;
+    this.exportService.exportTicket(current._id, current.code);
+  }
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id')!;

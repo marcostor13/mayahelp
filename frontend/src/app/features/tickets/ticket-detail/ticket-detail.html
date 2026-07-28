@@ -1,10 +1,21 @@
 @if (loading()) {
   <p class="text-body-md text-on-surface-variant">Cargando ticket...</p>
 } @else if (ticket(); as t) {
-  <a routerLink="/tickets" class="text-primary text-label-md hover:underline flex items-center gap-1 mb-stack-md w-fit">
-    <span class="material-symbols-outlined text-[18px]">arrow_back</span>
-    Volver a tickets
-  </a>
+  <div class="flex items-center justify-between mb-stack-md">
+    <a routerLink="/tickets" class="text-primary text-label-md hover:underline flex items-center gap-1 w-fit">
+      <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+      Volver a tickets
+    </a>
+    <button
+      type="button"
+      (click)="exportMarkdown()"
+      class="text-on-surface-variant hover:text-primary text-label-md flex items-center gap-1 transition-colors"
+      title="Exportar a Markdown"
+    >
+      <span class="material-symbols-outlined text-[18px]">download</span>
+      Exportar a Markdown
+    </button>
+  </div>
 
   <div class="flex flex-col lg:flex-row gap-stack-lg">
     <div class="flex-1 flex flex-col gap-stack-md">

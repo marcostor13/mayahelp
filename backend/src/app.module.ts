@@ -15,6 +15,7 @@ import { ArticlesModule } from './articles/articles.module';
 import { TasksModule } from './tasks/tasks.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { AttachmentsModule } from './attachments/attachments.module';
+import { ExportModule } from './export/export.module';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { AttachmentsModule } from './attachments/attachments.module';
     TasksModule,
     DashboardModule,
     AttachmentsModule,
+    ExportModule,
   ],
   controllers: [AppController],
   providers: [
