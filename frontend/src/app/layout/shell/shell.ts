@@ -15,6 +15,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Tickets', icon: 'confirmation_number', path: '/tickets' },
   { label: 'Proyectos', icon: 'folder_open', path: '/projects', roles: ['admin', 'agent'] },
   { label: 'Centro de Ayuda', icon: 'help', path: '/help-center' },
+  { label: 'Templates WhatsApp', icon: 'forum', path: '/whatsapp-templates', roles: ['admin'] },
 ];
 
 @Component({

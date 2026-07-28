@@ -30,6 +30,7 @@ export default () => ({
   whatsapp: {
     phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
     accessToken: process.env.WHATSAPP_ACCESS_TOKEN,
+    businessAccountId: process.env.WHATSAPP_BUSINESS_ACCOUNT_ID,
     templateName: process.env.WHATSAPP_TEMPLATE_NAME ?? 'ticket_notification',
     templateLanguage: process.env.WHATSAPP_TEMPLATE_LANGUAGE ?? 'es',
   },

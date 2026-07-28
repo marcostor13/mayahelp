@@ -98,4 +98,37 @@ dominio (no existía).
 - [x] Frontend: sección "Proyectos" (admin/agent) — listar/crear/editar, generar y revocar links, copiar URL
 - [x] Frontend: página pública `/public/observaciones/:token` (fuera del Shell, sin login)
 
+## Fase 3 — Gestión de templates de WhatsApp desde la plataforma
+
+Pedido: poder listar y crear templates de WhatsApp Business (Meta Cloud API) sin salir de MayaHelp, en vez de
+crearlos manualmente en Meta Business Manager.
+
+### Diseño
+
+- Nuevo módulo backend `whatsapp-templates` (admin-only) que habla directo con la Graph API de Meta:
+  `GET /{WABA_ID}/message_templates` para listar, `POST /{WABA_ID}/message_templates` para crear.
+- Requiere una variable de entorno nueva: `WHATSAPP_BUSINESS_ACCOUNT_ID` (WABA ID) — distinta de
+  `WHATSAPP_PHONE_NUMBER_ID` que ya existía (ese es solo para *enviar* mensajes, no para gestionar templates).
+- El template creado se envía a Meta para revisión (queda en estado `PENDING`); no se aprueba automáticamente.
+- Si el cuerpo usa variables (`{{1}}`, `{{2}}`...) hay que mandar valores de ejemplo (`example.body_text`) o
+  Meta rechaza la creación — se valida en el backend antes de llamar a la API.
+- No se tocó `WhatsAppService.sendTemplate()` (el que efectivamente envía notificaciones) — sigue usando el
+  template fijo configurado en `WHATSAPP_TEMPLATE_NAME`/`WHATSAPP_TEMPLATE_LANGUAGE`. Seleccionar template por
+  notificación es una mejora aparte, no pedida todavía.
+- Frontend: sección nueva `/whatsapp-templates` (solo admin, ícono en el sidebar) con lista de templates
+  existentes (nombre, categoría, idioma, estado con badge de color) y un formulario de creación que detecta
+  cuántas variables `{{n}}` tiene el cuerpo y pide un valor de ejemplo por cada una.
+
+### Estado
+
+- [x] Backend: `WhatsAppTemplatesService` (list/create contra Graph API) + controller admin-only
+- [x] Frontend: sección `/whatsapp-templates` (listar + crear)
+- [ ] Pendiente del usuario: cargar `WHATSAPP_BUSINESS_ACCOUNT_ID` en `.env` y en Coolify para que funcione en producción
+
+## Branding
+
+- Logo oficial (`kitui/mayahelp_logo/screen.png`, wordmark con ícono) copiado a `frontend/public/mayahelp-logo.png`
+  y usado en: login, register, página pública de observaciones, y sidebar/topbar del Shell — reemplaza el
+  placeholder cuadrado morado con "M".
+
 _Última actualización: ver historial de commits de este archivo (`git log -p ROADMAP.md`)._

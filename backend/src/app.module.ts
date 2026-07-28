@@ -19,6 +19,7 @@ import { ExportModule } from './export/export.module';
 import { AiModule } from './ai/ai.module';
 import { ProjectsModule } from './projects/projects.module';
 import { PublicModule } from './public/public.module';
+import { WhatsAppTemplatesModule } from './whatsapp-templates/whatsapp-templates.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { PublicModule } from './public/public.module';
     AiModule,
     ProjectsModule,
     PublicModule,
+    WhatsAppTemplatesModule,
   ],
   controllers: [AppController],
   providers: [

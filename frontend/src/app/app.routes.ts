@@ -68,6 +68,14 @@ export const routes: Routes = [
           import('./features/projects/project-detail/project-detail').then((m) => m.ProjectDetail),
       },
       {
+        path: 'whatsapp-templates',
+        canActivate: [roleGuard(['admin'])],
+        loadComponent: () =>
+          import('./features/whatsapp-templates/whatsapp-templates').then(
+            (m) => m.WhatsAppTemplates,
+          ),
+      },
+      {
         path: 'help-center',
         loadComponent: () => import('./features/help-center/help-center').then((m) => m.HelpCenter),
       },
