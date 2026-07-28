@@ -50,10 +50,10 @@ export class Ticket {
   @Prop({ type: [TicketCommentSchema], default: [] })
   comments: TicketComment[];
 
-  @Prop({ min: 1, max: 5, default: null })
+  @Prop({ type: Number, min: 1, max: 5, default: null })
   satisfaction: number | null;
 
-  @Prop({ default: null })
+  @Prop({ type: Date, default: null })
   resolvedAt: Date | null;
 
   declare createdAt: Date;

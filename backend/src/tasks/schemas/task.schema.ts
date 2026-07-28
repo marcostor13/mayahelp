@@ -11,7 +11,7 @@ export class Task {
   @Prop({ required: true, trim: true })
   title: string;
 
-  @Prop({ default: null })
+  @Prop({ type: Date, default: null })
   dueAt: Date | null;
 
   @Prop({ default: false })
