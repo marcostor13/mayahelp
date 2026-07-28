@@ -4,7 +4,9 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { TicketService } from '../../../core/services/ticket.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { AttachmentService } from '../../../core/services/attachment.service';
 import { Ticket, TicketPriority, TicketStatus } from '../../../core/models/ticket.model';
+import { Attachment } from '../../../core/models/attachment.model';
 
 @Component({
   selector: 'app-ticket-detail',
@@ -15,6 +17,8 @@ export class TicketDetail implements OnInit {
   protected readonly ticket = signal<Ticket | null>(null);
   protected readonly loading = signal(true);
   protected readonly sending = signal(false);
+  protected readonly attachments = signal<Attachment[]>([]);
+  protected readonly uploading = signal(false);
   protected newComment = '';
 
   protected readonly statuses: TicketStatus[] = ['abierto', 'en_proceso', 'resuelto', 'cerrado'];
@@ -23,12 +27,14 @@ export class TicketDetail implements OnInit {
   constructor(
     private readonly route: ActivatedRoute,
     private readonly ticketService: TicketService,
+    private readonly attachmentService: AttachmentService,
     protected readonly auth: AuthService,
   ) {}
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id')!;
     this.load(id);
+    this.loadAttachments(id);
   }
 
   private load(id: string): void {
@@ -37,6 +43,10 @@ export class TicketDetail implements OnInit {
       this.ticket.set(ticket);
       this.loading.set(false);
     });
+  }
+
+  private loadAttachments(id: string): void {
+    this.attachmentService.listForTicket(id).subscribe((attachments) => this.attachments.set(attachments));
   }
 
   updateStatus(status: string): void {
@@ -63,8 +73,44 @@ export class TicketDetail implements OnInit {
     });
   }
 
+  onFileSelected(event: Event): void {
+    const current = this.ticket();
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!current || !file) return;
+
+    this.uploading.set(true);
+    this.attachmentService.upload(current._id, file).subscribe({
+      next: (attachment) => {
+        this.attachments.update((list) => [...list, attachment]);
+        this.uploading.set(false);
+      },
+      error: () => this.uploading.set(false),
+    });
+    input.value = '';
+  }
+
+  removeAttachment(attachment: Attachment): void {
+    this.attachmentService.remove(attachment._id).subscribe(() => {
+      this.attachments.update((list) => list.filter((a) => a._id !== attachment._id));
+    });
+  }
+
   get canManage(): boolean {
     const role = this.auth.currentUser()?.role;
     return role === 'admin' || role === 'agent';
+  }
+
+  iconForKind(kind: Attachment['kind']): string {
+    switch (kind) {
+      case 'image':
+        return 'image';
+      case 'video':
+        return 'movie';
+      case 'audio':
+        return 'audiotrack';
+      default:
+        return 'description';
+    }
   }
 }

@@ -11,16 +11,16 @@
 5. Notificaciones por WhatsApp Cloud API y por correo.
 6. Exportar tickets a `.md` (individual o masivo) listos para que Claude Code u otra IA implemente la solución.
 
-## Decisiones pendientes (bloquean partes específicas, no todo)
+## Decisiones (resueltas)
 
-| # | Decisión | Afecta a | Estado |
+| # | Decisión | Afecta a | Resolución |
 |---|---|---|---|
-| D1 | Proveedor de IA (Anthropic Claude / OpenAI / otro) | 2, 4, opcionalmente 6 | Por confirmar |
-| D2 | Almacenamiento de archivos (Cloudflare R2 / disco local / S3) | 1 | Por confirmar |
-| D3 | Proveedor de email transaccional (Resend / SMTP Hostinger / otro) | 5 | Por confirmar |
-| D4 | WhatsApp Cloud API — ¿credenciales Meta ya listas? | 5 | Por confirmar |
+| D1 | Proveedor de IA | 4, 5 | **NVIDIA API** (catálogo NIM, modelos OpenAI-compatible vía `https://integrate.api.nvidia.com/v1`). Texto: `meta/llama-3.1-405b-instruct` (configurable por env). Visión (imágenes adjuntas en creación de tickets): `meta/llama-3.2-90b-vision-instruct`. |
+| D2 | Almacenamiento de archivos | 1 | **Cloudflare R2** (S3-compatible). |
+| D3 | Proveedor de email transaccional | 6 | **Resend**. |
+| D4 | WhatsApp Cloud API | 6 | Cuenta Meta Business + token **ya existentes** — se piden Phone Number ID + Access Token cuando llegue esa fase. |
 
-Mientras D2 no esté resuelta, el módulo de adjuntos se construye con una interfaz `StorageService` con driver de **disco local** por defecto — cambiar de driver después es aislado (una clase nueva), no bloquea el resto.
+Variables de entorno nuevas requeridas en `backend/.env` (agregadas como placeholders en `backend/.env.example`): `NVIDIA_API_KEY`, `NVIDIA_MODEL`, `NVIDIA_VISION_MODEL`, `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_URL`, `RESEND_API_KEY`, `EMAIL_FROM`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`.
 
 ## Orden de implementación acordado
 
@@ -65,9 +65,9 @@ Mientras D2 no esté resuelta, el módulo de adjuntos se construye con una inter
 
 ## Estado actual
 
-- [ ] Plan documentado y confirmado con el usuario (este archivo)
-- [ ] D1–D4 resueltas
-- [ ] 1. Adjuntos
+- [x] Plan documentado y confirmado con el usuario (este archivo)
+- [x] D1–D4 resueltas (ver tabla arriba)
+- [x] 1. Adjuntos (backend: schema, R2 storage service, endpoints; frontend: upload en creación y detalle de ticket)
 - [ ] 2. Carga masiva
 - [ ] 3. Export a Markdown
 - [ ] 4. Creación con IA

@@ -4,7 +4,7 @@ import { TicketPriority, TicketStatus } from '../../common/enums/ticket.enum';
 
 export type TicketDocument = HydratedDocument<Ticket>;
 
-@Schema({ _id: false })
+@Schema()
 export class TicketComment {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   author: Types.ObjectId;

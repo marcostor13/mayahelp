@@ -14,6 +14,7 @@ import { TicketsModule } from './tickets/tickets.module';
 import { ArticlesModule } from './articles/articles.module';
 import { TasksModule } from './tasks/tasks.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { AttachmentsModule } from './attachments/attachments.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     ArticlesModule,
     TasksModule,
     DashboardModule,
+    AttachmentsModule,
   ],
   controllers: [AppController],
   providers: [

@@ -102,6 +102,49 @@
           </div>
         }
       </div>
+
+      <div class="bg-surface-container-lowest rounded-2xl p-6 ambient-shadow-sm flex flex-col gap-3">
+        <div class="flex items-center justify-between">
+          <p class="text-label-xs text-on-surface-variant uppercase">Adjuntos</p>
+          <label for="attachment-input" class="text-primary hover:bg-surface-container-low p-1 rounded-full transition-colors cursor-pointer">
+            <span class="material-symbols-outlined text-[20px]">add</span>
+          </label>
+          <input
+            id="attachment-input"
+            type="file"
+            class="hidden"
+            accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
+            (change)="onFileSelected($event)"
+          />
+        </div>
+
+        @if (uploading()) {
+          <p class="text-body-sm text-on-surface-variant">Subiendo...</p>
+        }
+
+        @for (file of attachments(); track file._id) {
+          <a
+            [href]="file.url"
+            target="_blank"
+            rel="noopener"
+            class="flex items-center gap-2 bg-surface border border-outline-variant rounded-lg px-3 py-2 hover:border-primary transition-colors group"
+          >
+            <span class="material-symbols-outlined text-primary text-[18px]">{{ iconForKind(file.kind) }}</span>
+            <span class="text-body-sm text-on-surface truncate flex-1">{{ file.filename }}</span>
+            <button
+              type="button"
+              (click)="$event.preventDefault(); removeAttachment(file)"
+              class="text-on-surface-variant hover:text-error transition-colors opacity-0 group-hover:opacity-100"
+            >
+              <span class="material-symbols-outlined text-[16px]">close</span>
+            </button>
+          </a>
+        } @empty {
+          @if (!uploading()) {
+            <p class="text-body-sm text-on-surface-variant">Sin adjuntos.</p>
+          }
+        }
+      </div>
     </aside>
   </div>
 }
