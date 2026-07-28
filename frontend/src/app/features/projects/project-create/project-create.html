@@ -1,0 +1,85 @@
+<a routerLink="/projects" class="text-primary text-label-md hover:underline flex items-center gap-1 mb-stack-md w-fit">
+  <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+  Volver a proyectos
+</a>
+
+<h1 class="text-headline-xl text-on-background mb-stack-lg">Nuevo Proyecto</h1>
+
+<div class="max-w-2xl bg-surface-container-lowest rounded-2xl p-6 md:p-8 ambient-shadow-sm">
+  <form (ngSubmit)="submit()" class="flex flex-col gap-stack-md">
+    <div>
+      <label class="block text-label-md text-on-background mb-stack-sm" for="nombre">Nombre del proyecto</label>
+      <input
+        id="nombre"
+        name="nombre"
+        type="text"
+        required
+        [(ngModel)]="name"
+        placeholder="Ej. Rediseño del portal de clientes"
+        class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+      />
+    </div>
+
+    <div>
+      <label class="block text-label-md text-on-background mb-stack-sm" for="descripcion">Descripción (opcional)</label>
+      <textarea
+        id="descripcion"
+        name="descripcion"
+        rows="4"
+        [(ngModel)]="description"
+        placeholder="Contexto breve del proyecto..."
+        class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none"
+      ></textarea>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-stack-md">
+      <div>
+        <label class="block text-label-md text-on-background mb-stack-sm" for="categoria">
+          Categoría de las observaciones
+        </label>
+        <select
+          id="categoria"
+          name="categoria"
+          required
+          [(ngModel)]="defaultCategory"
+          class="w-full appearance-none bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all cursor-pointer"
+        >
+          <option value="" disabled selected>Selecciona categoría...</option>
+          @for (option of categories(); track option._id) {
+            <option [value]="option._id">{{ option.name }}</option>
+          }
+        </select>
+        <p class="text-body-sm text-on-surface-variant mt-1">
+          Todos los tickets enviados vía enlace público de este proyecto se archivarán aquí.
+        </p>
+      </div>
+
+      <div>
+        <label class="block text-label-md text-on-background mb-stack-sm" for="estado">Estado</label>
+        <select
+          id="estado"
+          name="estado"
+          [(ngModel)]="status"
+          class="w-full appearance-none bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all cursor-pointer"
+        >
+          <option value="planning">Planificación</option>
+          <option value="in_progress">En curso</option>
+          <option value="on_hold">En pausa</option>
+          <option value="completed">Completado</option>
+        </select>
+      </div>
+    </div>
+
+    @if (error()) {
+      <p class="text-body-sm text-error">{{ error() }}</p>
+    }
+
+    <button
+      type="submit"
+      [disabled]="submitting()"
+      class="self-start bg-primary-container text-on-primary text-label-md py-3 px-6 rounded-lg hover:bg-primary transition-colors shadow-sm disabled:opacity-60"
+    >
+      {{ submitting() ? 'Creando...' : 'Crear Proyecto' }}
+    </button>
+  </form>
+</div>

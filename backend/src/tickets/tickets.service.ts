@@ -15,7 +15,7 @@ import { UsersService } from '../users/users.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuthenticatedUser } from '../auth/types/authenticated-user.interface';
 import { Role } from '../common/enums/role.enum';
-import { TicketStatus } from '../common/enums/ticket.enum';
+import { TicketPriority, TicketStatus } from '../common/enums/ticket.enum';
 
 const TICKET_COUNTER_KEY = 'ticket';
 const TICKET_CODE_BASE = 8000;
@@ -36,19 +36,48 @@ export class TicketsService {
     if (!clientId) {
       throw new ForbiddenException('Debes indicar el cliente del ticket');
     }
+    return this.persistTicket({
+      subject: dto.subject,
+      description: dto.description,
+      category: dto.category,
+      clientId,
+      priority: dto.priority,
+    });
+  }
+
+  /** Used by the unauthenticated public-observation flow — no requester/role checks apply. */
+  async createFromExternalSource(params: {
+    subject: string;
+    description: string;
+    category: string;
+    clientId: string;
+    projectId: string;
+  }) {
+    return this.persistTicket(params);
+  }
+
+  private async persistTicket(params: {
+    subject: string;
+    description: string;
+    category: string;
+    clientId: string;
+    priority?: TicketPriority;
+    projectId?: string;
+  }) {
     const sequence = await this.countersService.next(TICKET_COUNTER_KEY);
     const code = `TCK-${TICKET_CODE_BASE + sequence}`;
 
     const ticket = await this.ticketModel.create({
       code,
-      subject: dto.subject,
-      description: dto.description,
-      category: dto.category,
-      client: clientId,
-      priority: dto.priority,
+      subject: params.subject,
+      description: params.description,
+      category: params.category,
+      client: params.clientId,
+      priority: params.priority,
+      project: params.projectId ?? null,
     });
 
-    const client = await this.usersService.findById(clientId);
+    const client = await this.usersService.findById(params.clientId);
     await this.notificationsService.notifyTicketCreated(
       { name: client.name, email: client.email, phone: client.phone },
       { _id: ticket.id, code: ticket.code, subject: ticket.subject },
@@ -67,6 +96,7 @@ export class TicketsService {
     if (filter.status) query.status = filter.status;
     if (filter.priority) query.priority = filter.priority;
     if (filter.category) query.category = filter.category;
+    if (filter.project) query.project = filter.project;
     if (filter.search) {
       query.$or = [
         { subject: { $regex: filter.search, $options: 'i' } },
@@ -79,6 +109,7 @@ export class TicketsService {
       .populate('client', 'name email company')
       .populate('category', 'name icon')
       .populate('assignedAgent', 'name email')
+      .populate('project', 'name')
       .sort({ createdAt: -1 })
       .exec();
   }
@@ -89,6 +120,7 @@ export class TicketsService {
       .populate('client', 'name email company')
       .populate('category', 'name icon')
       .populate('assignedAgent', 'name email')
+      .populate('project', 'name')
       .populate('comments.author', 'name role')
       .exec();
 

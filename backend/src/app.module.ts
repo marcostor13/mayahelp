@@ -17,6 +17,8 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { AttachmentsModule } from './attachments/attachments.module';
 import { ExportModule } from './export/export.module';
 import { AiModule } from './ai/ai.module';
+import { ProjectsModule } from './projects/projects.module';
+import { PublicModule } from './public/public.module';
 
 @Module({
   imports: [
@@ -39,6 +41,8 @@ import { AiModule } from './ai/ai.module';
     AttachmentsModule,
     ExportModule,
     AiModule,
+    ProjectsModule,
+    PublicModule,
   ],
   controllers: [AppController],
   providers: [

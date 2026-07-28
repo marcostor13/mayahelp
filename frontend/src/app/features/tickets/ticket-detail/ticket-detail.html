@@ -100,6 +100,15 @@
           <p class="text-label-xs text-on-surface-variant uppercase mb-1">Categoría</p>
           <p class="text-label-md text-on-surface">{{ t.category.name }}</p>
         </div>
+        @if (t.project) {
+          <div>
+            <p class="text-label-xs text-on-surface-variant uppercase mb-1">Proyecto</p>
+            <p class="text-label-md text-on-surface flex items-center gap-1">
+              <span class="material-symbols-outlined text-[16px] text-primary">folder_open</span>
+              {{ t.project.name }}
+            </p>
+          </div>
+        }
 
         @if (canManage) {
           <div>

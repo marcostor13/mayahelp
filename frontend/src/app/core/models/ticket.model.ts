@@ -18,6 +18,11 @@ export interface TicketParticipant {
   company?: string;
 }
 
+export interface TicketProjectRef {
+  _id: string;
+  name: string;
+}
+
 export interface Ticket {
   _id: string;
   code: string;
@@ -25,6 +30,7 @@ export interface Ticket {
   description: string;
   client: TicketParticipant;
   category: Category;
+  project: TicketProjectRef | null;
   assignedAgent: TicketParticipant | null;
   status: TicketStatus;
   priority: TicketPriority;

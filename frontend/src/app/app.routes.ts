@@ -14,6 +14,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/register/register').then((m) => m.Register),
   },
   {
+    path: 'public/observaciones/:token',
+    loadComponent: () =>
+      import('./features/public/observation-form/observation-form').then((m) => m.ObservationForm),
+  },
+  {
     path: '',
     canActivate: [authGuard],
     loadComponent: () => import('./layout/shell/shell').then((m) => m.Shell),
@@ -43,6 +48,24 @@ export const routes: Routes = [
         path: 'tickets/:id',
         loadComponent: () =>
           import('./features/tickets/ticket-detail/ticket-detail').then((m) => m.TicketDetail),
+      },
+      {
+        path: 'projects',
+        canActivate: [roleGuard(['admin', 'agent'])],
+        loadComponent: () =>
+          import('./features/projects/project-list/project-list').then((m) => m.ProjectList),
+      },
+      {
+        path: 'projects/new',
+        canActivate: [roleGuard(['admin', 'agent'])],
+        loadComponent: () =>
+          import('./features/projects/project-create/project-create').then((m) => m.ProjectCreate),
+      },
+      {
+        path: 'projects/:id',
+        canActivate: [roleGuard(['admin', 'agent'])],
+        loadComponent: () =>
+          import('./features/projects/project-detail/project-detail').then((m) => m.ProjectDetail),
       },
       {
         path: 'help-center',

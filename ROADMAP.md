@@ -74,4 +74,28 @@ Variables de entorno nuevas requeridas en `backend/.env` (agregadas como placeho
 - [x] 5. Respuesta automática con IA (usuario "Agente IA", modo `off`/`draft`/`auto` por categoría, comentarios internos filtrados para el cliente, botón "Usar esta respuesta" en el frontend)
 - [x] 6. Notificaciones WhatsApp + email (Resend + WhatsApp Cloud API, graceful no-op si faltan credenciales; ⚠️ WhatsApp necesita una plantilla aprobada en Meta Business Manager — ver nota en `backend/.env.example`)
 
+---
+
+## Fase 2 — Proyectos + enlaces públicos sin login
+
+Pedido: una sección para generar links que un usuario externo (sin cuenta, sin login) pueda abrir para dejar
+observaciones/tickets sobre un proyecto en desarrollo. Requiere modelar "proyectos" como concepto nuevo del
+dominio (no existía).
+
+### Diseño de dominio
+
+- **`Project`** (nuevo): `name`, `description?`, `status` (`planning`|`in_progress`|`on_hold`|`completed`, default `in_progress`), `client?` (ref `User`, la empresa/persona dueña del proyecto), `defaultCategory` (ref `Category` tipo `ticket` — toda observación pública de este proyecto cae en esa categoría, así el formulario público no pide categoría), `createdBy` (ref `User`).
+- **`Ticket.project`** (nuevo campo opcional, ref `Project`): permite asociar cualquier ticket (interno o público) a un proyecto; habilita filtrar tickets por proyecto a futuro.
+- **`ProjectShareLink`** (nuevo): `project` (ref), `token` (string random único, opaco — no es el `_id` de Mongo, evita enumeración), `label?` (nombre amigable, ej. "Cliente X — Fase 1"), `isActive` (default true, revocable), `expiresAt?` (null = no expira), `createdBy`, `usageCount`.
+- Flujo público: `GET /public/observations/:token` valida el link y devuelve solo `{projectName, projectDescription}` (nada sensible); `POST /public/observations/:token` (multipart: `subject`, `description`, `reporterName`, `reporterEmail`, `files[]` hasta 5) crea (o reutiliza por email) un `User` rol `client` vía el mismo `findOrCreateClient` de la carga masiva, crea el `Ticket` con la `defaultCategory` del proyecto y `project` seteado, sube los adjuntos, dispara notificación de "ticket creado" igual que el flujo normal, e incrementa `usageCount` del link.
+- Sin CAPTCHA ni rate-limiting dedicado por ahora (no pedido) — mitigación mínima: token opaco largo + revocación manual + límite de 5 archivos por envío (reutiliza el límite de 25MB/archivo ya existente).
+- La página pública **no** usa el `Shell` (sidebar/topbar) ni pasa por el `authGuard` — es una ruta standalone fuera del layout autenticado.
+
+### Estado
+
+- [x] Backend: schemas `Project` + `ProjectShareLink`, módulo `projects` (CRUD, admin/agent)
+- [x] Backend: módulo `public` (endpoints sin auth para consultar/enviar observaciones)
+- [x] Frontend: sección "Proyectos" (admin/agent) — listar/crear/editar, generar y revocar links, copiar URL
+- [x] Frontend: página pública `/public/observaciones/:token` (fuera del Shell, sin login)
+
 _Última actualización: ver historial de commits de este archivo (`git log -p ROADMAP.md`)._

@@ -14,6 +14,10 @@ export class FilterTicketDto {
   @IsOptional()
   category?: string;
 
+  @IsMongoId()
+  @IsOptional()
+  project?: string;
+
   @IsString()
   @IsOptional()
   search?: string;

@@ -41,6 +41,10 @@ export class Ticket {
   @Prop({ type: Types.ObjectId, ref: 'Category', required: true })
   category: Types.ObjectId;
 
+  /** Set when the ticket was filed against a project (staff-tagged, or via a public observation link). */
+  @Prop({ type: Types.ObjectId, ref: 'Project', default: null })
+  project: Types.ObjectId | null;
+
   @Prop({ type: Types.ObjectId, ref: 'User', default: null })
   assignedAgent: Types.ObjectId | null;
 

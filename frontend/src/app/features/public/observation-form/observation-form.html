@@ -1,0 +1,143 @@
+<div class="min-h-screen bg-background flex items-center justify-center p-6">
+  <div class="w-full max-w-xl bg-surface-container-lowest rounded-2xl ambient-shadow-md p-8">
+    <div class="flex items-center gap-3 mb-stack-lg">
+      <div class="w-10 h-10 rounded-md bg-primary flex items-center justify-center text-on-primary font-bold">M</div>
+      <div>
+        <h1 class="text-headline-lg font-bold text-primary">MayaHelp</h1>
+        <p class="text-body-sm text-on-surface-variant">Observaciones de proyecto</p>
+      </div>
+    </div>
+
+    @if (loading()) {
+      <p class="text-body-md text-on-surface-variant text-center py-8">Cargando...</p>
+    } @else if (linkError()) {
+      <div class="text-center py-8 flex flex-col items-center gap-3">
+        <span class="material-symbols-outlined text-error text-4xl">link_off</span>
+        <p class="text-body-md text-on-surface">{{ linkError() }}</p>
+      </div>
+    } @else if (ticketCode(); as code) {
+      <div class="text-center py-8 flex flex-col items-center gap-3">
+        <span class="material-symbols-outlined text-emerald-500 text-5xl">check_circle</span>
+        <h2 class="text-headline-lg text-on-surface">¡Observación enviada!</h2>
+        <p class="text-body-md text-on-surface-variant">
+          Registramos tu observación con el código
+        </p>
+        <p class="text-headline-md text-primary font-bold">{{ code }}</p>
+        <p class="text-body-sm text-on-surface-variant">
+          El equipo de soporte se pondrá en contacto contigo por correo si es necesario.
+        </p>
+      </div>
+    } @else if (project(); as p) {
+      <h2 class="text-headline-xl text-on-surface mb-1">{{ p.projectName }}</h2>
+      @if (p.projectDescription) {
+        <p class="text-body-md text-on-surface-variant mb-stack-lg">{{ p.projectDescription }}</p>
+      }
+      <p class="text-body-sm text-on-surface-variant mb-stack-lg">
+        Cuéntanos qué observaste en este proyecto. No necesitas una cuenta para enviar tu reporte.
+      </p>
+
+      <form (ngSubmit)="submit()" class="flex flex-col gap-stack-md">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-stack-md">
+          <div>
+            <label class="block text-label-md text-on-background mb-stack-sm" for="reporterName">Tu nombre</label>
+            <input
+              id="reporterName"
+              name="reporterName"
+              type="text"
+              required
+              [(ngModel)]="reporterName"
+              class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+            />
+          </div>
+          <div>
+            <label class="block text-label-md text-on-background mb-stack-sm" for="reporterEmail">Tu correo</label>
+            <input
+              id="reporterEmail"
+              name="reporterEmail"
+              type="email"
+              required
+              [(ngModel)]="reporterEmail"
+              class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-label-md text-on-background mb-stack-sm" for="subject">Asunto</label>
+          <input
+            id="subject"
+            name="subject"
+            type="text"
+            required
+            [(ngModel)]="subject"
+            placeholder="Ej. El botón de guardar no responde"
+            class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+          />
+        </div>
+
+        <div>
+          <label class="block text-label-md text-on-background mb-stack-sm" for="description">Descripción</label>
+          <textarea
+            id="description"
+            name="description"
+            required
+            rows="5"
+            [(ngModel)]="description"
+            placeholder="Describe la observación con el mayor detalle posible..."
+            class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none"
+          ></textarea>
+        </div>
+
+        <div>
+          <label class="block text-label-md text-on-background mb-stack-sm">Adjuntos (opcional)</label>
+          <label
+            for="files"
+            class="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-outline-variant rounded-lg px-4 py-6 cursor-pointer hover:border-primary transition-colors text-center"
+          >
+            <span class="material-symbols-outlined text-primary text-3xl">upload_file</span>
+            <span class="text-body-sm text-on-surface-variant">
+              Imágenes, videos, audios o documentos (máx. {{ maxFiles }} archivos)
+            </span>
+          </label>
+          <input
+            id="files"
+            type="file"
+            multiple
+            class="hidden"
+            accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
+            (change)="onFilesSelected($event)"
+          />
+
+          @if (selectedFiles().length > 0) {
+            <ul class="mt-3 flex flex-col gap-2">
+              @for (file of selectedFiles(); track file.name; let i = $index) {
+                <li class="flex items-center justify-between gap-2 bg-surface border border-outline-variant rounded-lg px-3 py-2">
+                  <span class="text-body-sm text-on-surface truncate">{{ file.name }}</span>
+                  <button
+                    type="button"
+                    (click)="removeFile(i)"
+                    class="text-on-surface-variant hover:text-error transition-colors"
+                  >
+                    <span class="material-symbols-outlined text-[18px]">close</span>
+                  </button>
+                </li>
+              }
+            </ul>
+          }
+        </div>
+
+        @if (submitError()) {
+          <p class="text-body-sm text-error">{{ submitError() }}</p>
+        }
+
+        <button
+          type="submit"
+          [disabled]="submitting()"
+          class="w-full bg-primary-container text-on-primary text-label-md py-3 px-4 rounded-lg hover:bg-primary transition-colors shadow-sm disabled:opacity-60"
+        >
+          {{ submitting() ? 'Enviando...' : 'Enviar observación' }}
+        </button>
+      </form>
+    }
+  </div>
+</div>
