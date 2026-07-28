@@ -1,0 +1,77 @@
+# MayaHelp — Roadmap de features avanzadas
+
+> Documento vivo. Si una sesión de Claude Code se corta, leer este archivo primero (sección "Estado actual") para retomar exactamente donde quedó, sin releer todo el historial de chat.
+
+## Alcance pedido
+
+1. Adjuntar imágenes, archivos, videos, documentos y audios a los tickets.
+2. Crear tickets asistido por IA (a partir de una descripción libre / voz / imagen).
+3. Carga masiva de tickets (CSV/Excel).
+4. Respuesta automática de tickets con IA.
+5. Notificaciones por WhatsApp Cloud API y por correo.
+6. Exportar tickets a `.md` (individual o masivo) listos para que Claude Code u otra IA implemente la solución.
+
+## Decisiones pendientes (bloquean partes específicas, no todo)
+
+| # | Decisión | Afecta a | Estado |
+|---|---|---|---|
+| D1 | Proveedor de IA (Anthropic Claude / OpenAI / otro) | 2, 4, opcionalmente 6 | Por confirmar |
+| D2 | Almacenamiento de archivos (Cloudflare R2 / disco local / S3) | 1 | Por confirmar |
+| D3 | Proveedor de email transaccional (Resend / SMTP Hostinger / otro) | 5 | Por confirmar |
+| D4 | WhatsApp Cloud API — ¿credenciales Meta ya listas? | 5 | Por confirmar |
+
+Mientras D2 no esté resuelta, el módulo de adjuntos se construye con una interfaz `StorageService` con driver de **disco local** por defecto — cambiar de driver después es aislado (una clase nueva), no bloquea el resto.
+
+## Orden de implementación acordado
+
+1. **Adjuntos** (fundacional, lo usan tickets, comentarios, y la creación con IA)
+2. **Carga masiva de tickets** (independiente, no depende de IA)
+3. **Exportar ticket(s) a Markdown** (independiente, valor rápido)
+4. **Creación de tickets con IA** (requiere D1)
+5. **Respuesta automática con IA** (requiere D1, se apoya en Centro de Ayuda existente)
+6. **Notificaciones WhatsApp + email** (requiere D3 y D4, normalmente lo más lento por credenciales externas)
+
+## Diseño técnico por feature
+
+### 1. Adjuntos multimedia
+- Backend: schema `Attachment` (ticket, comment opcional, filename, mimetype, size, storageKey, uploadedBy, createdAt).
+- `StorageService` interface: `upload(buffer, key, mimetype) -> url`, `getSignedUrl(key)`, `delete(key)`. Driver inicial: `LocalDiskStorageService` (volumen persistente en Coolify).
+- Endpoints: `POST /tickets/:id/attachments` (multipart, multer, whitelist de mimetypes, límite 25MB/archivo), `GET /attachments/:id` (descarga/redirect), `DELETE /attachments/:id`.
+- Frontend: selector de archivos + drag&drop en `ticket-create` y en el composer de comentarios de `ticket-detail`, con preview (thumbnail para imágenes, ícono por tipo para el resto) y barra de progreso.
+- Tipos permitidos: imágenes (jpg/png/webp/gif), video (mp4/webm/mov), audio (mp3/wav/ogg/m4a), documentos (pdf/doc/docx/xls/xlsx/csv/txt).
+
+### 2. Carga masiva de tickets
+- Backend: `POST /tickets/bulk-import` (multipart CSV/XLSX), parseo con `csv-parse`/`xlsx`, valida fila por fila contra un esquema tipo `CreateTicketDto` (resuelve cliente por email — lo crea si no existe con rol `client`, categoría por nombre), inserta en lote, devuelve `{created, failed, errors: [{row, reason}]}`.
+- Frontend: página admin/agente con botón "Descargar plantilla CSV", subida, preview de las primeras filas, resultado con tabla de errores.
+
+### 3. Export a Markdown
+- Backend: `GET /tickets/:id/export.md` genera Markdown con metadata, descripción, hilo de comentarios, lista de adjuntos y una sección "Contexto para implementación" (usa IA si D1 está resuelta; si no, la arma sin IA con la info cruda del ticket).
+- `POST /tickets/export/bulk.md` recibe lista de IDs o un filtro (mismo shape que el listado de tickets) y devuelve un ZIP con un `.md` por ticket.
+- Frontend: botón "Exportar a Markdown" en `ticket-detail`, selección múltiple + "Exportar seleccionados" en `ticket-list`.
+
+### 4. Creación de tickets con IA
+- `POST /tickets/ai-draft` recibe texto libre (+ adjuntos opcionales, ej. captura de pantalla) y devuelve `{subject, description, category, priority}` sugeridos; el usuario revisa/edita antes de confirmar (`POST /tickets` normal).
+- Usa el SDK del proveedor elegido en D1. Si hay imagen adjunta y el modelo soporta visión, se incluye para diagnóstico (ej. captura de un error).
+
+### 5. Respuesta automática con IA
+- Nuevo usuario de sistema "Agente IA" (rol `agent`, flag `isAiAgent: true`) para atribuir comentarios generados por IA.
+- Al crear un ticket o recibir un comentario del cliente: la IA arma una respuesta usando el historial del ticket + artículos relevantes del Centro de Ayuda (matching simple por categoría/texto).
+- Modo configurable por categoría: `draft` (sugiere, el agente humano aprueba/edita antes de enviar) o `auto` (publica directo). Default `draft` para evitar respuestas erróneas sin supervisión.
+
+### 6. Notificaciones
+- `NotificationsModule` con `EmailService` y `WhatsAppService`, disparados por eventos de dominio (ticket creado, cambio de estado, nuevo comentario, ticket resuelto).
+- Requiere agregar `phone` al schema de `User` para WhatsApp.
+- WhatsApp Cloud API: plantillas pre-aprobadas por Meta son obligatorias para mensajes iniciados por el negocio fuera de la ventana de 24h — hay que definir/aprobar esas plantillas en Meta Business Manager antes de poder notificar proactivamente.
+
+## Estado actual
+
+- [ ] Plan documentado y confirmado con el usuario (este archivo)
+- [ ] D1–D4 resueltas
+- [ ] 1. Adjuntos
+- [ ] 2. Carga masiva
+- [ ] 3. Export a Markdown
+- [ ] 4. Creación con IA
+- [ ] 5. Respuesta automática con IA
+- [ ] 6. Notificaciones WhatsApp + email
+
+_Última actualización: ver historial de commits de este archivo (`git log -p ROADMAP.md`)._
