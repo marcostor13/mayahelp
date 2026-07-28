@@ -70,7 +70,7 @@ Variables de entorno nuevas requeridas en `backend/.env` (agregadas como placeho
 - [x] 1. Adjuntos (backend: schema, R2 storage service, endpoints; frontend: upload en creación y detalle de ticket)
 - [x] 2. Carga masiva (backend: parseo CSV/XLSX, resolución/creación de clientes, reporte de errores; frontend: página `/tickets/bulk-import` con plantilla descargable)
 - [x] 3. Export a Markdown (individual `.md` y masivo `.zip`, sin IA por ahora — se enriquecerá cuando esté la integración NVIDIA)
-- [ ] 4. Creación con IA
+- [x] 4. Creación con IA (NVIDIA NIM, OpenAI-compatible; degrada con gracia si falta `NVIDIA_API_KEY` en vez de tumbar el backend)
 - [ ] 5. Respuesta automática con IA
 - [ ] 6. Notificaciones WhatsApp + email
 

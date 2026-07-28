@@ -16,6 +16,7 @@ import { TasksModule } from './tasks/tasks.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { AttachmentsModule } from './attachments/attachments.module';
 import { ExportModule } from './export/export.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { ExportModule } from './export/export.module';
     DashboardModule,
     AttachmentsModule,
     ExportModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [

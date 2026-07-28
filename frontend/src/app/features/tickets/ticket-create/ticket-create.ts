@@ -6,6 +6,7 @@ import { catchError } from 'rxjs/operators';
 import { TicketService } from '../../../core/services/ticket.service';
 import { CategoryService } from '../../../core/services/category.service';
 import { AttachmentService } from '../../../core/services/attachment.service';
+import { AiService } from '../../../core/services/ai.service';
 import { Category } from '../../../core/models/category.model';
 import { TicketPriority } from '../../../core/models/ticket.model';
 
@@ -19,18 +20,45 @@ export class TicketCreate implements OnInit {
   protected readonly submitting = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly selectedFiles = signal<File[]>([]);
+  protected readonly generating = signal(false);
+  protected readonly aiError = signal<string | null>(null);
 
   protected subject = '';
   protected description = '';
   protected category = '';
   protected priority: TicketPriority = 'media';
+  protected aiFreeText = '';
 
   constructor(
     private readonly ticketService: TicketService,
     private readonly categoryService: CategoryService,
     private readonly attachmentService: AttachmentService,
+    private readonly aiService: AiService,
     private readonly router: Router,
   ) {}
+
+  generateWithAi(): void {
+    const freeText = this.aiFreeText.trim();
+    if (!freeText) return;
+
+    this.generating.set(true);
+    this.aiError.set(null);
+    this.aiService.draftTicket(freeText).subscribe({
+      next: (draft) => {
+        this.subject = draft.subject;
+        this.description = draft.description;
+        this.priority = draft.priority;
+        if (draft.categoryId) {
+          this.category = draft.categoryId;
+        }
+        this.generating.set(false);
+      },
+      error: () => {
+        this.aiError.set('No se pudo generar el borrador con IA. Completa el formulario manualmente.');
+        this.generating.set(false);
+      },
+    });
+  }
 
   ngOnInit(): void {
     this.categoryService.list('ticket').subscribe((categories) => this.categories.set(categories));
