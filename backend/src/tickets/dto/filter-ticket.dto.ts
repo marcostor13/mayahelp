@@ -27,6 +27,11 @@ export class FilterTicketDto extends PaginationQueryDto {
   @IsOptional()
   assignedAgent?: string;
 
+  /** Staff-only; silently ignored for clients, who are always scoped to themselves. */
+  @IsMongoId()
+  @IsOptional()
+  client?: string;
+
   @IsEnum(TicketSource)
   @IsOptional()
   source?: TicketSource;

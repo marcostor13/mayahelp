@@ -185,6 +185,41 @@ que la plataforma aguanta volumen y deja de tener superficie de abuso.
 - [x] F0.8 Swagger en `/api/docs`
 - [ ] Pendiente: mover el throttler a Redis si se escala a más de una réplica
 
+## Fase 5 — Búsqueda global + paleta de comandos (F9 del `BENCHMARK.md`)
+
+El campo de búsqueda del topbar existía desde el principio pero era un `<input>` sin binding: no
+hacía absolutamente nada. Esta fase lo reemplaza por una búsqueda real.
+
+### Qué se hizo
+
+- **`GET /search?q=`** (módulo `search`): consulta en paralelo tickets, clientes, proyectos y
+  artículos, con 5 resultados por tipo y proyección `lean` — la paleta necesita etiquetas, no
+  documentos completos. Un `client` solo ve sus propios tickets y los artículos; la lista de
+  clientes y el listado de proyectos no se le devuelven nunca.
+- Los tickets reutilizan la misma estrategia del listado (`$text` con fallback a substring) y los
+  artículos aprovechan el índice de texto agregado en la Fase 0.
+- **Paleta de comandos** (`layout/command-palette`): overlay con `⌘K` / `Ctrl+K`, navegación por
+  teclado (flechas con wrap, Enter para abrir, Esc para cerrar), debounce de 250 ms y `switchMap`
+  para cancelar las respuestas viejas. Incluye acciones rápidas (nuevo ticket, importar, proyectos,
+  ajustes…) filtradas por rol y por el texto escrito.
+- **Filtro `client` en el listado de tickets.** Necesario para que el resultado "Cliente" de la
+  paleta lleve a algún lado útil: la búsqueda de tickets indexa asunto/descripción/comentarios, no
+  el email del cliente, así que enlazar por texto no habría encontrado nada. Se filtra por id.
+  ⚠️ El filtro se aplica **solo para staff**: aplicarlo sin condición habría dejado que un `client`
+  pasara `?client=<otro>` y sobrescribiera su propio scope, viendo tickets ajenos. Hay tests que
+  cubren ese caso concreto.
+- El listado lee `?client=` y `?search=` de la URL en **cada emisión** de `queryParamMap`, no del
+  snapshot: navegar de `/tickets` a `/tickets?client=X` reutiliza el componente y un snapshot
+  habría ignorado el filtro nuevo en silencio.
+
+### Estado
+
+- [x] Backend: módulo `search` (tickets, clientes, proyectos, artículos) con alcance por rol
+- [x] Backend: filtro `client` en el listado de tickets, restringido a staff
+- [x] Frontend: paleta de comandos con `⌘K`, navegación por teclado y acciones rápidas
+- [x] Frontend: el buscador del topbar abre la paleta (antes no hacía nada)
+- [ ] Pendiente: la campana de notificaciones del topbar sigue sin funcionalidad (no es parte de F9)
+
 ## Branding
 
 - Logo oficial (`kitui/mayahelp_logo/screen.png`, wordmark con ícono) copiado a `frontend/public/mayahelp-logo.png`

@@ -20,6 +20,7 @@ import { ExportModule } from './export/export.module';
 import { AiModule } from './ai/ai.module';
 import { ProjectsModule } from './projects/projects.module';
 import { PublicModule } from './public/public.module';
+import { SearchModule } from './search/search.module';
 import { WhatsAppTemplatesModule } from './whatsapp-templates/whatsapp-templates.module';
 
 @Module({
@@ -48,6 +49,7 @@ import { WhatsAppTemplatesModule } from './whatsapp-templates/whatsapp-templates
     AiModule,
     ProjectsModule,
     PublicModule,
+    SearchModule,
     WhatsAppTemplatesModule,
   ],
   controllers: [AppController],

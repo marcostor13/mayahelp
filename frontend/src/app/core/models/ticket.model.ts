@@ -78,6 +78,7 @@ export interface TicketFilter {
   status?: TicketStatus;
   priority?: TicketPriority;
   category?: string;
+  client?: string;
   search?: string;
   page?: number;
   limit?: number;

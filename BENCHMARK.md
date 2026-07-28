@@ -65,8 +65,7 @@ Tres conclusiones:
 
 Vale la pena listarlas aparte porque son las que más rápido erosionan la confianza en el producto:
 
-- **El buscador global del topbar no hace nada.** Es un `<input>` sin binding
-  (`frontend/src/app/layout/shell/shell.html:59`).
+- ~~**El buscador global del topbar no hace nada.**~~ ✅ Resuelto en F9: abre la paleta de comandos.
 - **La campana de notificaciones no hace nada.** Es un `<button>` sin `(click)`
   (`frontend/src/app/layout/shell/shell.html:66`).
 - **El CSAT del dashboard siempre muestra "—".** El campo `satisfaction` existe en el schema y el
@@ -453,7 +452,7 @@ tradicional la tiene bien resuelta.
 | F0 | Deuda técnica (paginación, índices, throttling, auditoría, tests) | 🔴 Alto | 5–7 d | — | **1** ✅ |
 | F2 | Memoria semántica (KB vectorial, dedup, "ya reportado") | 🔴 Alto | 4–5 d | 🌟🌟🌟 | **2** |
 | F1 | WhatsApp bidireccional + audios | 🔴 Alto | 4–6 d | 🌟🌟🌟 | **3** |
-| F9 | Búsqueda global + ⌘K | 🟠 Medio | 2–3 d | 🌟 | **4** |
+| F9 | Búsqueda global + ⌘K | 🟠 Medio | 2–3 d | 🌟 | **4** ✅ |
 | F8 | CSAT real + resumen semanal | 🟠 Medio | 3 d | 🌟🌟 | **5** |
 | F6 | SLA con riesgo de incumplimiento | 🔴 Alto | 4–5 d | 🌟 | **6** |
 | F7 | Triage automático + macros | 🟠 Medio | 3–4 d | 🌟 | **7** |
@@ -469,7 +468,7 @@ lenta es administrativa.
 
 ### Agrupación en entregas
 
-- **Entrega 1 — Cimientos (≈2 semanas):** F0 ✅ + F9. La plataforma aguanta escala y el buscador
+- **Entrega 1 — Cimientos (≈2 semanas):** F0 ✅ + F9 ✅. La plataforma aguanta escala y el buscador
   funciona. Sin features nuevas visibles más allá de la búsqueda, pero es lo que habilita el resto.
 - **Entrega 2 — Inteligencia (≈2 semanas):** F2 + F3. La IA deja de responder a ciegas, se detectan
   duplicados y el centro de ayuda empieza a crecer solo.

@@ -92,6 +92,30 @@ describe('buildTicketQuery', () => {
     });
   });
 
+  it('lets staff filter by client', () => {
+    const query = buildTicketQuery(
+      filter({ client: '507f1f77bcf86cd799439016' }),
+      agent,
+    );
+    expect(query.client).toBe('507f1f77bcf86cd799439016');
+  });
+
+  it('ignores a client filter coming from a client, instead of escalating', () => {
+    const query = buildTicketQuery(
+      filter({ client: '507f1f77bcf86cd799439016' }),
+      client,
+    );
+    expect(query.client).toBe(client.userId);
+  });
+
+  it('ignores a client filter coming from a client in the fallback search too', () => {
+    const query = buildTicketSearchFallback(
+      filter({ search: 'factur', client: '507f1f77bcf86cd799439016' }),
+      client,
+    );
+    expect(query.client).toBe(client.userId);
+  });
+
   it('uses an anchored code regex when the search looks like a ticket code', () => {
     const query = buildTicketQuery(filter({ search: 'TCK-80' }), agent);
     expect(query).toEqual({ code: { $regex: '^TCK-80', $options: 'i' } });

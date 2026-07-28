@@ -20,6 +20,7 @@ export class TicketService {
     if (filter.status) params['status'] = filter.status;
     if (filter.priority) params['priority'] = filter.priority;
     if (filter.category) params['category'] = filter.category;
+    if (filter.client) params['client'] = filter.client;
     if (filter.search) params['search'] = filter.search;
     if (filter.page) params['page'] = String(filter.page);
     if (filter.limit) params['limit'] = String(filter.limit);

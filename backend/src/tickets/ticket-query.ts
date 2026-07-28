@@ -3,14 +3,12 @@ import { TicketDocument } from './schemas/ticket.schema';
 import { FilterTicketDto } from './dto/filter-ticket.dto';
 import { AuthenticatedUser } from '../auth/types/authenticated-user.interface';
 import { Role } from '../common/enums/role.enum';
+import { escapeRegex } from '../common/search/escape-regex';
 
 /** "TCK-8042", "tck8042", or just the start of one. */
 const TICKET_CODE_PATTERN = /^tck-?\d*$/i;
 
-/** Neutralises regex metacharacters so a user typing "(" cannot blow up the query. */
-export function escapeRegex(input: string): string {
-  return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
+export { escapeRegex };
 
 export function looksLikeTicketCode(search: string): boolean {
   return TICKET_CODE_PATTERN.test(search.trim());
@@ -32,9 +30,13 @@ function baseQuery(
 ): QueryFilter<TicketDocument> {
   const query: QueryFilter<TicketDocument> = {};
 
-  // A client only ever sees their own tickets, whatever else they ask for.
+  // A client only ever sees their own tickets, whatever else they ask for. The
+  // client filter is applied only for staff — otherwise passing ?client=<someone
+  // else> would overwrite this scope and hand a client another client's tickets.
   if (requester.role === Role.CLIENT) {
     query.client = requester.userId;
+  } else if (filter.client) {
+    query.client = filter.client;
   }
   if (filter.status) query.status = filter.status;
   if (filter.priority) query.priority = filter.priority;
