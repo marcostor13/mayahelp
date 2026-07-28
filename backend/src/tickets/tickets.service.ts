@@ -297,14 +297,15 @@ export class TicketsService {
 
     const agentNow = ticket.assignedAgent?.toString() ?? null;
     if (agentNow !== before.assignedAgent) {
-      const agentName = agentNow
-        ? await this.safeUserName(agentNow)
-        : 'sin asignar';
+      // Names, not ids, on both sides: the trail is read by humans, and an agent
+      // deleted later would otherwise leave an unresolvable id behind.
       await this.eventsService.record({
         ...base,
         type: agentNow ? TicketEventType.ASSIGNED : TicketEventType.UNASSIGNED,
-        from: before.assignedAgent,
-        to: agentName,
+        from: before.assignedAgent
+          ? await this.safeUserName(before.assignedAgent)
+          : null,
+        to: agentNow ? await this.safeUserName(agentNow) : null,
       });
     }
   }

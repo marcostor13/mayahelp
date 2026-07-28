@@ -155,8 +155,10 @@ que la plataforma aguanta volumen y deja de tener superficie de abuso.
   por instancia. Si se escala horizontalmente hay que pasarlo a Redis.
 - **Historial de auditoría.** Colección nueva `ticketevents` (append-only, en su propia colección
   para no hacer crecer el documento del ticket): creación, cambios de estado/prioridad/categoría,
-  asignaciones, comentarios y respuestas de IA. `GET /tickets/:id/events` y una sección "Historial"
-  plegable en el detalle del ticket.
+  asignaciones, comentarios y respuestas de IA. `GET /tickets/:id/events` (admin/agente: el historial
+  nombra a los agentes asignados y deja ver que la IA redactó una respuesta — el mismo detalle interno
+  que el hilo de comentarios ya le oculta al cliente) y una sección "Historial" plegable en el detalle
+  del ticket.
 - **`Ticket.source`.** Canal de entrada (`portal`, `public_link`, `bulk_import`, `whatsapp`,
   `email`, `api`). Se agrega ahora, antes de que haya histórico sin clasificar; es lo que permitirá
   medir la adopción de los canales nuevos.
