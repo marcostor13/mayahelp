@@ -1,6 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
-import { TicketPriority, TicketStatus } from '../../common/enums/ticket.enum';
+import {
+  TicketPriority,
+  TicketSource,
+  TicketStatus,
+} from '../../common/enums/ticket.enum';
 
 export type TicketDocument = HydratedDocument<Ticket>;
 
@@ -54,6 +58,10 @@ export class Ticket {
   @Prop({ type: String, enum: TicketPriority, default: TicketPriority.MEDIA })
   priority: TicketPriority;
 
+  /** Entry channel. Needed to measure channel adoption; never inferred after the fact. */
+  @Prop({ type: String, enum: TicketSource, default: TicketSource.PORTAL })
+  source: TicketSource;
+
   @Prop({ type: [TicketCommentSchema], default: [] })
   comments: TicketComment[];
 
@@ -68,3 +76,24 @@ export class Ticket {
 }
 
 export const TicketSchema = SchemaFactory.createForClass(Ticket);
+
+// The list endpoint always sorts by createdAt desc, so every filter that has its
+// own index pairs it with createdAt to serve sort and filter from one index.
+TicketSchema.index({ createdAt: -1 });
+TicketSchema.index({ client: 1, createdAt: -1 });
+TicketSchema.index({ status: 1, createdAt: -1 });
+TicketSchema.index({ assignedAgent: 1, status: 1, createdAt: -1 });
+TicketSchema.index({ category: 1, createdAt: -1 });
+TicketSchema.index({ project: 1, createdAt: -1 });
+TicketSchema.index({ priority: 1, createdAt: -1 });
+
+// Mongo allows a single text index per collection, so subject/description/comments
+// share one. Weights make a hit in the subject outrank one buried in a comment.
+TicketSchema.index(
+  { subject: 'text', description: 'text', 'comments.message': 'text' },
+  {
+    name: 'ticket_text_search',
+    default_language: 'spanish',
+    weights: { subject: 10, description: 4, 'comments.message': 1 },
+  },
+);

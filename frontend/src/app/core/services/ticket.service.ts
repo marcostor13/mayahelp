@@ -1,7 +1,14 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
-import { CreateTicketPayload, Ticket, TicketFilter } from '../models/ticket.model';
+import {
+  CreateTicketPayload,
+  SimilarTicket,
+  Ticket,
+  TicketEvent,
+  TicketFilter,
+} from '../models/ticket.model';
+import { Paginated } from '../models/pagination.model';
 
 @Injectable({ providedIn: 'root' })
 export class TicketService {
@@ -14,8 +21,19 @@ export class TicketService {
     if (filter.status) params['status'] = filter.status;
     if (filter.priority) params['priority'] = filter.priority;
     if (filter.category) params['category'] = filter.category;
+    if (filter.client) params['client'] = filter.client;
     if (filter.search) params['search'] = filter.search;
-    return this.http.get<Ticket[]>(this.baseUrl, { params });
+    if (filter.page) params['page'] = String(filter.page);
+    if (filter.limit) params['limit'] = String(filter.limit);
+    return this.http.get<Paginated<Ticket>>(this.baseUrl, { params });
+  }
+
+  similar(id: string) {
+    return this.http.get<SimilarTicket[]>(`${this.baseUrl}/${id}/similar`);
+  }
+
+  events(id: string) {
+    return this.http.get<TicketEvent[]>(`${this.baseUrl}/${id}/events`);
   }
 
   getById(id: string) {

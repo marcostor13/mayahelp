@@ -1,6 +1,8 @@
 import { Component, computed } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
+import { SearchService } from '../../core/services/search.service';
+import { CommandPalette } from '../command-palette/command-palette';
 import { Role } from '../../core/models/user.model';
 
 interface NavItem {
@@ -20,13 +22,16 @@ const NAV_ITEMS: NavItem[] = [
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, CommandPalette],
   templateUrl: './shell.html',
 })
 export class Shell {
   protected readonly navItems = NAV_ITEMS;
 
-  constructor(protected readonly auth: AuthService) {}
+  constructor(
+    protected readonly auth: AuthService,
+    protected readonly search: SearchService,
+  ) {}
 
   protected readonly visibleNavItems = computed(() => {
     const role = this.auth.currentUser()?.role;

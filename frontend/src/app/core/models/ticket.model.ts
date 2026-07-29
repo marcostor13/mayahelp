@@ -2,6 +2,32 @@ import { Category } from './category.model';
 
 export type TicketStatus = 'abierto' | 'en_proceso' | 'resuelto' | 'cerrado';
 export type TicketPriority = 'baja' | 'media' | 'alta';
+export type TicketSource =
+  | 'portal'
+  | 'public_link'
+  | 'bulk_import'
+  | 'whatsapp'
+  | 'email'
+  | 'api';
+
+export type TicketEventType =
+  | 'created'
+  | 'status_changed'
+  | 'priority_changed'
+  | 'category_changed'
+  | 'assigned'
+  | 'unassigned'
+  | 'commented'
+  | 'ai_replied';
+
+export interface TicketEvent {
+  _id: string;
+  actorName: string;
+  type: TicketEventType;
+  from: string | null;
+  to: string | null;
+  createdAt: string;
+}
 
 export interface TicketComment {
   author: string;
@@ -9,6 +35,16 @@ export interface TicketComment {
   message: string;
   isInternal: boolean;
   createdAt: string;
+}
+
+/** Ranked by lexical relevance; a suggestion for a human, not a verdict. */
+export interface SimilarTicket {
+  _id: string;
+  code: string;
+  subject: string;
+  status: TicketStatus;
+  createdAt: string;
+  score: number;
 }
 
 export interface TicketParticipant {
@@ -34,6 +70,7 @@ export interface Ticket {
   assignedAgent: TicketParticipant | null;
   status: TicketStatus;
   priority: TicketPriority;
+  source: TicketSource;
   comments: TicketComment[];
   satisfaction: number | null;
   createdAt: string;
@@ -51,5 +88,8 @@ export interface TicketFilter {
   status?: TicketStatus;
   priority?: TicketPriority;
   category?: string;
+  client?: string;
   search?: string;
+  page?: number;
+  limit?: number;
 }

@@ -1,6 +1,8 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { setServers } from 'node:dns';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
@@ -23,8 +25,14 @@ async function bootstrap() {
   // instead of a system default that may not resolve Atlas SRV records.
   configureDns();
 
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
+
+  // In Coolify every request arrives through Traefik, so without this `req.ip` is
+  // the proxy's address for everyone and the rate limiter would throttle all users
+  // as if they were one. Trust exactly one hop — trusting more would let a client
+  // spoof its own address through X-Forwarded-For and bypass the limit entirely.
+  app.set('trust proxy', 1);
 
   app.use(helmet());
   app.enableCors({
@@ -40,6 +48,22 @@ async function bootstrap() {
     }),
   );
   app.useGlobalFilters(new HttpExceptionFilter());
+
+  // Docs are served everywhere except production, where the schema of a private
+  // support desk is not something to publish without an explicit decision.
+  if (configService.get<string>('nodeEnv') !== 'production') {
+    const config = new DocumentBuilder()
+      .setTitle('MayaHelp API')
+      .setDescription('API de la mesa de ayuda MayaHelp')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build();
+    SwaggerModule.setup(
+      'api/docs',
+      app,
+      SwaggerModule.createDocument(app, config),
+    );
+  }
 
   await app.listen(configService.get<number>('port') ?? 3000);
 }

@@ -3,7 +3,9 @@ import { ProjectsService } from '../projects/projects.service';
 import { UsersService } from '../users/users.service';
 import { TicketsService } from '../tickets/tickets.service';
 import { AttachmentsService } from '../attachments/attachments.service';
+import { RelevanceService } from '../relevance/relevance.service';
 import { CreatePublicObservationDto } from './dto/create-public-observation.dto';
+import { CheckDuplicateDto } from './dto/check-duplicate.dto';
 import { ProjectDocument } from '../projects/schemas/project.schema';
 import { CategoryDocument } from '../categories/schemas/category.schema';
 
@@ -21,6 +23,7 @@ export class PublicService {
     private readonly usersService: UsersService,
     private readonly ticketsService: TicketsService,
     private readonly attachmentsService: AttachmentsService,
+    private readonly relevanceService: RelevanceService,
   ) {}
 
   async getProjectInfo(token: string): Promise<PublicProjectInfo> {
@@ -30,6 +33,32 @@ export class PublicService {
       projectName: project.name,
       projectDescription: project.description,
     };
+  }
+
+  /**
+   * Shown before the reporter submits: during a demo the same bug arrives from five
+   * different people, and each copy costs an agent a triage pass. Deliberately
+   * scoped to unresolved observations of this project, and phrased as a question —
+   * the reporter decides, nothing is blocked.
+   */
+  async findPossibleDuplicates(token: string, dto: CheckDuplicateDto) {
+    const link = await this.projectsService.resolveShareLink(token);
+    const project = link.project as unknown as ProjectDocument;
+
+    const similar = await this.relevanceService.findSimilarTickets({
+      text: `${dto.subject} ${dto.description}`,
+      projectId: project.id,
+      onlyUnresolved: true,
+      limit: 3,
+    });
+
+    // Only what an outsider may see: no client, no agent, no comments.
+    return similar.map((ticket) => ({
+      code: ticket.code,
+      subject: ticket.subject,
+      status: ticket.status,
+      createdAt: ticket.createdAt,
+    }));
   }
 
   async submitObservation(
@@ -52,6 +81,7 @@ export class PublicService {
       category: category.id,
       clientId: client.id,
       projectId: project.id,
+      actorName: `${dto.reporterName} (enlace público)`,
     });
 
     for (const file of files.slice(0, MAX_PUBLIC_FILES)) {

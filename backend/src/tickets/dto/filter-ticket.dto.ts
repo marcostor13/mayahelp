@@ -1,7 +1,12 @@
 import { IsEnum, IsMongoId, IsOptional, IsString } from 'class-validator';
-import { TicketPriority, TicketStatus } from '../../common/enums/ticket.enum';
+import {
+  TicketPriority,
+  TicketSource,
+  TicketStatus,
+} from '../../common/enums/ticket.enum';
+import { PaginationQueryDto } from '../../common/pagination/pagination';
 
-export class FilterTicketDto {
+export class FilterTicketDto extends PaginationQueryDto {
   @IsEnum(TicketStatus)
   @IsOptional()
   status?: TicketStatus;
@@ -17,6 +22,19 @@ export class FilterTicketDto {
   @IsMongoId()
   @IsOptional()
   project?: string;
+
+  @IsMongoId()
+  @IsOptional()
+  assignedAgent?: string;
+
+  /** Staff-only; silently ignored for clients, who are always scoped to themselves. */
+  @IsMongoId()
+  @IsOptional()
+  client?: string;
+
+  @IsEnum(TicketSource)
+  @IsOptional()
+  source?: TicketSource;
 
   @IsString()
   @IsOptional()

@@ -13,3 +13,11 @@ export interface CreatePublicObservationPayload {
 export interface PublicObservationResult {
   code: string;
 }
+
+/** Only what an outsider may see about another reporter's observation. */
+export interface PossibleDuplicate {
+  code: string;
+  subject: string;
+  status: string;
+  createdAt: string;
+}

@@ -40,6 +40,23 @@ export class TicketsController {
     return this.ticketsService.findById(id, user);
   }
 
+  /**
+   * Staff-only: the trail names the assigned agents and records that the AI drafted a
+   * reply, which is exactly the kind of internal detail the comment thread already
+   * hides from clients.
+   */
+  @Get(':id/events')
+  @Roles(Role.ADMIN, Role.AGENT)
+  findEvents(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.ticketsService.findEvents(id, user);
+  }
+
+  @Get(':id/similar')
+  @Roles(Role.ADMIN, Role.AGENT)
+  findSimilar(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.ticketsService.findSimilar(id, user);
+  }
+
   @Patch(':id')
   @Roles(Role.ADMIN, Role.AGENT)
   update(

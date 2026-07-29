@@ -3,7 +3,10 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { PublicObservationService } from '../../../core/services/public-observation.service';
-import { PublicProjectInfo } from '../../../core/models/public-observation.model';
+import {
+  PossibleDuplicate,
+  PublicProjectInfo,
+} from '../../../core/models/public-observation.model';
 
 const MAX_FILES = 5;
 
@@ -21,6 +24,10 @@ export class ObservationForm implements OnInit {
   protected readonly submitError = signal<string | null>(null);
   protected readonly ticketCode = signal<string | null>(null);
   protected readonly maxFiles = MAX_FILES;
+  protected readonly duplicates = signal<PossibleDuplicate[]>([]);
+  protected readonly checkingDuplicates = signal(false);
+  /** True once the reporter has seen the duplicates and chose to send anyway. */
+  protected readonly duplicatesDismissed = signal(false);
 
   protected reporterName = '';
   protected reporterEmail = '';
@@ -61,6 +68,35 @@ export class ObservationForm implements OnInit {
 
   removeFile(index: number): void {
     this.selectedFiles.update((files) => files.filter((_, i) => i !== index));
+  }
+
+  /**
+   * Runs when the reporter leaves the description: late enough to have real text to
+   * match on, early enough to save them from typing the rest of the form.
+   */
+  checkForDuplicates(): void {
+    if (this.subject.trim().length < 3 || this.description.trim().length < 5) return;
+    if (this.duplicatesDismissed()) return;
+
+    this.checkingDuplicates.set(true);
+    this.publicObservationService
+      .checkDuplicates(this.token, this.subject, this.description)
+      .subscribe({
+        next: (found) => {
+          this.duplicates.set(found);
+          this.checkingDuplicates.set(false);
+        },
+        // A failed check must never block reporting — worst case they send a duplicate.
+        error: () => {
+          this.duplicates.set([]);
+          this.checkingDuplicates.set(false);
+        },
+      });
+  }
+
+  dismissDuplicates(): void {
+    this.duplicatesDismissed.set(true);
+    this.duplicates.set([]);
   }
 
   submit(): void {

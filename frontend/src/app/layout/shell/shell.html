@@ -51,15 +51,17 @@
         <img src="/mayahelp-logo.png" alt="MayaHelp" class="h-7 w-auto" />
       </div>
 
+      <!-- A button, not an input: typing happens in the command palette overlay. -->
       <div class="hidden md:flex flex-1 items-center max-w-md">
-        <div class="relative w-full">
-          <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
-          <input
-            class="w-full pl-10 pr-4 py-2 bg-surface-container-low border border-surface-variant rounded-full text-body-sm focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-on-surface"
-            placeholder="Buscar tickets, clientes..."
-            type="text"
-          />
-        </div>
+        <button
+          type="button"
+          (click)="search.open()"
+          class="w-full flex items-center gap-2 pl-3 pr-2 py-2 bg-surface-container-low border border-surface-variant rounded-full text-body-sm text-on-surface-variant hover:border-primary transition-all"
+        >
+          <span class="material-symbols-outlined text-[20px]">search</span>
+          <span class="flex-1 text-left">Buscar tickets, clientes, proyectos...</span>
+          <span class="text-label-xs border border-outline-variant rounded px-1.5 py-0.5">⌘K</span>
+        </button>
       </div>
 
       <div class="flex items-center gap-2">
@@ -112,4 +114,6 @@
   >
     <span class="material-symbols-outlined icon-fill text-[28px]">add</span>
   </a>
+
+  <app-command-palette />
 </div>
