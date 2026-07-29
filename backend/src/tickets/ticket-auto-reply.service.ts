@@ -3,7 +3,7 @@ import { TicketDocument } from './schemas/ticket.schema';
 import { AiService } from '../ai/ai.service';
 import { UsersService } from '../users/users.service';
 import { CategoriesService } from '../categories/categories.service';
-import { ArticlesService } from '../articles/articles.service';
+import { RelevanceService } from '../relevance/relevance.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { TicketEventsService } from './ticket-events.service';
 import { TicketEventType } from './schemas/ticket-event.schema';
@@ -18,7 +18,7 @@ export class TicketAutoReplyService {
     private readonly aiService: AiService,
     private readonly usersService: UsersService,
     private readonly categoriesService: CategoriesService,
-    private readonly articlesService: ArticlesService,
+    private readonly relevanceService: RelevanceService,
     private readonly notificationsService: NotificationsService,
     private readonly eventsService: TicketEventsService,
   ) {}
@@ -33,12 +33,16 @@ export class TicketAutoReplyService {
         return;
       }
 
-      const articles = await this.articlesService.findAll({
-        search: ticket.subject,
-      });
-      const referenceArticles = articles
-        .slice(0, MAX_REFERENCE_ARTICLES)
-        .map((a) => ({ title: a.title, content: a.content }));
+      // Subject *and* description: the subject alone is often too terse to rank
+      // anything ("no funciona"), and the description is where the real terms are.
+      const articles = await this.relevanceService.findRelevantArticles(
+        `${ticket.subject} ${ticket.description}`,
+        MAX_REFERENCE_ARTICLES,
+      );
+      const referenceArticles = articles.map((a) => ({
+        title: a.title,
+        content: a.content,
+      }));
 
       const reply = await this.aiService.suggestReply(
         {

@@ -7,6 +7,7 @@ import { AuthService } from '../../../core/services/auth.service';
 import { AttachmentService } from '../../../core/services/attachment.service';
 import { ExportService } from '../../../core/services/export.service';
 import {
+  SimilarTicket,
   Ticket,
   TicketComment,
   TicketEvent,
@@ -27,6 +28,7 @@ export class TicketDetail implements OnInit {
   protected readonly attachments = signal<Attachment[]>([]);
   protected readonly uploading = signal(false);
   protected readonly events = signal<TicketEvent[]>([]);
+  protected readonly similar = signal<SimilarTicket[]>([]);
   protected readonly showHistory = signal(false);
   protected newComment = '';
 
@@ -52,6 +54,7 @@ export class TicketDetail implements OnInit {
     this.load(id);
     this.loadAttachments(id);
     this.loadEvents(id);
+    this.loadSimilar(id);
   }
 
   toggleHistory(): void {
@@ -87,6 +90,14 @@ export class TicketDetail implements OnInit {
     this.ticketService.getById(id).subscribe((ticket) => {
       this.ticket.set(ticket);
       this.loading.set(false);
+    });
+  }
+
+  private loadSimilar(id: string): void {
+    this.ticketService.similar(id).subscribe({
+      next: (tickets) => this.similar.set(tickets),
+      // Staff-only endpoint; for a client it 403s and the section stays hidden.
+      error: () => this.similar.set([]),
     });
   }
 

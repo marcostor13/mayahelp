@@ -19,6 +19,7 @@ import {
 import { CountersService } from '../common/counters/counters.service';
 import { TicketAutoReplyService } from './ticket-auto-reply.service';
 import { TicketEventsService } from './ticket-events.service';
+import { RelevanceService } from '../relevance/relevance.service';
 import { UsersService } from '../users/users.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { AuthenticatedUser } from '../auth/types/authenticated-user.interface';
@@ -54,6 +55,7 @@ export class TicketsService {
     private readonly countersService: CountersService,
     private readonly autoReplyService: TicketAutoReplyService,
     private readonly eventsService: TicketEventsService,
+    private readonly relevanceService: RelevanceService,
     private readonly usersService: UsersService,
     private readonly notificationsService: NotificationsService,
   ) {}
@@ -212,6 +214,22 @@ export class TicketsService {
     }
     this.assertAccess(ticket, requester);
     return this.eventsService.findByTicket(id);
+  }
+
+  /** Possible duplicates of an existing ticket, ranked by lexical relevance. */
+  async findSimilar(id: string, requester: AuthenticatedUser) {
+    const ticket = await this.ticketModel.findById(id).exec();
+    if (!ticket) {
+      throw new NotFoundException('Ticket no encontrado');
+    }
+    this.assertAccess(ticket, requester);
+
+    return this.relevanceService.findSimilarTickets({
+      text: `${ticket.subject} ${ticket.description}`,
+      excludeTicketId: ticket.id,
+      projectId: ticket.project?.toString(),
+      onlyUnresolved: true,
+    });
   }
 
   async update(id: string, dto: UpdateTicketDto, requester: AuthenticatedUser) {

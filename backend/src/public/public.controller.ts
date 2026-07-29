@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Post,
   UploadedFiles,
@@ -12,6 +14,7 @@ import { Throttle } from '@nestjs/throttler';
 import { memoryStorage } from 'multer';
 import { PublicService } from './public.service';
 import { CreatePublicObservationDto } from './dto/create-public-observation.dto';
+import { CheckDuplicateDto } from './dto/check-duplicate.dto';
 import { Public } from '../common/decorators/public.decorator';
 import { MAX_ATTACHMENT_SIZE_BYTES } from '../attachments/attachment-types';
 
@@ -26,6 +29,16 @@ export class PublicController {
   @Throttle({ default: { ttl: 60_000, limit: 30 } })
   getProjectInfo(@Param('token') token: string) {
     return this.publicService.getProjectInfo(token);
+  }
+
+  @Post(':token/check-duplicates')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { ttl: 60_000, limit: 20 } })
+  checkDuplicates(
+    @Param('token') token: string,
+    @Body() dto: CheckDuplicateDto,
+  ) {
+    return this.publicService.findPossibleDuplicates(token, dto);
   }
 
   /**

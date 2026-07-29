@@ -51,6 +51,12 @@ export class TicketsController {
     return this.ticketsService.findEvents(id, user);
   }
 
+  @Get(':id/similar')
+  @Roles(Role.ADMIN, Role.AGENT)
+  findSimilar(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.ticketsService.findSimilar(id, user);
+  }
+
   @Patch(':id')
   @Roles(Role.ADMIN, Role.AGENT)
   update(

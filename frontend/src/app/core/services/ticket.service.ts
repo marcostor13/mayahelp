@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import {
   CreateTicketPayload,
+  SimilarTicket,
   Ticket,
   TicketEvent,
   TicketFilter,
@@ -25,6 +26,10 @@ export class TicketService {
     if (filter.page) params['page'] = String(filter.page);
     if (filter.limit) params['limit'] = String(filter.limit);
     return this.http.get<Paginated<Ticket>>(this.baseUrl, { params });
+  }
+
+  similar(id: string) {
+    return this.http.get<SimilarTicket[]>(`${this.baseUrl}/${id}/similar`);
   }
 
   events(id: string) {

@@ -21,6 +21,7 @@ import { AiModule } from './ai/ai.module';
 import { ProjectsModule } from './projects/projects.module';
 import { PublicModule } from './public/public.module';
 import { SearchModule } from './search/search.module';
+import { RelevanceModule } from './relevance/relevance.module';
 import { WhatsAppTemplatesModule } from './whatsapp-templates/whatsapp-templates.module';
 
 @Module({
@@ -50,6 +51,7 @@ import { WhatsAppTemplatesModule } from './whatsapp-templates/whatsapp-templates
     ProjectsModule,
     PublicModule,
     SearchModule,
+    RelevanceModule,
     WhatsAppTemplatesModule,
   ],
   controllers: [AppController],

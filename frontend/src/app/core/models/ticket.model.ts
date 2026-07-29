@@ -37,6 +37,16 @@ export interface TicketComment {
   createdAt: string;
 }
 
+/** Ranked by lexical relevance; a suggestion for a human, not a verdict. */
+export interface SimilarTicket {
+  _id: string;
+  code: string;
+  subject: string;
+  status: TicketStatus;
+  createdAt: string;
+  score: number;
+}
+
 export interface TicketParticipant {
   _id: string;
   name: string;

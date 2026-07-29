@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import {
   CreatePublicObservationPayload,
+  PossibleDuplicate,
   PublicObservationResult,
   PublicProjectInfo,
 } from '../models/public-observation.model';
@@ -15,6 +16,13 @@ export class PublicObservationService {
 
   getProjectInfo(token: string) {
     return this.http.get<PublicProjectInfo>(`${this.baseUrl}/${token}`);
+  }
+
+  checkDuplicates(token: string, subject: string, description: string) {
+    return this.http.post<PossibleDuplicate[]>(
+      `${this.baseUrl}/${token}/check-duplicates`,
+      { subject, description },
+    );
   }
 
   submit(token: string, payload: CreatePublicObservationPayload, files: File[]) {

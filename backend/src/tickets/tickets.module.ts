@@ -11,7 +11,7 @@ import { TicketEventsService } from './ticket-events.service';
 import { CountersModule } from '../common/counters/counters.module';
 import { UsersModule } from '../users/users.module';
 import { CategoriesModule } from '../categories/categories.module';
-import { ArticlesModule } from '../articles/articles.module';
+import { RelevanceModule } from '../relevance/relevance.module';
 import { AiModule } from '../ai/ai.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 
@@ -24,7 +24,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     CountersModule,
     UsersModule,
     CategoriesModule,
-    ArticlesModule,
+    RelevanceModule,
     AiModule,
     NotificationsModule,
   ],

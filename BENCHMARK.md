@@ -503,7 +503,7 @@ lenta es administrativa.
 |---|---|---|---|
 | D5 | Motor de transcripción de audio (F1) | NVIDIA Riva/Parakeet · Groq Whisper · OpenAI Whisper | **Groq Whisper** — barato, rápido, español sólido, API compatible; NVIDIA Riva mantiene un solo proveedor pero su API no es OpenAI-compatible y agrega trabajo |
 | D6 | Modelo de embeddings (F2) | `nvidia/nv-embedqa-e5-v5` (NVIDIA) · `text-embedding-3-small` (OpenAI) | **NVIDIA** — mismo proveedor y misma clave que ya está configurada |
-| D7 | Nivel de Atlas para `$vectorSearch` (F2) | M0 gratuito soporta vector search con límites · M10+ | Verificar el cluster actual antes de empezar F2 |
+| D7 | Nivel de Atlas para `$vectorSearch` (F2) | Flex · Dedicado M10+ | ⚠️ **Corrección:** se verificó y el M0 gratuito **no** figura como soportado; M2/M5 dejaron de existir en enero de 2026 (migrados a Flex). Hay que confirmar en qué tier está el cluster antes de la capa semántica. La capa léxica ya está implementada y funciona en cualquier tier |
 | D8 | Cierre automático de ticket al mergear el PR (F5) | Sí · Solo sugerir | **Solo sugerir por defecto**, configurable por proyecto |
 | D9 | ¿Multi-tenant real? | `company` sigue siendo texto libre en `User` · Modelar `Organization` | No bloquea nada del plan, pero si MayaHelp va a venderse a varias agencias hay que decidirlo **antes** de F5 y F6, porque ambas cuelgan configuración del proyecto |
 

@@ -220,6 +220,59 @@ hacía absolutamente nada. Esta fase lo reemplaza por una búsqueda real.
 - [x] Frontend: el buscador del topbar abre la paleta (antes no hacía nada)
 - [ ] Pendiente: la campana de notificaciones del topbar sigue sin funcionalidad (no es parte de F9)
 
+## Fase 6 — Relevancia léxica (capa 1 de F2 del `BENCHMARK.md`)
+
+**D7 sigue sin resolverse y ahora se sabe por qué importa.** `$vectorSearch` **no** está disponible
+en cualquier tier: se soporta en clusters **Flex** y **dedicados M10+**, y los gratuitos **M0 no
+figuran como soportados**. Además **M2 y M5 dejaron de existir en enero de 2026** (migrados
+automáticamente a Flex). Hasta saber en qué tier está el cluster de producción, la capa semántica
+no se puede dar por disponible.
+
+Pero el problema concreto que motivaba F2 **no necesita embeddings**: la auto-respuesta fallaba
+porque buscaba artículos con un `$regex` de la frase completa. Con el índice de texto de la Fase 0
+eso se arregla hoy, en cualquier tier. Esta fase entrega esa capa; la semántica se enchufa después
+detrás de la misma interfaz.
+
+### Qué se hizo
+
+- **`RelevanceService`** (módulo `relevance`): relevancia léxica sobre los índices de texto, con
+  `findRelevantArticles(text, limit)` y `findSimilarTickets({text, projectId, onlyUnresolved, ...})`,
+  ambos ordenados por `textScore`. **Es la costura donde entra F2**: cuando el cluster soporte
+  `$vectorSearch`, estos dos métodos ganan un camino con embeddings y esta implementación queda como
+  fallback — los llamadores no cambian.
+- **`extractSearchTerms`** (puro, con 15 tests): convierte texto libre en los términos del `$text`.
+  Descarta palabras de menos de 4 caracteres, ruido de dominio que haría match con casi todo
+  (`problema`, `error`, `urgente`, `sistema`…) y limita a 12 términos, porque una descripción larga
+  produce una query que matchea media colección y no rankea nada. Preserva el orden, así que las
+  palabras con las que arrancó el reportante sobreviven al corte.
+- **Auto-respuesta arreglada**: usa asunto **y** descripción (el asunto solo suele ser demasiado
+  escueto para rankear: "no funciona") contra los artículos publicados. Antes, en la práctica, la IA
+  respondía sin ningún contexto del Centro de Ayuda.
+- **Posibles duplicados para el staff**: `GET /tickets/:id/similar` (admin/agente) + sección en el
+  detalle del ticket. Solo considera tickets sin resolver del mismo proyecto — un ticket cerrado no
+  es un duplicado que fusionar, es historia.
+- **"¿Es alguna de estas?" en el formulario público**: `POST /public/observations/:token/check-duplicates`
+  se dispara al salir del campo de descripción y muestra las observaciones parecidas sin resolver del
+  proyecto. Devuelve **solo** código, asunto, estado y fecha — nada del cliente, agente ni comentarios.
+  Nunca bloquea el envío: si el chequeo falla, se envía igual.
+
+### Límites conocidos
+
+- El umbral de duplicados es un piso sobre el `textScore` de Mongo, que es **relativo al corpus y no
+  acotado**: sirve para descartar coincidencias de una sola palabra, no es una medida de similitud.
+  Por eso todo se presenta como sugerencia para que decida una persona. La capa semántica es la que
+  da un umbral con significado real.
+- La lista de ruido de dominio está en español y hardcodeada en `relevance/search-terms.ts`.
+
+### Estado
+
+- [x] `RelevanceService` + `extractSearchTerms` con tests
+- [x] Auto-respuesta usando relevancia real en vez del `$regex` roto
+- [x] Duplicados sugeridos en el detalle del ticket (staff)
+- [x] "¿Es alguna de estas?" en el formulario público de observaciones
+- [ ] Capa semántica (embeddings + `$vectorSearch`): **bloqueada por D7** — requiere confirmar que el
+      cluster es Flex o M10+, y cargar `NVIDIA_API_KEY`
+
 ## Branding
 
 - Logo oficial (`kitui/mayahelp_logo/screen.png`, wordmark con ícono) copiado a `frontend/public/mayahelp-logo.png`
