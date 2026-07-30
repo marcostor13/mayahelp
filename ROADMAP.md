@@ -157,6 +157,25 @@ tomar foto, grabar video, grabar audio o subir un archivo, usando la cámara/mic
 - Si el navegador no soporta `getUserMedia`/`MediaRecorder` (o el usuario niega permisos), se degrada con un
   mensaje de error y el botón de "Subir archivo" (selector normal) sigue funcionando siempre.
 
+## Página pública como app de una sola pantalla
+
+Pedido: que la página pública de observaciones se sienta como una app (no como un formulario web genérico),
+en una sola pantalla, en celular y desktop; y que al enviar un ticket haya un botón "Generar otro" que
+mantenga seleccionada la persona que reportó.
+
+- Rediseño `observation-form` como app-shell real: `h-dvh overflow-hidden` + `flex flex-col` con header y
+  barra de acción inferior fijos (`shrink-0`, fuera del área con scroll) y un `<main>` con `overflow-y-auto`
+  como única región que se desplaza. Se usó `h-dvh` (dynamic viewport height) en vez de `h-screen`/`100vh` para
+  que la barra de acción no quede tapada por la barra de direcciones del navegador en celular.
+- Importante: la barra de acción inferior está fuera del `<form>` (para no vivir dentro del área con scroll) y
+  se conecta al submit vía el atributo HTML `form="observation-form"` en el botón — soportado nativamente por
+  los navegadores, dispara el `(ngSubmit)` del formulario igual que si el botón estuviera adentro.
+- El botón de envío se deshabilita en vivo (`canSubmit`) en vez de solo mostrar error después de intentar
+  enviar sin completar los campos.
+- Tras enviar un ticket, la barra de acción cambia a un botón **"Generar otro"** (`resetForAnother()`) que limpia
+  descripción, categoría (vuelve a la sugerida del proyecto) y adjuntos, pero **mantiene seleccionada la persona
+  que reportó** — pensado para cuando la misma persona reporta varias observaciones seguidas.
+
 ## Gaps detectados (backend listo, sin UI todavía)
 
 - [x] **Gestión de categorías** — resuelto: sección `/categories` (solo admin) con tabs Tickets/Artículos, CRUD

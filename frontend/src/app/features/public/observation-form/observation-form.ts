@@ -64,6 +64,19 @@ export class ObservationForm implements OnInit {
     this.selectedFiles.update((files) => files.filter((_, i) => i !== index));
   }
 
+  get canSubmit(): boolean {
+    return !!this.reporterId && !!this.category && this.description.trim().length >= 5;
+  }
+
+  resetForAnother(): void {
+    this.ticketCode.set(null);
+    this.submitError.set(null);
+    this.description = '';
+    this.category = this.project()?.defaultCategoryId ?? '';
+    this.selectedFiles.set([]);
+    // reporterId is intentionally kept — the same person usually reports several observations in a row.
+  }
+
   submit(): void {
     this.submitError.set(null);
     if (!this.reporterId || !this.description || !this.category) {
