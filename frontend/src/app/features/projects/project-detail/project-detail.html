@@ -327,4 +327,170 @@
       </div>
     </div>
   </div>
+
+  <!-- Repositorio para implementar con Claude Code -->
+  <div
+    class="mt-stack-lg bg-surface-container-lowest rounded-2xl p-4 md:p-6 ambient-shadow-sm flex flex-col gap-stack-md"
+  >
+    <div class="flex items-start justify-between gap-2">
+      <div class="min-w-0">
+        <h3 class="text-headline-lg-mobile text-on-background flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary">rocket_launch</span>
+          Implementar con Claude Code
+        </h3>
+        <p class="text-body-sm text-on-surface-variant mt-0.5">
+          Conectá el repositorio donde vive este proyecto para poder disparar los tickets desde
+          <a routerLink="/tickets" class="underline inline-block py-1.5">la lista de tickets</a>.
+        </p>
+      </div>
+      @if (repo(); as connected) {
+        <span
+          class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-label-xs shrink-0"
+          [class]="
+            connected.isActive
+              ? 'bg-emerald-100 text-emerald-800'
+              : 'bg-surface-container-high text-on-surface-variant'
+          "
+        >
+          {{ connected.isActive ? 'Conectado' : 'Pausado' }}
+        </span>
+      }
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div>
+        <label class="block text-label-md text-on-background mb-stack-sm" for="repo-owner"
+          >Propietario</label
+        >
+        <input
+          id="repo-owner"
+          [(ngModel)]="repoOwner"
+          type="text"
+          placeholder="mi-usuario"
+          class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+        />
+      </div>
+      <div>
+        <label class="block text-label-md text-on-background mb-stack-sm" for="repo-name"
+          >Repositorio</label
+        >
+        <input
+          id="repo-name"
+          [(ngModel)]="repoName"
+          type="text"
+          placeholder="mi-proyecto"
+          class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+        />
+      </div>
+      <div>
+        <label class="block text-label-md text-on-background mb-stack-sm" for="repo-branch"
+          >Rama base</label
+        >
+        <input
+          id="repo-branch"
+          [(ngModel)]="repoBaseBranch"
+          type="text"
+          placeholder="main"
+          class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+        />
+      </div>
+      <div>
+        <label class="block text-label-md text-on-background mb-stack-sm" for="repo-token">
+          Token de GitHub
+        </label>
+        <input
+          id="repo-token"
+          [(ngModel)]="repoToken"
+          type="password"
+          autocomplete="new-password"
+          [placeholder]="
+            repo()?.hasToken ? 'Guardado — escribí para reemplazarlo' : 'ghp_... o github_pat_...'
+          "
+          class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+        />
+      </div>
+    </div>
+
+    <div>
+      <label class="block text-label-md text-on-background mb-stack-sm" for="repo-instructions">
+        Contexto del proyecto (se agrega a cada pedido)
+      </label>
+      <textarea
+        id="repo-instructions"
+        [(ngModel)]="repoInstructions"
+        rows="3"
+        placeholder="Ej: monorepo con NestJS en /api y Next.js en /web. No toques /infra."
+        class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+      ></textarea>
+    </div>
+
+    <label class="check-row items-start">
+      <input
+        type="checkbox"
+        [(ngModel)]="repoAutoMerge"
+        class="h-5 w-5 mt-0.5 rounded border border-outline-variant accent-primary cursor-pointer"
+      />
+      <span class="min-w-0">
+        <span class="block text-body-sm text-on-surface">Mergear solo cuando el CI pase</span>
+        <span class="block text-label-xs text-on-surface-variant">
+          El pull request va directo a la rama base y dispara el despliegue sin que nadie lea el
+          diff. Si el repositorio no corre ningún chequeo, MayaHelp no mergea.
+        </span>
+      </span>
+    </label>
+
+    <label class="check-row">
+      <input
+        type="checkbox"
+        [(ngModel)]="repoActive"
+        class="h-5 w-5 rounded border border-outline-variant accent-primary cursor-pointer"
+      />
+      <span class="text-body-sm text-on-surface">Permitir disparar implementaciones</span>
+    </label>
+
+    <p class="text-label-xs text-on-surface-variant flex items-start gap-1.5">
+      <span class="material-symbols-outlined text-[16px] shrink-0">lock</span>
+      <span class="min-w-0 break-words">
+        El token se guarda cifrado y no vuelve a mostrarse. Necesita permisos de contents, pull
+        requests y actions sobre el repositorio, que además tiene que tener el workflow
+        <code class="break-all">claude-implement.yml</code> y el secret
+        <code class="break-all">CLAUDE_CODE_OAUTH_TOKEN</code> (se genera con
+        <code class="break-all">claude setup-token</code> y usa tu suscripción de Claude Code).
+      </span>
+    </p>
+
+    @if (repoError()) {
+      <p class="text-body-sm text-error">{{ repoError() }}</p>
+    }
+    @if (repoSaved()) {
+      <p class="text-body-sm text-emerald-600 flex items-center gap-1.5">
+        <span class="material-symbols-outlined text-[18px]">check_circle</span>
+        Repositorio verificado y guardado.
+      </p>
+    }
+
+    <div class="flex flex-wrap items-center gap-4">
+      <button
+        type="button"
+        (click)="saveRepo()"
+        [disabled]="!canSaveRepo || repoSaving()"
+        class="inline-flex items-center gap-2 bg-primary-container text-on-primary text-label-md py-2.5 px-5 rounded-xl hover:bg-primary transition-colors disabled:opacity-50"
+      >
+        <span class="material-symbols-outlined text-[18px]" [class.animate-spin]="repoSaving()">
+          {{ repoSaving() ? 'progress_activity' : 'save' }}
+        </span>
+        Guardar repositorio
+      </button>
+      @if (repo()) {
+        <a routerLink="/implementations" class="link-action">
+          <span class="material-symbols-outlined text-[18px]">list_alt</span>
+          Ver implementaciones
+        </a>
+        <button type="button" (click)="disconnectRepo()" class="link-action link-action--danger">
+          <span class="material-symbols-outlined text-[18px]">link_off</span>
+          Desconectar
+        </button>
+      }
+    </div>
+  </div>
 }

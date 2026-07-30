@@ -8,5 +8,6 @@ import { AttachmentsModule } from '../attachments/attachments.module';
   imports: [TicketsModule, AttachmentsModule],
   controllers: [ExportController],
   providers: [ExportService],
+  exports: [ExportService],
 })
 export class ExportModule {}

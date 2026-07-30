@@ -5,6 +5,8 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ProjectService, ReporterInput } from '../../../core/services/project.service';
 import { CategoryService } from '../../../core/services/category.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { ImplementationService } from '../../../core/services/implementation.service';
+import { ProjectRepo } from '../../../core/models/implementation.model';
 import { Project, ProjectShareLink, ProjectStatus } from '../../../core/models/project.model';
 import { Category } from '../../../core/models/category.model';
 
@@ -25,6 +27,19 @@ export class ProjectDetail implements OnInit {
   protected readonly expandedLinkId = signal<string | null>(null);
   protected readonly newLinkReporters = signal<ReporterInput[]>([]);
 
+  // --- repositorio para Claude Code ---
+  protected readonly repo = signal<ProjectRepo | null>(null);
+  protected readonly repoSaving = signal(false);
+  protected readonly repoError = signal<string | null>(null);
+  protected readonly repoSaved = signal(false);
+  protected repoOwner = '';
+  protected repoName = '';
+  protected repoBaseBranch = 'main';
+  protected repoToken = '';
+  protected repoInstructions = '';
+  protected repoAutoMerge = false;
+  protected repoActive = true;
+
   protected name = '';
   protected description = '';
   protected status: ProjectStatus = 'in_progress';
@@ -43,6 +58,7 @@ export class ProjectDetail implements OnInit {
     private readonly router: Router,
     private readonly projectService: ProjectService,
     private readonly categoryService: CategoryService,
+    private readonly implementationService: ImplementationService,
     protected readonly auth: AuthService,
   ) {}
 
@@ -53,6 +69,7 @@ export class ProjectDetail implements OnInit {
   ngOnInit(): void {
     this.projectId = this.route.snapshot.paramMap.get('id') ?? '';
     this.categoryService.list('ticket').subscribe((categories) => this.categories.set(categories));
+    this.loadRepo();
     this.load();
   }
 
@@ -66,7 +83,9 @@ export class ProjectDetail implements OnInit {
       this.defaultCategory = project.defaultCategory?._id ?? '';
       this.loading.set(false);
     });
-    this.projectService.listShareLinks(this.projectId).subscribe((links) => this.shareLinks.set(links));
+    this.projectService
+      .listShareLinks(this.projectId)
+      .subscribe((links) => this.shareLinks.set(links));
   }
 
   saveDetails(): void {
@@ -175,7 +194,83 @@ export class ProjectDetail implements OnInit {
   }
 
   deleteProject(): void {
-    if (!confirm('¿Eliminar este proyecto y todos sus enlaces? Esta acción no se puede deshacer.')) return;
+    if (!confirm('¿Eliminar este proyecto y todos sus enlaces? Esta acción no se puede deshacer.'))
+      return;
     this.projectService.remove(this.projectId).subscribe(() => this.router.navigate(['/projects']));
+  }
+
+  // --- repositorio para Claude Code ---------------------------------------
+
+  private loadRepo(): void {
+    this.implementationService.getRepo(this.projectId).subscribe({
+      next: (repo) => {
+        this.repo.set(repo);
+        if (!repo) return;
+        this.repoOwner = repo.owner;
+        this.repoName = repo.repo;
+        this.repoBaseBranch = repo.baseBranch;
+        this.repoInstructions = repo.instructions;
+        this.repoAutoMerge = repo.autoMerge;
+        this.repoActive = repo.isActive;
+      },
+      error: () => this.repo.set(null),
+    });
+  }
+
+  get canSaveRepo(): boolean {
+    // The token is only required the first time; afterwards the stored one is kept.
+    return (
+      this.repoOwner.trim().length > 0 &&
+      this.repoName.trim().length > 0 &&
+      (!!this.repo()?.hasToken || this.repoToken.trim().length > 0)
+    );
+  }
+
+  saveRepo(): void {
+    if (!this.canSaveRepo || this.repoSaving()) return;
+    this.repoSaving.set(true);
+    this.repoError.set(null);
+    this.repoSaved.set(false);
+    this.implementationService
+      .saveRepo(this.projectId, {
+        owner: this.repoOwner.trim(),
+        repo: this.repoName.trim(),
+        baseBranch: this.repoBaseBranch.trim() || undefined,
+        instructions: this.repoInstructions.trim(),
+        autoMerge: this.repoAutoMerge,
+        isActive: this.repoActive,
+        token: this.repoToken.trim() || undefined,
+      })
+      .subscribe({
+        next: (repo) => {
+          this.repo.set(repo);
+          this.repoToken = '';
+          this.repoBaseBranch = repo.baseBranch;
+          this.repoSaving.set(false);
+          this.repoSaved.set(true);
+        },
+        error: (err: { error?: { message?: string | string[] } }) => {
+          this.repoError.set(
+            err.error?.message?.toString() ?? 'No se pudo guardar el repositorio.',
+          );
+          this.repoSaving.set(false);
+        },
+      });
+  }
+
+  disconnectRepo(): void {
+    if (!confirm('¿Desconectar el repositorio? Se borra el token guardado.')) return;
+    this.implementationService.removeRepo(this.projectId).subscribe({
+      next: () => {
+        this.repo.set(null);
+        this.repoOwner = '';
+        this.repoName = '';
+        this.repoToken = '';
+        this.repoInstructions = '';
+        this.repoAutoMerge = false;
+        this.repoActive = true;
+      },
+      error: () => this.repoError.set('No se pudo desconectar el repositorio.'),
+    });
   }
 }

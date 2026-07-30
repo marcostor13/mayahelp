@@ -21,7 +21,12 @@
 
     <div class="flex items-center gap-2 shrink-0">
       @if (canBulkImport) {
-        <a routerLink="/tickets/bulk-import" class="ticket-icon-btn" title="Carga masiva" aria-label="Carga masiva">
+        <a
+          routerLink="/tickets/bulk-import"
+          class="ticket-icon-btn"
+          title="Carga masiva"
+          aria-label="Carga masiva"
+        >
           <span class="material-symbols-outlined text-[22px]">upload_file</span>
         </a>
       }
@@ -30,23 +35,43 @@
         (click)="exportMarkdown()"
         [disabled]="exporting()"
         class="ticket-icon-btn"
-        [title]="selectedIds().size > 0 ? 'Markdown de los ' + selectedIds().size + ' seleccionados' : 'Markdown de todos los tickets filtrados'"
-        [attr.aria-label]="selectedIds().size > 0 ? 'Descargar markdown de los seleccionados' : 'Descargar markdown de todos'"
+        [title]="
+          selectedIds().size > 0
+            ? 'Markdown de los ' + selectedIds().size + ' seleccionados'
+            : 'Markdown de todos los tickets filtrados'
+        "
+        [attr.aria-label]="
+          selectedIds().size > 0
+            ? 'Descargar markdown de los seleccionados'
+            : 'Descargar markdown de todos'
+        "
       >
-        <span class="material-symbols-outlined text-[22px]">{{ exporting() ? 'progress_activity' : 'description' }}</span>
+        <span class="material-symbols-outlined text-[22px]">{{
+          exporting() ? 'progress_activity' : 'description'
+        }}</span>
       </button>
-      <a routerLink="/tickets/new" class="ticket-icon-btn ticket-icon-btn--primary hidden sm:inline-flex" title="Nuevo ticket" aria-label="Nuevo ticket">
+      <a
+        routerLink="/tickets/new"
+        class="ticket-icon-btn ticket-icon-btn--primary hidden sm:inline-flex"
+        title="Nuevo ticket"
+        aria-label="Nuevo ticket"
+      >
         <span class="material-symbols-outlined icon-fill text-[22px]">add</span>
       </a>
     </div>
   </div>
 
   <!-- Buscador + filtros -->
-  <div class="bg-surface-container-lowest border border-surface-container-highest rounded-2xl ambient-shadow-sm">
+  <div
+    class="bg-surface-container-lowest border border-surface-container-highest rounded-2xl ambient-shadow-sm"
+  >
     <!-- En mobile la búsqueda ocupa su propia fila; los controles van abajo. -->
     <div class="p-3 flex flex-col sm:flex-row sm:items-center gap-2">
       <div class="relative flex-1 min-w-0">
-        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
+        <span
+          class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]"
+          >search</span
+        >
         <input
           [(ngModel)]="search"
           (keyup.enter)="load()"
@@ -58,44 +83,48 @@
       </div>
 
       <div class="flex items-center gap-2">
-      <button
-        type="button"
-        (click)="filtersOpen.set(!filtersOpen())"
-        class="ticket-icon-btn relative shrink-0"
-        [class.ticket-icon-btn--active]="filtersOpen() || appliedFilterCount > 0"
-        title="Filtros"
-        aria-label="Filtros"
-      >
-        <span class="material-symbols-outlined text-[22px]">filter_alt</span>
-        @if (appliedFilterCount > 0) {
-          <span class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-on-primary text-[11px] font-bold flex items-center justify-center">
-            {{ appliedFilterCount }}
-          </span>
-        }
-      </button>
-
-      <!-- Orden (mobile: el desktop ordena desde los encabezados) -->
-      <div class="lg:hidden flex-1 min-w-0">
-        <select
-          [(ngModel)]="sortField"
-          (ngModelChange)="load()"
-          aria-label="Ordenar por"
-          class="w-full h-11 bg-surface border border-outline-variant rounded-xl px-3 text-body-sm text-on-surface focus:border-primary outline-none"
+        <button
+          type="button"
+          (click)="filtersOpen.set(!filtersOpen())"
+          class="ticket-icon-btn relative shrink-0"
+          [class.ticket-icon-btn--active]="filtersOpen() || appliedFilterCount > 0"
+          title="Filtros"
+          aria-label="Filtros"
         >
-          @for (column of sortableColumns; track column.field) {
-            <option [value]="column.field">{{ column.label }}</option>
+          <span class="material-symbols-outlined text-[22px]">filter_alt</span>
+          @if (appliedFilterCount > 0) {
+            <span
+              class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-on-primary text-[11px] font-bold flex items-center justify-center"
+            >
+              {{ appliedFilterCount }}
+            </span>
           }
-        </select>
-      </div>
-      <button
-        type="button"
-        (click)="sortBy(sortField)"
-        class="ticket-icon-btn lg:hidden shrink-0"
-        [title]="sortOrder === 'asc' ? 'Ascendente' : 'Descendente'"
-        aria-label="Cambiar dirección del orden"
-      >
-        <span class="material-symbols-outlined text-[22px]">{{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</span>
-      </button>
+        </button>
+
+        <!-- Orden (mobile: el desktop ordena desde los encabezados) -->
+        <div class="lg:hidden flex-1 min-w-0">
+          <select
+            [(ngModel)]="sortField"
+            (ngModelChange)="load()"
+            aria-label="Ordenar por"
+            class="w-full h-11 bg-surface border border-outline-variant rounded-xl px-3 text-body-sm text-on-surface focus:border-primary outline-none"
+          >
+            @for (column of sortableColumns; track column.field) {
+              <option [value]="column.field">{{ column.label }}</option>
+            }
+          </select>
+        </div>
+        <button
+          type="button"
+          (click)="sortBy(sortField)"
+          class="ticket-icon-btn lg:hidden shrink-0"
+          [title]="sortOrder === 'asc' ? 'Ascendente' : 'Descendente'"
+          aria-label="Cambiar dirección del orden"
+        >
+          <span class="material-symbols-outlined text-[22px]">{{
+            sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward'
+          }}</span>
+        </button>
       </div>
     </div>
 
@@ -119,7 +148,9 @@
         </div>
 
         <div>
-          <p class="text-label-xs text-on-surface-variant uppercase tracking-wider mb-2">Prioridad</p>
+          <p class="text-label-xs text-on-surface-variant uppercase tracking-wider mb-2">
+            Prioridad
+          </p>
           <div class="flex flex-wrap gap-2">
             @for (meta of priorityMeta; track meta.value) {
               <button
@@ -137,7 +168,10 @@
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label class="block text-label-xs text-on-surface-variant uppercase tracking-wider mb-2" for="category-filter">
+            <label
+              class="block text-label-xs text-on-surface-variant uppercase tracking-wider mb-2"
+              for="category-filter"
+            >
               Categoría
             </label>
             <select
@@ -155,7 +189,10 @@
 
           @if (canManage) {
             <div>
-              <label class="block text-label-xs text-on-surface-variant uppercase tracking-wider mb-2" for="project-filter">
+              <label
+                class="block text-label-xs text-on-surface-variant uppercase tracking-wider mb-2"
+                for="project-filter"
+              >
                 Proyecto
               </label>
               <select
@@ -174,11 +211,7 @@
         </div>
 
         @if (appliedFilterCount > 0) {
-          <button
-            type="button"
-            (click)="clearFilters()"
-            class="link-action self-start"
-          >
+          <button type="button" (click)="clearFilters()" class="link-action self-start">
             <span class="material-symbols-outlined text-[18px]">filter_alt_off</span>
             Limpiar filtros
           </button>
@@ -189,17 +222,48 @@
 
   <!-- Barra de selección -->
   @if (selectedIds().size > 0) {
-    <div class="sticky top-16 z-30 bg-primary-fixed border border-primary-fixed-dim rounded-2xl px-3 py-2 flex items-center gap-2 ambient-shadow-md">
+    <div
+      class="sticky top-16 z-30 bg-primary-fixed border border-primary-fixed-dim rounded-2xl px-3 py-2 flex items-center gap-2 ambient-shadow-md"
+    >
       <span class="text-label-md text-on-primary-fixed flex-1 min-w-0 truncate">
         {{ selectedIds().size }} seleccionado(s)
       </span>
-      <button type="button" (click)="exportMarkdown()" class="ticket-icon-btn" title="Markdown combinado" aria-label="Markdown combinado">
+      <button
+        type="button"
+        (click)="exportMarkdown()"
+        class="ticket-icon-btn"
+        title="Markdown combinado"
+        aria-label="Markdown combinado"
+      >
         <span class="material-symbols-outlined text-[22px]">description</span>
       </button>
-      <button type="button" (click)="exportZip()" class="ticket-icon-btn" title="ZIP con un .md por ticket" aria-label="ZIP con un markdown por ticket">
+      <button
+        type="button"
+        (click)="exportZip()"
+        class="ticket-icon-btn"
+        title="ZIP con un .md por ticket"
+        aria-label="ZIP con un markdown por ticket"
+      >
         <span class="material-symbols-outlined text-[22px]">folder_zip</span>
       </button>
-      <button type="button" (click)="clearSelection()" class="ticket-icon-btn" title="Quitar selección" aria-label="Quitar selección">
+      @if (auth.currentUser()?.role !== 'client') {
+        <button
+          type="button"
+          (click)="openImplement()"
+          class="ticket-icon-btn ticket-icon-btn--primary"
+          title="Implementar con Claude Code"
+          aria-label="Implementar con Claude Code"
+        >
+          <span class="material-symbols-outlined icon-fill text-[22px]">rocket_launch</span>
+        </button>
+      }
+      <button
+        type="button"
+        (click)="clearSelection()"
+        class="ticket-icon-btn"
+        title="Quitar selección"
+        aria-label="Quitar selección"
+      >
         <span class="material-symbols-outlined text-[22px]">close</span>
       </button>
     </div>
@@ -207,7 +271,9 @@
 
   @if (loading()) {
     <div class="py-16 flex flex-col items-center gap-3 text-center">
-      <span class="material-symbols-outlined text-primary text-4xl animate-spin">progress_activity</span>
+      <span class="material-symbols-outlined text-primary text-4xl animate-spin"
+        >progress_activity</span
+      >
       <p class="text-body-sm text-on-surface-variant">Cargando tickets...</p>
     </div>
   } @else if (tickets().length === 0) {
@@ -215,14 +281,14 @@
       <span class="material-symbols-outlined text-on-surface-variant text-5xl">inbox</span>
       <p class="text-body-md text-on-surface">No hay tickets para mostrar.</p>
       @if (appliedFilterCount > 0) {
-        <button type="button" (click)="clearFilters()" class="link-action">
-          Limpiar filtros
-        </button>
+        <button type="button" (click)="clearFilters()" class="link-action">Limpiar filtros</button>
       }
     </div>
   } @else {
     <!-- Tabla (desktop) -->
-    <div class="hidden lg:block bg-surface-container-lowest border border-surface-container-highest rounded-2xl ambient-shadow-sm overflow-hidden">
+    <div
+      class="hidden lg:block bg-surface-container-lowest border border-surface-container-highest rounded-2xl ambient-shadow-sm overflow-hidden"
+    >
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
           <thead>
@@ -244,18 +310,40 @@
                   [class.text-primary]="sortField === column.field"
                   [class.text-on-surface-variant]="sortField !== column.field"
                 >
-                  <button type="button" (click)="sortBy(column.field)" class="flex items-center gap-1 hover:text-primary transition-colors">
+                  <button
+                    type="button"
+                    (click)="sortBy(column.field)"
+                    class="flex items-center gap-1 hover:text-primary transition-colors"
+                  >
                     {{ column.label }}
-                    <span class="material-symbols-outlined text-[16px]">{{ sortIcon(column.field) }}</span>
+                    <span class="material-symbols-outlined text-[16px]">{{
+                      sortIcon(column.field)
+                    }}</span>
                   </button>
                 </th>
               }
-              <th class="py-3 px-2 text-label-xs text-on-surface-variant uppercase tracking-wider">Cliente</th>
-              <th class="py-3 px-2 text-label-xs text-on-surface-variant uppercase tracking-wider">Categoría</th>
-              <th class="py-3 px-2 text-label-xs text-on-surface-variant uppercase tracking-wider">Proyecto</th>
-              <th class="py-3 px-2 text-label-xs text-on-surface-variant uppercase tracking-wider">Agente</th>
-              <th class="py-3 px-2 text-label-xs text-on-surface-variant uppercase tracking-wider text-center">Actividad</th>
-              <th class="sticky right-0 z-10 bg-surface-container-low py-3 pl-3 pr-4 text-label-xs text-on-surface-variant uppercase tracking-wider text-right shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.12)]">Acciones</th>
+              <th class="py-3 px-2 text-label-xs text-on-surface-variant uppercase tracking-wider">
+                Cliente
+              </th>
+              <th class="py-3 px-2 text-label-xs text-on-surface-variant uppercase tracking-wider">
+                Categoría
+              </th>
+              <th class="py-3 px-2 text-label-xs text-on-surface-variant uppercase tracking-wider">
+                Proyecto
+              </th>
+              <th class="py-3 px-2 text-label-xs text-on-surface-variant uppercase tracking-wider">
+                Agente
+              </th>
+              <th
+                class="py-3 px-2 text-label-xs text-on-surface-variant uppercase tracking-wider text-center"
+              >
+                Actividad
+              </th>
+              <th
+                class="sticky right-0 z-10 bg-surface-container-low py-3 pl-3 pr-4 text-label-xs text-on-surface-variant uppercase tracking-wider text-right shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.12)]"
+              >
+                Acciones
+              </th>
             </tr>
           </thead>
           <tbody class="divide-y divide-surface-container-highest">
@@ -276,20 +364,36 @@
                     />
                   </label>
                 </td>
-                <td class="py-3 px-2 text-label-md text-primary whitespace-nowrap">{{ ticket.code }}</td>
+                <td class="py-3 px-2 text-label-md text-primary whitespace-nowrap">
+                  {{ ticket.code }}
+                </td>
                 <td class="py-3 px-2 min-w-[220px] max-w-[340px]">
                   <p class="text-body-sm font-medium text-on-surface">{{ ticket.subject }}</p>
-                  <p class="text-label-xs text-on-surface-variant line-clamp-2 mt-0.5">{{ ticket.description }}</p>
+                  <p class="text-label-xs text-on-surface-variant line-clamp-2 mt-0.5">
+                    {{ ticket.description }}
+                  </p>
                 </td>
                 <td class="py-3 px-2">
-                  <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-label-xs {{ priorityFor(ticket.priority).badge }}">
-                    <span class="material-symbols-outlined text-[14px]">{{ priorityFor(ticket.priority).icon }}</span>
+                  <span
+                    class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-label-xs {{
+                      priorityFor(ticket.priority).badge
+                    }}"
+                  >
+                    <span class="material-symbols-outlined text-[14px]">{{
+                      priorityFor(ticket.priority).icon
+                    }}</span>
                     {{ priorityFor(ticket.priority).label }}
                   </span>
                 </td>
                 <td class="py-3 px-2">
-                  <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-label-xs {{ statusFor(ticket.status).badge }}">
-                    <span class="material-symbols-outlined text-[14px]">{{ statusFor(ticket.status).icon }}</span>
+                  <span
+                    class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-label-xs {{
+                      statusFor(ticket.status).badge
+                    }}"
+                  >
+                    <span class="material-symbols-outlined text-[14px]">{{
+                      statusFor(ticket.status).icon
+                    }}</span>
                     {{ statusFor(ticket.status).label }}
                   </span>
                 </td>
@@ -303,21 +407,29 @@
                 </td>
                 <td class="py-3 px-2 max-w-[180px]">
                   <p class="text-body-sm text-on-surface truncate">{{ ticket.client.name }}</p>
-                  <p class="text-label-xs text-on-surface-variant truncate">{{ ticket.client.email }}</p>
+                  <p class="text-label-xs text-on-surface-variant truncate">
+                    {{ ticket.client.email }}
+                  </p>
                   @if (ticket.client.company) {
-                    <p class="text-label-xs text-on-surface-variant truncate">{{ ticket.client.company }}</p>
+                    <p class="text-label-xs text-on-surface-variant truncate">
+                      {{ ticket.client.company }}
+                    </p>
                   }
                 </td>
                 <td class="py-3 px-2 text-body-sm text-on-surface-variant whitespace-nowrap">
                   <span class="inline-flex items-center gap-1">
-                    <span class="material-symbols-outlined text-[16px] text-primary">{{ ticket.category.icon || 'label' }}</span>
+                    <span class="material-symbols-outlined text-[16px] text-primary">{{
+                      ticket.category.icon || 'label'
+                    }}</span>
                     {{ ticket.category.name }}
                   </span>
                 </td>
                 <td class="py-3 px-2 text-body-sm text-on-surface-variant">
                   @if (ticket.project) {
                     <span class="inline-flex items-center gap-1">
-                      <span class="material-symbols-outlined text-[16px] text-primary">folder_open</span>
+                      <span class="material-symbols-outlined text-[16px] text-primary"
+                        >folder_open</span
+                      >
                       {{ ticket.project.name }}
                     </span>
                   } @else {
@@ -328,18 +440,28 @@
                   {{ ticket.assignedAgent?.name ?? 'Sin asignar' }}
                 </td>
                 <td class="py-3 px-2">
-                  <div class="flex items-center justify-center gap-2 text-label-xs text-on-surface-variant">
-                    <span class="inline-flex items-center gap-0.5" [title]="(ticket.commentsCount ?? 0) + ' comentario(s)'">
+                  <div
+                    class="flex items-center justify-center gap-2 text-label-xs text-on-surface-variant"
+                  >
+                    <span
+                      class="inline-flex items-center gap-0.5"
+                      [title]="(ticket.commentsCount ?? 0) + ' comentario(s)'"
+                    >
                       <span class="material-symbols-outlined text-[16px]">forum</span>
                       {{ ticket.commentsCount ?? 0 }}
                     </span>
-                    <span class="inline-flex items-center gap-0.5" [title]="(ticket.attachmentsCount ?? 0) + ' adjunto(s)'">
+                    <span
+                      class="inline-flex items-center gap-0.5"
+                      [title]="(ticket.attachmentsCount ?? 0) + ' adjunto(s)'"
+                    >
                       <span class="material-symbols-outlined text-[16px]">attach_file</span>
                       {{ ticket.attachmentsCount ?? 0 }}
                     </span>
                   </div>
                 </td>
-                <td class="sticky right-0 z-10 bg-inherit py-3 pl-3 pr-4 border-l border-surface-container-highest shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.12)]">
+                <td
+                  class="sticky right-0 z-10 bg-inherit py-3 pl-3 pr-4 border-l border-surface-container-highest shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.12)]"
+                >
                   <div class="flex items-center justify-end gap-1">
                     <a
                       [routerLink]="['/tickets', ticket._id]"
@@ -400,48 +522,84 @@
             <button type="button" (click)="open(ticket)" class="flex-1 min-w-0 text-left">
               <div class="flex items-center gap-2 flex-wrap">
                 <span class="text-label-md text-primary">{{ ticket.code }}</span>
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-label-xs {{ statusFor(ticket.status).badge }}">
-                  <span class="material-symbols-outlined text-[14px]">{{ statusFor(ticket.status).icon }}</span>
+                <span
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-label-xs {{
+                    statusFor(ticket.status).badge
+                  }}"
+                >
+                  <span class="material-symbols-outlined text-[14px]">{{
+                    statusFor(ticket.status).icon
+                  }}</span>
                   {{ statusFor(ticket.status).label }}
                 </span>
-                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-label-xs {{ priorityFor(ticket.priority).badge }}">
-                  <span class="material-symbols-outlined text-[14px]">{{ priorityFor(ticket.priority).icon }}</span>
+                <span
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-label-xs {{
+                    priorityFor(ticket.priority).badge
+                  }}"
+                >
+                  <span class="material-symbols-outlined text-[14px]">{{
+                    priorityFor(ticket.priority).icon
+                  }}</span>
                   {{ priorityFor(ticket.priority).label }}
                 </span>
               </div>
               <p class="text-body-md font-medium text-on-surface mt-1">{{ ticket.subject }}</p>
-              <p class="text-body-sm text-on-surface-variant line-clamp-2 mt-0.5">{{ ticket.description }}</p>
+              <p class="text-body-sm text-on-surface-variant line-clamp-2 mt-0.5">
+                {{ ticket.description }}
+              </p>
             </button>
           </div>
 
           <dl class="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 text-label-xs">
             <div class="flex items-center gap-1 min-w-0">
-              <span class="material-symbols-outlined text-[16px] text-on-surface-variant">person</span>
+              <span class="material-symbols-outlined text-[16px] text-on-surface-variant"
+                >person</span
+              >
               <span class="text-on-surface truncate">{{ ticket.client.name }}</span>
             </div>
             <div class="flex items-center gap-1 min-w-0">
-              <span class="material-symbols-outlined text-[16px] text-on-surface-variant">{{ ticket.category.icon || 'label' }}</span>
+              <span class="material-symbols-outlined text-[16px] text-on-surface-variant">{{
+                ticket.category.icon || 'label'
+              }}</span>
               <span class="text-on-surface truncate">{{ ticket.category.name }}</span>
             </div>
             <div class="flex items-center gap-1 min-w-0">
-              <span class="material-symbols-outlined text-[16px] text-on-surface-variant">folder_open</span>
-              <span class="text-on-surface truncate">{{ ticket.project?.name ?? 'Sin proyecto' }}</span>
+              <span class="material-symbols-outlined text-[16px] text-on-surface-variant"
+                >folder_open</span
+              >
+              <span class="text-on-surface truncate">{{
+                ticket.project?.name ?? 'Sin proyecto'
+              }}</span>
             </div>
             <div class="flex items-center gap-1 min-w-0">
-              <span class="material-symbols-outlined text-[16px] text-on-surface-variant">support_agent</span>
-              <span class="text-on-surface truncate">{{ ticket.assignedAgent?.name ?? 'Sin asignar' }}</span>
+              <span class="material-symbols-outlined text-[16px] text-on-surface-variant"
+                >support_agent</span
+              >
+              <span class="text-on-surface truncate">{{
+                ticket.assignedAgent?.name ?? 'Sin asignar'
+              }}</span>
             </div>
             <div class="flex items-center gap-1 min-w-0">
-              <span class="material-symbols-outlined text-[16px] text-on-surface-variant">schedule</span>
-              <span class="text-on-surface truncate">{{ ticket.createdAt | date: 'dd/MM/yy HH:mm' }}</span>
+              <span class="material-symbols-outlined text-[16px] text-on-surface-variant"
+                >schedule</span
+              >
+              <span class="text-on-surface truncate">{{
+                ticket.createdAt | date: 'dd/MM/yy HH:mm'
+              }}</span>
             </div>
             <div class="flex items-center gap-1 min-w-0">
-              <span class="material-symbols-outlined text-[16px] text-on-surface-variant">update</span>
-              <span class="text-on-surface truncate">{{ ticket.updatedAt | date: 'dd/MM/yy HH:mm' }}</span>
+              <span class="material-symbols-outlined text-[16px] text-on-surface-variant"
+                >update</span
+              >
+              <span class="text-on-surface truncate">{{
+                ticket.updatedAt | date: 'dd/MM/yy HH:mm'
+              }}</span>
             </div>
           </dl>
 
-          <div class="mt-3 pt-2 border-t border-surface-container-highest flex items-center justify-between">
+          <div
+            class="mt-3 pt-2 border-t border-surface-container-highest flex items-center justify-between"
+          >
             <div class="flex items-center gap-3 text-label-xs text-on-surface-variant">
               <span class="inline-flex items-center gap-1">
                 <span class="material-symbols-outlined text-[16px]">forum</span>
@@ -453,7 +611,12 @@
               </span>
             </div>
             <div class="flex items-center gap-1">
-              <a [routerLink]="['/tickets', ticket._id]" class="ticket-row-action" title="Ver detalle" aria-label="Ver detalle">
+              <a
+                [routerLink]="['/tickets', ticket._id]"
+                class="ticket-row-action"
+                title="Ver detalle"
+                aria-label="Ver detalle"
+              >
                 <span class="material-symbols-outlined text-[20px]">open_in_new</span>
               </a>
               <button
@@ -483,3 +646,162 @@
     </div>
   }
 </div>
+
+<!-- Diálogo: implementar con Claude Code -->
+@if (implementOpen()) {
+  <div
+    class="fixed inset-0 z-[70] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+  >
+    <div
+      class="bg-surface-container-lowest w-full sm:max-w-lg max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl p-4 sm:p-6 flex flex-col gap-4"
+    >
+      <div class="flex items-start justify-between gap-2">
+        <div class="min-w-0">
+          <h3 class="text-headline-lg-mobile text-on-surface flex items-center gap-2">
+            <span class="material-symbols-outlined text-primary">rocket_launch</span>
+            Implementar con Claude Code
+          </h3>
+          <p class="text-body-sm text-on-surface-variant mt-0.5">
+            {{ selectedIds().size }} ticket(s) seleccionado(s)
+          </p>
+        </div>
+        <button
+          type="button"
+          (click)="closeImplement()"
+          class="ticket-icon-btn shrink-0"
+          title="Cerrar"
+          aria-label="Cerrar"
+        >
+          <span class="material-symbols-outlined text-[22px]">close</span>
+        </button>
+      </div>
+
+      @if (implementDone()) {
+        <div class="flex flex-col items-center gap-3 py-6 text-center">
+          <span class="material-symbols-outlined text-emerald-600 text-5xl">check_circle</span>
+          <p class="text-body-md text-on-surface">Se disparó el workflow en GitHub.</p>
+          <p class="text-body-sm text-on-surface-variant max-w-sm">
+            Claude Code va a trabajar sobre el repositorio y abrir un pull request. Podés seguir el
+            avance desde la pantalla de implementaciones.
+          </p>
+          <div class="flex flex-wrap items-center justify-center gap-3">
+            <a routerLink="/implementations" (click)="closeImplement()" class="link-action">
+              <span class="material-symbols-outlined text-[18px]">list_alt</span>
+              Ver implementaciones
+            </a>
+            <button type="button" (click)="closeImplement()" class="link-action">Cerrar</button>
+          </div>
+        </div>
+      } @else {
+        <ul class="flex flex-col gap-1 max-h-32 overflow-y-auto">
+          @for (ticket of selectedTickets; track ticket._id) {
+            <li class="text-body-sm text-on-surface-variant truncate">
+              <span class="text-on-surface font-medium">{{ ticket.code }}</span> —
+              {{ ticket.subject }}
+            </li>
+          }
+        </ul>
+
+        <div>
+          <label
+            class="block text-label-xs text-on-surface-variant uppercase mb-1"
+            for="impl-project"
+          >
+            Proyecto (define el repositorio)
+          </label>
+          <select
+            id="impl-project"
+            [(ngModel)]="implementProject"
+            (ngModelChange)="loadImplementRepo()"
+            class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+          >
+            <option value="">Elegí un proyecto...</option>
+            @for (project of projects(); track project._id) {
+              <option [value]="project._id">{{ project.name }}</option>
+            }
+          </select>
+        </div>
+
+        @if (implementRepoLoading()) {
+          <p class="text-body-sm text-on-surface-variant flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px] animate-spin"
+              >progress_activity</span
+            >
+            Buscando el repositorio del proyecto...
+          </p>
+        } @else if (implementProject && !implementRepo()) {
+          <div class="bg-error-container rounded-xl px-3 py-2 text-body-sm text-on-error-container">
+            Este proyecto no tiene un repositorio conectado.
+            <a
+              [routerLink]="['/projects', implementProject]"
+              (click)="closeImplement()"
+              class="underline"
+            >
+              Configuralo en el proyecto </a
+            >.
+          </div>
+        } @else if (implementRepo(); as repo) {
+          <div class="bg-surface rounded-xl px-3 py-2 flex flex-col gap-1">
+            <p class="text-body-sm text-on-surface flex items-center gap-1.5 min-w-0">
+              <span class="material-symbols-outlined text-[18px] text-primary shrink-0">code</span>
+              <span class="truncate">{{ repo.owner }}/{{ repo.repo }}</span>
+              <span class="text-on-surface-variant shrink-0">· {{ repo.baseBranch }}</span>
+            </p>
+            @if (!repo.isActive) {
+              <p class="text-label-xs text-error">
+                Las implementaciones están pausadas en este proyecto.
+              </p>
+            }
+          </div>
+        }
+
+        <div>
+          <label
+            class="block text-label-xs text-on-surface-variant uppercase mb-1"
+            for="impl-notes"
+          >
+            Indicaciones extra (opcional)
+          </label>
+          <textarea
+            id="impl-notes"
+            [(ngModel)]="implementNotes"
+            rows="3"
+            placeholder="Ej: no toques el diseño, solo la lógica de validación."
+            class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+          ></textarea>
+        </div>
+
+        <label class="check-row items-start">
+          <input
+            type="checkbox"
+            [(ngModel)]="implementAutoMerge"
+            class="h-5 w-5 mt-0.5 rounded border border-outline-variant accent-primary cursor-pointer"
+          />
+          <span class="min-w-0">
+            <span class="block text-body-sm text-on-surface">Mergear solo cuando el CI pase</span>
+            <span class="block text-label-xs text-on-surface-variant">
+              Va directo a {{ implementRepo()?.baseBranch || 'main' }} y dispara el despliegue, sin
+              que nadie lea el diff.
+            </span>
+          </span>
+        </label>
+
+        @if (implementError()) {
+          <p class="text-body-sm text-error">{{ implementError() }}</p>
+        }
+
+        <button
+          type="button"
+          (click)="submitImplement()"
+          [disabled]="!canImplement || implementing()"
+          class="inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-md py-3 px-5 rounded-xl hover:bg-primary transition-colors disabled:opacity-50"
+        >
+          <span class="material-symbols-outlined text-[18px]" [class.animate-spin]="implementing()">
+            {{ implementing() ? 'progress_activity' : 'rocket_launch' }}
+          </span>
+          Implementar
+        </button>
+      }
+    </div>
+  </div>
+}

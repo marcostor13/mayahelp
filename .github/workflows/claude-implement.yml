@@ -1,0 +1,113 @@
+# Implementa tickets de MayaHelp con Claude Code.
+#
+# MayaHelp dispara este workflow con `repository_dispatch` cuando seleccionás tickets
+# en /tickets y tocás "Implementar con Claude Code". Claude crea la rama, commitea y
+# abre el pull request; los últimos pasos le avisan a MayaHelp cómo salió.
+#
+# Para usarlo en otro proyecto: copiá este archivo tal cual y cargá los secrets
+# CLAUDE_CODE_OAUTH_TOKEN y MAYAHELP_PAT en ese repositorio.
+name: Implementar ticket con Claude Code
+
+on:
+  repository_dispatch:
+    types: [mayahelp-implement]
+  # Permite probarlo a mano desde la pestaña Actions sin pasar por MayaHelp.
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: Qué tiene que implementar Claude
+        required: true
+      title:
+        description: Título del pull request
+        required: false
+        default: Cambio manual con Claude Code
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  # Una corrida por rama base; dos a la vez se pisarían el checkout.
+  group: claude-implement-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    env:
+      RUN_KEY: ${{ github.event.client_payload.run_key }}
+      CALLBACK_URL: ${{ github.event.client_payload.callback_url }}
+      CALLBACK_TOKEN: ${{ github.event.client_payload.callback_token }}
+      BRANCH_PREFIX: ${{ github.event.client_payload.branch_prefix || 'mayahelp/manual-' }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.client_payload.base_branch || github.event.repository.default_branch }}
+
+      - name: Avisar a MayaHelp que arrancó
+        if: env.CALLBACK_URL != ''
+        continue-on-error: true
+        run: |
+          curl -sf -X POST "$CALLBACK_URL" \
+            -H "Content-Type: application/json" \
+            -H "X-MayaHelp-Token: $CALLBACK_TOKEN" \
+            -d "$(jq -n --arg url "$RUN_URL" '{status:"running", workflowUrl:$url}')"
+
+      - name: Implementar con Claude Code
+        id: claude
+        uses: anthropics/claude-code-action@v1
+        with:
+          # Corre contra tu suscripción de Claude Code (Pro/Max): generá el token con
+          # `claude setup-token` y guardalo como secret CLAUDE_CODE_OAUTH_TOKEN.
+          # ANTHROPIC_API_KEY queda como alternativa si algún día se factura por API.
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Un PAT hace que el pull request dispare el CI; con el token por defecto
+          # de Actions los workflows `on: pull_request` no se ejecutan, y entonces
+          # MayaHelp nunca vería chequeos en verde para poder mergear.
+          github_token: ${{ secrets.MAYAHELP_PAT || github.token }}
+          base_branch: ${{ github.event.client_payload.base_branch || github.event.repository.default_branch }}
+          # Prefijo único por corrida: así MayaHelp reconoce la rama que creó Claude.
+          branch_prefix: ${{ env.BRANCH_PREFIX }}
+          prompt: ${{ github.event.client_payload.prompt || inputs.prompt }}
+          claude_args: --max-turns 60
+
+      - name: Buscar el pull request que abrió Claude
+        id: pr
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.MAYAHELP_PAT || github.token }}
+        run: |
+          number=$(gh pr list --state all --limit 50 \
+            --json number,url,headRefName \
+            --jq "[.[] | select(.headRefName | startswith(\"$BRANCH_PREFIX\"))][0]" || echo '')
+          if [ -n "$number" ] && [ "$number" != "null" ]; then
+            echo "number=$(echo "$number" | jq -r .number)" >> "$GITHUB_OUTPUT"
+            echo "url=$(echo "$number" | jq -r .url)" >> "$GITHUB_OUTPUT"
+            echo "branch=$(echo "$number" | jq -r .headRefName)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Reportar el resultado a MayaHelp
+        if: always() && env.CALLBACK_URL != ''
+        continue-on-error: true
+        run: |
+          if [ "${{ steps.claude.outcome }}" = "success" ] && [ -n "${{ steps.pr.outputs.number }}" ]; then
+            body=$(jq -n \
+              --argjson pr "${{ steps.pr.outputs.number }}" \
+              --arg url "${{ steps.pr.outputs.url }}" \
+              --arg branch "${{ steps.pr.outputs.branch }}" \
+              --arg run "$RUN_URL" \
+              '{status:"pr_open", prNumber:$pr, prUrl:$url, branch:$branch, workflowUrl:$run}')
+          elif [ "${{ steps.claude.outcome }}" = "success" ]; then
+            body=$(jq -n --arg run "$RUN_URL" \
+              '{status:"failed", workflowUrl:$run, error:"Claude Code terminó sin abrir un pull request"}')
+          else
+            body=$(jq -n --arg run "$RUN_URL" \
+              '{status:"failed", workflowUrl:$run, error:"El paso de Claude Code falló, revisá el log del workflow"}')
+          fi
+          curl -sf -X POST "$CALLBACK_URL" \
+            -H "Content-Type: application/json" \
+            -H "X-MayaHelp-Token: $CALLBACK_TOKEN" \
+            -d "$body"

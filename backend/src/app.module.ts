@@ -22,6 +22,8 @@ import { PublicModule } from './public/public.module';
 import { WhatsAppTemplatesModule } from './whatsapp-templates/whatsapp-templates.module';
 import { AppSettingsModule } from './app-settings/app-settings.module';
 import { MonitoringModule } from './monitoring/monitoring.module';
+import { ImplementationsModule } from './implementations/implementations.module';
+import { EncryptionModule } from './common/encryption/encryption.module';
 
 @Module({
   imports: [
@@ -49,6 +51,8 @@ import { MonitoringModule } from './monitoring/monitoring.module';
     WhatsAppTemplatesModule,
     AppSettingsModule,
     MonitoringModule,
+    ImplementationsModule,
+    EncryptionModule,
   ],
   controllers: [AppController],
   providers: [

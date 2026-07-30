@@ -79,6 +79,12 @@ export const routes: Routes = [
           import('./features/monitoring/monitoring-project').then((m) => m.MonitoringProject),
       },
       {
+        path: 'implementations',
+        canActivate: [roleGuard(['admin', 'agent'])],
+        loadComponent: () =>
+          import('./features/implementations/implementations').then((m) => m.Implementations),
+      },
+      {
         path: 'mi-cuenta',
         loadComponent: () => import('./features/account/account').then((m) => m.Account),
       },

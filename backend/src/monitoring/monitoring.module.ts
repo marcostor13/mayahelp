@@ -14,7 +14,6 @@ import { MonitoringService } from './monitoring.service';
 import { MonitoringController } from './monitoring.controller';
 import { MonitoringScheduler } from './monitoring.scheduler';
 import { MonitoringAlertsService } from './monitoring-alerts.service';
-import { EncryptionService } from './encryption.service';
 import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
@@ -28,11 +27,6 @@ import { NotificationsModule } from '../notifications/notifications.module';
     NotificationsModule,
   ],
   controllers: [MonitoringController],
-  providers: [
-    MonitoringService,
-    MonitoringScheduler,
-    MonitoringAlertsService,
-    EncryptionService,
-  ],
+  providers: [MonitoringService, MonitoringScheduler, MonitoringAlertsService],
 })
 export class MonitoringModule {}

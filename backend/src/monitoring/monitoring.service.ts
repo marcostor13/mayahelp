@@ -17,7 +17,7 @@ import {
   MonitorCheckDocument,
 } from './schemas/monitor-check.schema';
 import { Project, ProjectDocument } from '../projects/schemas/project.schema';
-import { EncryptionService } from './encryption.service';
+import { EncryptionService } from '../common/encryption/encryption.service';
 import { MonitoringAlertsService } from './monitoring-alerts.service';
 import { CheckResult, checkHttp } from './checkers/http-checker';
 import { checkSsh } from './checkers/ssh-checker';

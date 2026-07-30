@@ -1,4 +1,5 @@
 import { Component, OnInit, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
@@ -7,6 +8,8 @@ import { CategoryService } from '../../../core/services/category.service';
 import { ProjectService } from '../../../core/services/project.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ExportService } from '../../../core/services/export.service';
+import { ImplementationService } from '../../../core/services/implementation.service';
+import { ProjectRepo } from '../../../core/models/implementation.model';
 import {
   SortOrder,
   Ticket,
@@ -112,6 +115,17 @@ export class TicketList implements OnInit {
   protected readonly filtersOpen = signal(false);
   protected readonly selectedIds = signal<Set<string>>(new Set());
 
+  // --- implementación con Claude Code ---
+  protected readonly implementOpen = signal(false);
+  protected readonly implementing = signal(false);
+  protected readonly implementError = signal<string | null>(null);
+  protected readonly implementRepo = signal<ProjectRepo | null>(null);
+  protected readonly implementRepoLoading = signal(false);
+  protected readonly implementDone = signal<string | null>(null);
+  protected implementProject = '';
+  protected implementNotes = '';
+  protected implementAutoMerge = false;
+
   protected statusFilter: TicketStatus | '' = '';
   protected priorityFilter: TicketPriority | '' = '';
   protected categoryFilter = '';
@@ -127,6 +141,7 @@ export class TicketList implements OnInit {
     private readonly categoryService: CategoryService,
     private readonly projectService: ProjectService,
     private readonly exportService: ExportService,
+    private readonly implementationService: ImplementationService,
     private readonly route: ActivatedRoute,
     private readonly router: Router,
     protected readonly auth: AuthService,
@@ -285,6 +300,87 @@ export class TicketList implements OnInit {
   exportSingle(ticket: Ticket, event: Event): void {
     event.stopPropagation();
     this.exportService.exportTicket(ticket._id, ticket.code);
+  }
+
+  // --- implementación con Claude Code -------------------------------------
+
+  /** The selected tickets, in the order the table shows them. */
+  get selectedTickets(): Ticket[] {
+    const ids = this.selectedIds();
+    return this.tickets().filter((ticket) => ids.has(ticket._id));
+  }
+
+  openImplement(): void {
+    const selected = this.selectedTickets;
+    if (selected.length === 0) return;
+    this.implementError.set(null);
+    this.implementDone.set(null);
+    this.implementNotes = '';
+
+    // Tickets of the same project are the common case; otherwise the user picks.
+    const projects = new Set(
+      selected.map((ticket) => ticket.project?._id).filter((id): id is string => !!id),
+    );
+    this.implementProject = projects.size === 1 ? [...projects][0] : '';
+    this.implementOpen.set(true);
+    this.loadImplementRepo();
+  }
+
+  closeImplement(): void {
+    this.implementOpen.set(false);
+    this.implementRepo.set(null);
+  }
+
+  /** Loads the repository so the dialog can say up front whether it can dispatch. */
+  loadImplementRepo(): void {
+    this.implementRepo.set(null);
+    if (!this.implementProject) return;
+    this.implementRepoLoading.set(true);
+    this.implementationService.getRepo(this.implementProject).subscribe({
+      next: (repo) => {
+        this.implementRepo.set(repo);
+        this.implementAutoMerge = repo?.autoMerge ?? false;
+        this.implementRepoLoading.set(false);
+      },
+      error: () => {
+        this.implementRepo.set(null);
+        this.implementRepoLoading.set(false);
+      },
+    });
+  }
+
+  get canImplement(): boolean {
+    const repo = this.implementRepo();
+    return (
+      !!this.implementProject && !!repo?.isActive && repo.hasToken && this.selectedIds().size > 0
+    );
+  }
+
+  submitImplement(): void {
+    if (!this.canImplement || this.implementing()) return;
+    this.implementing.set(true);
+    this.implementError.set(null);
+    this.implementationService
+      .trigger({
+        project: this.implementProject,
+        tickets: [...this.selectedIds()],
+        notes: this.implementNotes.trim() || undefined,
+        autoMerge: this.implementAutoMerge,
+      })
+      .subscribe({
+        next: (run) => {
+          this.implementing.set(false);
+          this.implementDone.set(run._id);
+          this.clearSelection();
+        },
+        error: (err: HttpErrorResponse) => {
+          this.implementError.set(
+            (err.error as { message?: string | string[] })?.message?.toString() ??
+              'No se pudo disparar la implementación.',
+          );
+          this.implementing.set(false);
+        },
+      });
   }
 
   // --- row actions --------------------------------------------------------

@@ -407,6 +407,49 @@ Dos decisiones que evitan ruido, cubiertas por tests:
 - El formulario solo pide los campos y ofrece los avisos y umbrales que ese tipo de conexión puede producir
   (a Render no se le pregunta por certificados; a un sitio web no se le pregunta por CPU).
 
+## Implementar tickets con Claude Code
+
+Pedido: seleccionar tickets en la plataforma y detonar ahí mismo la implementación en Claude Code, que
+después pase a main para que corra el despliegue automático ya configurado.
+
+### El circuito
+
+1. En `/tickets` seleccionás tickets y tocás el cohete. El diálogo resuelve el proyecto (si todos los
+   tickets comparten uno viene preseleccionado), muestra el repositorio conectado y acepta indicaciones
+   extra para esa corrida.
+2. El backend arma el prompt reusando el **markdown combinado** que ya existía para IAs de codificación,
+   le antepone el contexto del proyecto y dispara `repository_dispatch` contra GitHub.
+3. `.github/workflows/claude-implement.yml` corre `anthropics/claude-code-action@v1`. Claude crea la rama,
+   commitea y abre el pull request; los últimos pasos le reportan a MayaHelp qué pasó.
+4. MayaHelp sigue el pull request: cuenta sus chequeos y, si la corrida pidió merge automático, mergea
+   apenas están todos en verde. El push a la rama base dispara el deploy que ya estaba configurado.
+
+### Autenticación
+
+La action corre contra la **suscripción de Claude Code** (Pro/Max): el token se genera localmente con
+`claude setup-token` y se guarda como secret `CLAUDE_CODE_OAUTH_TOKEN` del repositorio. `ANTHROPIC_API_KEY`
+queda soportada como alternativa. El PAT de GitHub (`MAYAHELP_PAT`) se guarda cifrado en MayaHelp y como
+secret del repo: hace falta porque **un pull request abierto con el token por defecto de Actions no dispara
+los workflows `on: pull_request`**, y sin chequeos no hay merge automático posible.
+
+### Qué frena un merge
+
+`sync()` solo mergea si la corrida lo pidió, el pull request no es borrador, y **hay al menos un chequeo y
+todos pasaron**. Ese "al menos uno" es deliberado y está cubierto por un test: un repo sin CI —o un pull
+request que no disparó el CI por el problema del token— reporta cero chequeos, y mergear eso sería subir a
+producción código que nunca se compiló.
+
+El merge automático viene **apagado** por proyecto. Con él prendido, el diff no lo lee nadie: el único filtro
+es el CI del repositorio.
+
+### Un bug de seguridad que apareció en el camino
+
+El callback del workflow es `@Public()` porque el runner no tiene sesión, pero `RolesGuard` lee los roles
+**de la clase**: un handler público dentro de un controlador con `@Roles(...)` igual se rechaza, porque la
+request llega sin usuario. El endpoint quedó en su propio controlador (`ImplementationHooksController`) y hay
+un test del guard que documenta el comportamiento para que nadie los vuelva a juntar. El callback se
+autentica con un token HMAC derivado por corrida, comparado en tiempo constante.
+
 ## Gaps detectados (backend listo, sin UI todavía)
 
 - [x] **Gestión de categorías** — resuelto: sección `/categories` (solo admin) con tabs Tickets/Artículos, CRUD
