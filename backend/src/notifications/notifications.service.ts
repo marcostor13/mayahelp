@@ -196,6 +196,98 @@ export class NotificationsService {
   }
 
   /**
+   * Infrastructure alert coming from the monitoring module (site down, disk full,
+   * certificate expiring...). It reuses the same channels and the same email layout as
+   * the ticket notifications, plus any extra recipients configured on that connection.
+   */
+  async notifyMonitoringAlert(params: {
+    projectName: string;
+    connectionName: string;
+    connectionType: string;
+    severity: 'critical' | 'warning' | 'info';
+    title: string;
+    detail: string;
+    target: string;
+    channels: { email: boolean; whatsapp: boolean };
+    extraEmails: string[];
+    extraPhones: string[];
+  }): Promise<void> {
+    let settings: AppSettingsDocument | null = null;
+    try {
+      settings = await this.appSettingsService.get();
+    } catch (error) {
+      this.logger.warn(
+        `No se pudieron leer los ajustes para la alerta de monitoreo: ${(error as Error).message}`,
+      );
+    }
+
+    const accent: EmailAccent =
+      params.severity === 'critical'
+        ? 'warning'
+        : params.severity === 'warning'
+          ? 'warning'
+          : 'success';
+    const content: EmailContent = {
+      preheader: `${params.projectName}: ${params.title}`,
+      badge:
+        params.severity === 'critical'
+          ? 'Alerta crítica'
+          : params.severity === 'warning'
+            ? 'Advertencia'
+            : 'Recuperado',
+      title: params.title,
+      intro: params.detail,
+      accent: params.severity === 'info' ? 'success' : accent,
+      rows: [
+        { label: 'Proyecto', value: params.projectName },
+        { label: 'Conexión', value: params.connectionName },
+        { label: 'Tipo', value: params.connectionType },
+        ...(params.target ? [{ label: 'Destino', value: params.target }] : []),
+        { label: 'Detectado', value: new Date().toLocaleString('es-ES') },
+      ],
+      action: { label: 'Ver el monitoreo', url: `${this.appUrl}/monitoring` },
+    };
+
+    if (params.channels.email && settings?.email.enabled !== false) {
+      const recipients = [
+        ...(settings?.email.recipients ?? []),
+        ...params.extraEmails,
+      ];
+      for (const to of [...new Set(recipients)]) {
+        await this.sendEmail(to, {
+          subject: `[${params.projectName}] ${params.title}`,
+          content,
+        });
+      }
+    }
+
+    if (params.channels.whatsapp && settings?.whatsapp.enabled) {
+      const context: NotificationContext = {
+        code: params.connectionName,
+        subject: params.title,
+        description: params.detail,
+        status: params.severity,
+        priority: params.severity === 'critical' ? 'alta' : 'media',
+        category: params.connectionType,
+        project: params.projectName,
+        event: params.title,
+        link: `${this.appUrl}/monitoring`,
+      };
+      const phones = [...settings.whatsapp.recipients, ...params.extraPhones];
+      for (const phone of [...new Set(phones)]) {
+        await this.whatsappService.sendTemplate(
+          phone,
+          resolveVariables(settings.whatsapp.variables, context),
+          {
+            name: settings.whatsapp.templateName,
+            language: settings.whatsapp.templateLanguage,
+          },
+        );
+      }
+    }
+  }
+
+  /**
    * Sends a sample notification with the settings as they are saved right now, so an
    * admin can confirm the WhatsApp template and its variables actually work.
    */

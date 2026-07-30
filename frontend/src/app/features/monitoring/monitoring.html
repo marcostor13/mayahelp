@@ -1,0 +1,93 @@
+<div class="flex flex-col gap-stack-md">
+  <div class="flex items-start justify-between gap-3">
+    <div class="min-w-0">
+      <h2 class="text-headline-lg-mobile md:text-headline-xl text-on-surface">Monitoreo</h2>
+      <p class="text-body-sm md:text-body-md text-on-surface-variant mt-0.5">
+        Estado de los proyectos y sus despliegues
+      </p>
+    </div>
+    <button
+      type="button"
+      (click)="load()"
+      class="ticket-icon-btn"
+      title="Actualizar"
+      aria-label="Actualizar"
+    >
+      <span class="material-symbols-outlined text-[22px]">refresh</span>
+    </button>
+  </div>
+
+  @if (loading()) {
+    <div class="py-16 flex flex-col items-center gap-3 text-center">
+      <span class="material-symbols-outlined text-primary text-4xl animate-spin"
+        >progress_activity</span
+      >
+      <p class="text-body-sm text-on-surface-variant">Cargando estado...</p>
+    </div>
+  } @else if (rows().length === 0) {
+    <div class="py-16 flex flex-col items-center gap-3 text-center">
+      <span class="material-symbols-outlined text-on-surface-variant text-5xl">monitor_heart</span>
+      <p class="text-body-md text-on-surface">Todavía no hay despliegues conectados.</p>
+      <p class="text-body-sm text-on-surface-variant max-w-md">
+        Entrá a un proyecto y conectá dónde está desplegado (sitio web, servidor por SSH, Render,
+        Netlify o Coolify) para empezar a monitorearlo.
+      </p>
+      <a routerLink="/projects" class="link-action">Ir a proyectos</a>
+    </div>
+  } @else {
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+      @for (row of rows(); track row.projectId) {
+        <a
+          [routerLink]="['/monitoring', row.projectId]"
+          class="bg-surface-container-lowest border border-surface-container-highest rounded-2xl p-4 ambient-shadow-sm hover:border-primary transition-colors"
+        >
+          <div class="flex items-start justify-between gap-2">
+            <p class="text-body-md font-medium text-on-surface min-w-0 truncate">
+              {{ row.projectName }}
+            </p>
+            <span
+              class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-label-xs shrink-0 {{
+                healthClass(row)
+              }}"
+            >
+              <span class="material-symbols-outlined text-[14px]">{{ healthIcon(row) }}</span>
+              {{ healthLabel(row) }}
+            </span>
+          </div>
+
+          <div class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-label-xs text-on-surface-variant">
+            <span class="inline-flex items-center gap-1">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+              {{ row.up }} en línea
+            </span>
+            @if (row.degraded > 0) {
+              <span class="inline-flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+                {{ row.degraded }} con problemas
+              </span>
+            }
+            @if (row.down > 0) {
+              <span class="inline-flex items-center gap-1 text-error">
+                <span class="w-2 h-2 rounded-full bg-error"></span>
+                {{ row.down }} caído(s)
+              </span>
+            }
+            @if (row.unknown > 0) {
+              <span class="inline-flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-gray-400"></span>
+                {{ row.unknown }} sin datos
+              </span>
+            }
+          </div>
+
+          <p class="mt-2 text-label-xs text-on-surface-variant">
+            {{ row.total }} conexión(es)
+            @if (row.lastCheckedAt) {
+              · último chequeo {{ row.lastCheckedAt | date: 'dd/MM/yy HH:mm' }}
+            }
+          </p>
+        </a>
+      }
+    </div>
+  }
+</div>

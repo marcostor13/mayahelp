@@ -21,6 +21,7 @@ import { ProjectsModule } from './projects/projects.module';
 import { PublicModule } from './public/public.module';
 import { WhatsAppTemplatesModule } from './whatsapp-templates/whatsapp-templates.module';
 import { AppSettingsModule } from './app-settings/app-settings.module';
+import { MonitoringModule } from './monitoring/monitoring.module';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { AppSettingsModule } from './app-settings/app-settings.module';
     PublicModule,
     WhatsAppTemplatesModule,
     AppSettingsModule,
+    MonitoringModule,
   ],
   controllers: [AppController],
   providers: [

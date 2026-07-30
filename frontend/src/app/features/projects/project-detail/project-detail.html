@@ -6,29 +6,37 @@
 @if (loading()) {
   <p class="text-body-md text-on-surface-variant">Cargando proyecto...</p>
 } @else if (project(); as p) {
-  <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-stack-lg gap-4">
+  <div
+    class="flex flex-col md:flex-row justify-between items-start md:items-center mb-stack-lg gap-4"
+  >
     <h1 class="text-headline-xl text-on-background">{{ p.name }}</h1>
-    @if (canDelete) {
-      <button
-        type="button"
-        (click)="deleteProject()"
-        class="link-action link-action--danger"
-      >
-        <span class="material-symbols-outlined text-[18px]">delete</span>
-        Eliminar proyecto
-      </button>
-    }
+    <div class="flex flex-wrap items-center gap-4">
+      <a [routerLink]="['/monitoring', p._id]" class="link-action">
+        <span class="material-symbols-outlined text-[18px]">monitor_heart</span>
+        Monitoreo del despliegue
+      </a>
+      @if (canDelete) {
+        <button type="button" (click)="deleteProject()" class="link-action link-action--danger">
+          <span class="material-symbols-outlined text-[18px]">delete</span>
+          Eliminar proyecto
+        </button>
+      }
+    </div>
   </div>
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-stack-lg">
-    <div class="lg:col-span-1 bg-surface-container-lowest rounded-2xl p-6 ambient-shadow-sm flex flex-col gap-stack-md h-fit">
+    <div
+      class="lg:col-span-1 bg-surface-container-lowest rounded-2xl p-6 ambient-shadow-sm flex flex-col gap-stack-md h-fit"
+    >
       <h3 class="text-headline-lg-mobile text-on-background flex items-center gap-2">
         <span class="material-symbols-outlined text-primary">edit_note</span>
         Detalles
       </h3>
 
       <div>
-        <label class="block text-label-md text-on-background mb-stack-sm" for="nombre">Nombre</label>
+        <label class="block text-label-md text-on-background mb-stack-sm" for="nombre"
+          >Nombre</label
+        >
         <input
           id="nombre"
           name="nombre"
@@ -39,7 +47,9 @@
       </div>
 
       <div>
-        <label class="block text-label-md text-on-background mb-stack-sm" for="descripcion">Descripción</label>
+        <label class="block text-label-md text-on-background mb-stack-sm" for="descripcion"
+          >Descripción</label
+        >
         <textarea
           id="descripcion"
           name="descripcion"
@@ -50,7 +60,9 @@
       </div>
 
       <div>
-        <label class="block text-label-md text-on-background mb-stack-sm" for="estado">Estado</label>
+        <label class="block text-label-md text-on-background mb-stack-sm" for="estado"
+          >Estado</label
+        >
         <select
           id="estado"
           name="estado"
@@ -80,8 +92,8 @@
           }
         </select>
         <p class="text-body-sm text-on-surface-variant mt-1">
-          Quien reporte una observación por el enlace público elige la categoría del ticket; esta solo viene
-          preseleccionada en el formulario.
+          Quien reporte una observación por el enlace público elige la categoría del ticket; esta
+          solo viene preseleccionada en el formulario.
         </p>
       </div>
 
@@ -99,20 +111,28 @@
       </button>
     </div>
 
-    <div class="lg:col-span-2 bg-surface-container-lowest rounded-2xl p-6 ambient-shadow-sm flex flex-col gap-stack-md">
+    <div
+      class="lg:col-span-2 bg-surface-container-lowest rounded-2xl p-6 ambient-shadow-sm flex flex-col gap-stack-md"
+    >
       <h3 class="text-headline-lg-mobile text-on-background flex items-center gap-2">
         <span class="material-symbols-outlined text-primary">link</span>
         Enlaces públicos de observaciones
       </h3>
       <p class="text-body-sm text-on-surface-variant">
-        Comparte un enlace con las personas que autorices para que reporten observaciones sobre este proyecto,
-        sin necesidad de crear una cuenta. Cada envío crea un ticket con la categoría que la persona elija
+        Comparte un enlace con las personas que autorices para que reporten observaciones sobre este
+        proyecto, sin necesidad de crear una cuenta. Cada envío crea un ticket con la categoría que
+        la persona elija
         @if (p.defaultCategory) {
-          (viene preseleccionada con <span class="text-on-surface font-medium">{{ p.defaultCategory.name }}</span>)
-        }.
+          (viene preseleccionada con
+          <span class="text-on-surface font-medium">{{ p.defaultCategory.name }}</span
+          >)
+        }
+        .
       </p>
 
-      <div class="flex flex-col gap-2 bg-surface rounded-xl p-4 border border-surface-container-highest">
+      <div
+        class="flex flex-col gap-2 bg-surface rounded-xl p-4 border border-surface-container-highest"
+      >
         <div class="flex flex-col sm:flex-row gap-2">
           <input
             [(ngModel)]="newLinkLabel"
@@ -126,7 +146,9 @@
           />
         </div>
 
-        <p class="text-label-xs text-on-surface-variant uppercase mt-1">Personas autorizadas a reportar</p>
+        <p class="text-label-xs text-on-surface-variant uppercase mt-1">
+          Personas autorizadas a reportar
+        </p>
         <div class="flex flex-col sm:flex-row gap-2">
           <input
             [(ngModel)]="newReporterName"
@@ -151,9 +173,15 @@
         @if (newLinkReporters().length > 0) {
           <ul class="flex flex-wrap gap-2">
             @for (reporter of newLinkReporters(); track $index; let i = $index) {
-              <li class="flex items-center gap-1 bg-surface-container-low rounded-full pl-3 pr-1 py-1 text-body-sm">
+              <li
+                class="flex items-center gap-1 bg-surface-container-low rounded-full pl-3 pr-1 py-1 text-body-sm"
+              >
                 {{ reporter.name }}
-                <button type="button" (click)="removePendingReporter(i)" class="text-on-surface-variant hover:text-error p-1">
+                <button
+                  type="button"
+                  (click)="removePendingReporter(i)"
+                  class="text-on-surface-variant hover:text-error p-1"
+                >
                   <span class="material-symbols-outlined text-[14px]">close</span>
                 </button>
               </li>
@@ -174,13 +202,21 @@
 
       <div class="flex flex-col gap-3">
         @for (link of shareLinks(); track link._id) {
-          <div class="bg-surface border border-surface-container-highest rounded-xl p-4 flex flex-col gap-2">
+          <div
+            class="bg-surface border border-surface-container-highest rounded-xl p-4 flex flex-col gap-2"
+          >
             <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2">
               <div class="flex items-center gap-2">
-                <span class="material-symbols-outlined text-[18px]" [class.text-emerald-500]="link.isActive" [class.text-on-surface-variant]="!link.isActive">
+                <span
+                  class="material-symbols-outlined text-[18px]"
+                  [class.text-emerald-500]="link.isActive"
+                  [class.text-on-surface-variant]="!link.isActive"
+                >
                   {{ link.isActive ? 'link' : 'link_off' }}
                 </span>
-                <span class="text-body-md text-on-surface font-medium">{{ link.label || 'Enlace sin etiqueta' }}</span>
+                <span class="text-body-md text-on-surface font-medium">{{
+                  link.label || 'Enlace sin etiqueta'
+                }}</span>
               </div>
               <div class="flex items-center gap-3 text-body-sm text-on-surface-variant">
                 <span>{{ link.usageCount }} envío{{ link.usageCount === 1 ? '' : 's' }}</span>
@@ -191,13 +227,13 @@
             </div>
 
             <div class="flex items-center gap-2 bg-surface-container-low rounded-lg px-3 py-2">
-              <span class="text-body-sm text-on-surface-variant truncate flex-1">{{ publicUrl(link.token) }}</span>
-              <button
-                type="button"
-                (click)="copyUrl(link.token)"
-                class="link-action shrink-0"
-              >
-                <span class="material-symbols-outlined text-[16px]">{{ copiedToken() === link.token ? 'check' : 'content_copy' }}</span>
+              <span class="text-body-sm text-on-surface-variant truncate flex-1">{{
+                publicUrl(link.token)
+              }}</span>
+              <button type="button" (click)="copyUrl(link.token)" class="link-action shrink-0">
+                <span class="material-symbols-outlined text-[16px]">{{
+                  copiedToken() === link.token ? 'check' : 'content_copy'
+                }}</span>
                 {{ copiedToken() === link.token ? 'Copiado' : 'Copiar' }}
               </button>
             </div>
@@ -210,7 +246,9 @@
                 [class.text-on-surface-variant]="link.isActive"
                 [class.text-emerald-600]="!link.isActive"
               >
-                <span class="material-symbols-outlined text-[16px]">{{ link.isActive ? 'pause_circle' : 'play_circle' }}</span>
+                <span class="material-symbols-outlined text-[16px]">{{
+                  link.isActive ? 'pause_circle' : 'play_circle'
+                }}</span>
                 {{ link.isActive ? 'Desactivar' : 'Activar' }}
               </button>
               <button
@@ -234,10 +272,14 @@
             @if (expandedLinkId() === link._id) {
               <div class="mt-2 pt-3 border-t border-surface-container-highest flex flex-col gap-2">
                 @for (reporter of link.reporters; track reporter._id) {
-                  <div class="flex items-center justify-between gap-2 bg-surface-container-low rounded-lg px-3 py-2">
+                  <div
+                    class="flex items-center justify-between gap-2 bg-surface-container-low rounded-lg px-3 py-2"
+                  >
                     <div class="min-w-0">
                       <p class="text-body-sm text-on-surface truncate">{{ reporter.name }}</p>
-                      <p class="text-label-xs text-on-surface-variant truncate">{{ reporter.email }}</p>
+                      <p class="text-label-xs text-on-surface-variant truncate">
+                        {{ reporter.email }}
+                      </p>
                     </div>
                     <button
                       type="button"
@@ -249,7 +291,9 @@
                     </button>
                   </div>
                 } @empty {
-                  <p class="text-body-sm text-on-surface-variant">Nadie está autorizado a reportar por este enlace todavía.</p>
+                  <p class="text-body-sm text-on-surface-variant">
+                    Nadie está autorizado a reportar por este enlace todavía.
+                  </p>
                 }
 
                 <div class="flex flex-col sm:flex-row gap-2 mt-1">

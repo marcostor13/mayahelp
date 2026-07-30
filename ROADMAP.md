@@ -346,6 +346,67 @@ y errores de JS. Arrancó en **74 problemas** y quedó en **0**:
   (`.check-row`), enlaces de acción a 44px (`.link-action`), y el logo del topbar con área ampliada.
 - La barra inferior ya mostraba 4 ítems + hoja "Más"; con Usuarios y Mi cuenta sumados sigue entrando en 320px.
 
+## Monitoreo de despliegues por proyecto
+
+Pedido: conectar cada proyecto con el lugar donde está desplegado (EC2 por SSH, un hosting con solo la URL, o
+las cuentas de Render / Netlify / Coolify), sacarle a cada tipo de conexión la mayor cantidad de métricas
+posible, verlas en un dashboard por proyecto, y avisar por caídas de servidor, problemas del sitio, problemas
+de dominio, etc. — pudiendo elegir qué avisos y qué métricas se reciben.
+
+### Tipos de conexión y métricas
+
+Cada tipo tiene su propio "checker" y devuelve todo lo que ese medio permite observar:
+
+| Tipo | Cómo conecta | Métricas |
+| --- | --- | --- |
+| **Sitio web (HTTP)** | solo la URL | DNS (resuelve, IPs), certificado TLS (válido, emisor, días para vencer, fecha), código HTTP y si es el esperado, latencia, tamaño de la respuesta, servidor, redirecciones, URL final y texto esperado en el body |
+| **Servidor (SSH)** | host, usuario y contraseña o clave privada | uptime, load 1/5/15, núcleos, CPU %, RAM usada/total/%, disco usado/total/%, procesos, unidades de systemd fallidas, contenedores Docker corriendo/detenidos y tiempo de conexión |
+| **Render** | API token + `serviceId` | estado del servicio, si está suspendido, tipo, URL, estado del último deploy, commit y cuándo terminó |
+| **Netlify** | personal access token + site id | estado del sitio, estado del deploy publicado, rama, fecha de publicación |
+| **Coolify** | URL de la instancia + token + uuid | estado de la aplicación (`running:healthy`, `exited`…), dominio, rama y última vez en línea |
+
+Los cuatro chequeos que realmente tumban un sitio para el usuario —el dominio deja de resolver, el certificado
+vence, el servidor devuelve error, o responde 200 con la página rota— quedan cubiertos por el checker HTTP sin
+pedir credenciales de ningún tipo.
+
+### Seguridad de las credenciales
+
+- Contraseñas, claves privadas, passphrases y tokens se guardan **cifrados con AES-256-GCM**
+  (`EncryptionService`, formato `iv.tag.ciphertext`) y con `select: false` en el esquema: la API nunca los
+  devuelve, solo expone `hasPassword` / `hasPrivateKey` / `hasApiToken`.
+- La clave sale de `ENCRYPTION_KEY`; si no está, se deriva del secreto JWT con `scrypt` y se loguea una
+  advertencia (rotar el JWT invalidaría los secretos guardados).
+- El probe SSH ejecuta una **lista fija de comandos de solo lectura**. Nada de lo que escribe el usuario llega
+  nunca a la shell del servidor.
+
+### Alertas
+
+`MonitoringAlertsService.buildAlerts` traduce cada chequeo a una lista de eventos: `down`, `recovered`, `slow`,
+`unexpected-response`, `ssl-invalid`, `ssl-expiring`, `dns`, `cpu`, `memory`, `disk`, `services`, `deploy`,
+`suspended`. Por conexión se elige **qué eventos avisar**, **por qué canal** (correo y/o WhatsApp, más
+destinatarios extra), y los **umbrales** (latencia, CPU, memoria, disco, días antes del vencimiento del
+certificado y cuántos fallos seguidos hacen falta para declarar una caída).
+
+Dos decisiones que evitan ruido, cubiertas por tests:
+
+- una caída necesita `failureThreshold` fallos seguidos (un chequeo aislado puede ser un blip), y
+- el mismo aviso no se repite dentro de `repeatAfterMinutes`… **salvo la recuperación**, que siempre se manda
+  aunque acabe de salir el aviso de caída.
+
+### Scheduler y dashboard
+
+- Cron cada minuto (`@nestjs/schedule`) que corre las conexiones vencidas según su `intervalMinutes`, con un
+  guard para que una ronda lenta no se solape con la siguiente.
+- Cada chequeo se guarda como muestra (`MonitorCheck`) con índice TTL de 30 días.
+- `/monitoring`: tarjetas por proyecto con salud agregada (gana el peor estado: una conexión caída pinta todo
+  el proyecto como caído).
+- `/monitoring/:id`: por conexión, disponibilidad y latencia media/máxima de la ventana elegida (6 h / 24 h /
+  7 d / 30 d), sparkline de latencia, barra de estado por chequeo, el detalle completo de métricas con los
+  valores fuera de umbral en rojo o ámbar, y botón para **probar la conexión en el momento** sin esperar al
+  cron.
+- El formulario solo pide los campos y ofrece los avisos y umbrales que ese tipo de conexión puede producir
+  (a Render no se le pregunta por certificados; a un sitio web no se le pregunta por CPU).
+
 ## Gaps detectados (backend listo, sin UI todavía)
 
 - [x] **Gestión de categorías** — resuelto: sección `/categories` (solo admin) con tabs Tickets/Artículos, CRUD

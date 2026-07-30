@@ -68,6 +68,17 @@ export const routes: Routes = [
           import('./features/projects/project-detail/project-detail').then((m) => m.ProjectDetail),
       },
       {
+        path: 'monitoring',
+        canActivate: [roleGuard(['admin', 'agent'])],
+        loadComponent: () => import('./features/monitoring/monitoring').then((m) => m.Monitoring),
+      },
+      {
+        path: 'monitoring/:id',
+        canActivate: [roleGuard(['admin', 'agent'])],
+        loadComponent: () =>
+          import('./features/monitoring/monitoring-project').then((m) => m.MonitoringProject),
+      },
+      {
         path: 'mi-cuenta',
         loadComponent: () => import('./features/account/account').then((m) => m.Account),
       },
@@ -79,8 +90,7 @@ export const routes: Routes = [
       {
         path: 'categories',
         canActivate: [roleGuard(['admin'])],
-        loadComponent: () =>
-          import('./features/categories/categories').then((m) => m.Categories),
+        loadComponent: () => import('./features/categories/categories').then((m) => m.Categories),
       },
       {
         path: 'whatsapp-templates',

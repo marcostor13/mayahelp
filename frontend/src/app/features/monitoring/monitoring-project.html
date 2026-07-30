@@ -1,0 +1,786 @@
+<div class="flex flex-col gap-stack-md">
+  <!-- Encabezado -->
+  <div class="flex items-start gap-2">
+    <a
+      routerLink="/monitoring"
+      class="ticket-icon-btn shrink-0"
+      title="Volver"
+      aria-label="Volver al monitoreo"
+    >
+      <span class="material-symbols-outlined text-[22px]">arrow_back</span>
+    </a>
+    <div class="min-w-0 flex-1">
+      <h2 class="text-headline-lg-mobile md:text-headline-xl text-on-surface truncate">
+        {{ dashboard()?.project?.name ?? 'Monitoreo' }}
+      </h2>
+      <p class="text-body-sm md:text-body-md text-on-surface-variant mt-0.5">
+        {{ items().length }} conexión(es) monitoreadas
+      </p>
+    </div>
+    <div class="flex items-center gap-1 shrink-0">
+      <button
+        type="button"
+        (click)="load()"
+        class="ticket-icon-btn"
+        title="Actualizar"
+        aria-label="Actualizar"
+      >
+        <span class="material-symbols-outlined text-[22px]">refresh</span>
+      </button>
+      <button
+        type="button"
+        (click)="openCreate()"
+        class="ticket-icon-btn ticket-icon-btn--primary"
+        title="Conectar despliegue"
+        aria-label="Conectar despliegue"
+      >
+        <span class="material-symbols-outlined icon-fill text-[22px]">add_link</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Ventana de tiempo -->
+  <div class="flex flex-wrap items-center gap-2">
+    <span class="text-label-xs text-on-surface-variant uppercase">Ventana</span>
+    @for (option of windowOptions; track option.hours) {
+      <button
+        type="button"
+        (click)="setHours(option.hours)"
+        class="ticket-chip"
+        [class.ticket-chip--on]="hours() === option.hours"
+      >
+        {{ option.label }}
+      </button>
+    }
+  </div>
+
+  @if (error()) {
+    <p class="text-body-sm text-error">{{ error() }}</p>
+  }
+
+  <!-- Formulario -->
+  @if (formOpen()) {
+    <div
+      class="bg-surface-container-lowest border border-primary rounded-2xl p-4 md:p-6 ambient-shadow-sm flex flex-col gap-4"
+    >
+      <div class="flex items-center justify-between gap-2">
+        <h3 class="text-headline-lg-mobile text-on-surface">
+          {{ editingId() ? 'Editar conexión' : 'Conectar despliegue' }}
+        </h3>
+        <button
+          type="button"
+          (click)="closeForm()"
+          class="ticket-icon-btn"
+          title="Cerrar"
+          aria-label="Cerrar"
+        >
+          <span class="material-symbols-outlined text-[22px]">close</span>
+        </button>
+      </div>
+
+      <!-- Tipo (fijo al editar: cambia toda la forma de conectar) -->
+      <div class="flex flex-col gap-2">
+        <p class="text-label-xs text-on-surface-variant uppercase">¿Dónde está desplegado?</p>
+        <div class="flex flex-wrap gap-2">
+          @for (option of types; track option) {
+            <button
+              type="button"
+              (click)="type = option"
+              [disabled]="!!editingId()"
+              class="ticket-chip inline-flex items-center gap-1.5 disabled:opacity-40"
+              [class.ticket-chip--on]="type === option"
+            >
+              <span class="material-symbols-outlined text-[16px]">{{ typeIcon(option) }}</span>
+              {{ typeLabels[option] }}
+            </button>
+          }
+        </div>
+        <p class="text-body-sm text-on-surface-variant">{{ typeHints[type] }}</p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-label-xs text-on-surface-variant uppercase mb-1" for="conn-name"
+            >Nombre</label
+          >
+          <input
+            id="conn-name"
+            [(ngModel)]="name"
+            type="text"
+            placeholder="Producción"
+            class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+          />
+        </div>
+        <div>
+          <label
+            class="block text-label-xs text-on-surface-variant uppercase mb-1"
+            for="conn-interval"
+          >
+            Chequear cada (minutos)
+          </label>
+          <input
+            id="conn-interval"
+            [(ngModel)]="intervalMinutes"
+            type="number"
+            min="1"
+            max="1440"
+            class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+          />
+        </div>
+
+        @if (type === 'http') {
+          <div class="sm:col-span-2">
+            <label class="block text-label-xs text-on-surface-variant uppercase mb-1" for="conn-url"
+              >URL del sitio</label
+            >
+            <input
+              id="conn-url"
+              [(ngModel)]="url"
+              type="url"
+              placeholder="https://miapp.com"
+              class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+            />
+          </div>
+          <div>
+            <label
+              class="block text-label-xs text-on-surface-variant uppercase mb-1"
+              for="conn-status"
+            >
+              Código HTTP esperado
+            </label>
+            <input
+              id="conn-status"
+              [(ngModel)]="expectedStatus"
+              type="number"
+              min="100"
+              max="599"
+              class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+            />
+          </div>
+          <div>
+            <label
+              class="block text-label-xs text-on-surface-variant uppercase mb-1"
+              for="conn-text"
+            >
+              Texto que debe aparecer (opcional)
+            </label>
+            <input
+              id="conn-text"
+              [(ngModel)]="expectedText"
+              type="text"
+              placeholder="Iniciar sesión"
+              class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+            />
+          </div>
+        }
+
+        @if (type === 'ssh') {
+          <div>
+            <label
+              class="block text-label-xs text-on-surface-variant uppercase mb-1"
+              for="conn-host"
+              >Host o IP</label
+            >
+            <input
+              id="conn-host"
+              [(ngModel)]="host"
+              type="text"
+              placeholder="ec2-1-2-3-4.compute.amazonaws.com"
+              class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+            />
+          </div>
+          <div>
+            <label
+              class="block text-label-xs text-on-surface-variant uppercase mb-1"
+              for="conn-port"
+              >Puerto</label
+            >
+            <input
+              id="conn-port"
+              [(ngModel)]="port"
+              type="number"
+              min="1"
+              max="65535"
+              class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+            />
+          </div>
+          <div>
+            <label
+              class="block text-label-xs text-on-surface-variant uppercase mb-1"
+              for="conn-user"
+              >Usuario</label
+            >
+            <input
+              id="conn-user"
+              [(ngModel)]="username"
+              type="text"
+              placeholder="ubuntu"
+              autocomplete="off"
+              class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+            />
+          </div>
+          <div>
+            <label
+              class="block text-label-xs text-on-surface-variant uppercase mb-1"
+              for="conn-pass"
+            >
+              Contraseña (o dejá la clave privada)
+            </label>
+            <input
+              id="conn-pass"
+              [(ngModel)]="password"
+              type="password"
+              autocomplete="new-password"
+              [placeholder]="editingId() ? 'Guardada — escribí para reemplazar' : ''"
+              class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+            />
+          </div>
+          <div class="sm:col-span-2">
+            <label
+              class="block text-label-xs text-on-surface-variant uppercase mb-1"
+              for="conn-key"
+            >
+              Clave privada (PEM)
+            </label>
+            <textarea
+              id="conn-key"
+              [(ngModel)]="privateKey"
+              rows="4"
+              [placeholder]="
+                editingId()
+                  ? 'Guardada — pegá una nueva para reemplazarla'
+                  : '-----BEGIN OPENSSH PRIVATE KEY-----'
+              "
+              class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface font-mono focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+            ></textarea>
+          </div>
+          <div>
+            <label
+              class="block text-label-xs text-on-surface-variant uppercase mb-1"
+              for="conn-passphrase"
+            >
+              Passphrase de la clave (opcional)
+            </label>
+            <input
+              id="conn-passphrase"
+              [(ngModel)]="passphrase"
+              type="password"
+              autocomplete="new-password"
+              class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+            />
+          </div>
+        }
+
+        @if (isProvider) {
+          @if (type === 'coolify') {
+            <div class="sm:col-span-2">
+              <label
+                class="block text-label-xs text-on-surface-variant uppercase mb-1"
+                for="conn-base"
+              >
+                URL de la instancia de Coolify
+              </label>
+              <input
+                id="conn-base"
+                [(ngModel)]="providerBaseUrl"
+                type="url"
+                placeholder="https://coolify.miempresa.com"
+                class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+              />
+            </div>
+          }
+          <div>
+            <label
+              class="block text-label-xs text-on-surface-variant uppercase mb-1"
+              for="conn-service"
+            >
+              {{
+                type === 'netlify'
+                  ? 'ID del sitio'
+                  : type === 'coolify'
+                    ? 'UUID de la aplicación'
+                    : 'ID del servicio'
+              }}
+            </label>
+            <input
+              id="conn-service"
+              [(ngModel)]="serviceId"
+              type="text"
+              [placeholder]="type === 'render' ? 'srv-abc123' : ''"
+              class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+            />
+          </div>
+          <div>
+            <label
+              class="block text-label-xs text-on-surface-variant uppercase mb-1"
+              for="conn-token"
+            >
+              Token de la API
+            </label>
+            <input
+              id="conn-token"
+              [(ngModel)]="apiToken"
+              type="password"
+              autocomplete="new-password"
+              [placeholder]="editingId() ? 'Guardado — escribí para reemplazarlo' : ''"
+              class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+            />
+          </div>
+        }
+      </div>
+
+      <p class="text-label-xs text-on-surface-variant inline-flex items-start gap-1.5">
+        <span class="material-symbols-outlined text-[16px] shrink-0">lock</span>
+        Las contraseñas, claves y tokens se guardan cifrados y no vuelven a mostrarse.
+      </p>
+
+      <label class="check-row">
+        <input
+          type="checkbox"
+          [(ngModel)]="isActive"
+          class="h-5 w-5 rounded border border-outline-variant accent-primary cursor-pointer"
+        />
+        <span class="text-body-sm text-on-surface">Monitorear esta conexión</span>
+      </label>
+
+      <!-- Notificaciones y métricas -->
+      <div class="border-t border-surface-container-highest pt-3 flex flex-col gap-3">
+        <button
+          type="button"
+          (click)="showAlertSettings.set(!showAlertSettings())"
+          class="flex items-center justify-between gap-2 py-2 text-left"
+        >
+          <span class="text-label-md text-on-surface inline-flex items-center gap-2">
+            <span class="material-symbols-outlined text-[20px] text-primary"
+              >notifications_active</span
+            >
+            Alertas y métricas a vigilar
+          </span>
+          <span class="material-symbols-outlined text-[22px] text-on-surface-variant">
+            {{ showAlertSettings() ? 'expand_less' : 'expand_more' }}
+          </span>
+        </button>
+
+        @if (showAlertSettings()) {
+          <div class="flex flex-col gap-3">
+            <label class="check-row">
+              <input
+                type="checkbox"
+                [(ngModel)]="alertsEnabled"
+                class="h-5 w-5 rounded border border-outline-variant accent-primary cursor-pointer"
+              />
+              <span class="text-body-sm text-on-surface">Enviar alertas de esta conexión</span>
+            </label>
+
+            <div class="flex flex-wrap gap-x-6 gap-y-2">
+              <label class="check-row">
+                <input
+                  type="checkbox"
+                  [(ngModel)]="alertEmail"
+                  class="h-5 w-5 rounded border border-outline-variant accent-primary cursor-pointer"
+                />
+                <span class="text-body-sm text-on-surface inline-flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[16px]">mail</span>
+                  Correo
+                </span>
+              </label>
+              <label class="check-row">
+                <input
+                  type="checkbox"
+                  [(ngModel)]="alertWhatsapp"
+                  class="h-5 w-5 rounded border border-outline-variant accent-primary cursor-pointer"
+                />
+                <span class="text-body-sm text-on-surface inline-flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[16px]">chat</span>
+                  WhatsApp
+                </span>
+              </label>
+            </div>
+
+            <div>
+              <p class="text-label-xs text-on-surface-variant uppercase mb-2">¿Qué avisar?</p>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4">
+                @for (option of eventsFor(type); track option.key) {
+                  <label class="check-row items-start">
+                    <input
+                      type="checkbox"
+                      [(ngModel)]="events[option.key]"
+                      class="h-5 w-5 mt-0.5 rounded border border-outline-variant accent-primary cursor-pointer"
+                    />
+                    <span class="min-w-0">
+                      <span class="block text-body-sm text-on-surface">{{ option.label }}</span>
+                      <span class="block text-label-xs text-on-surface-variant">{{
+                        option.hint
+                      }}</span>
+                    </span>
+                  </label>
+                }
+              </div>
+            </div>
+
+            <div>
+              <p class="text-label-xs text-on-surface-variant uppercase mb-2">Umbrales</p>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                @for (option of thresholdsFor(type); track option.key) {
+                  <div>
+                    <label
+                      class="block text-label-xs text-on-surface-variant mb-1"
+                      [for]="'thr-' + option.key"
+                    >
+                      {{ option.label }} ({{ option.suffix }})
+                    </label>
+                    <input
+                      [id]="'thr-' + option.key"
+                      [(ngModel)]="thresholds[option.key]"
+                      type="number"
+                      min="1"
+                      class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                    />
+                  </div>
+                }
+                <div>
+                  <label class="block text-label-xs text-on-surface-variant mb-1" for="thr-repeat">
+                    No repetir el mismo aviso por (minutos)
+                  </label>
+                  <input
+                    id="thr-repeat"
+                    [(ngModel)]="repeatAfterMinutes"
+                    type="number"
+                    min="5"
+                    class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label
+                  class="block text-label-xs text-on-surface-variant uppercase mb-1"
+                  for="conn-emails"
+                >
+                  Correos adicionales
+                </label>
+                <input
+                  id="conn-emails"
+                  [(ngModel)]="extraEmails"
+                  type="text"
+                  placeholder="devops@empresa.com, ana@empresa.com"
+                  class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                />
+              </div>
+              <div>
+                <label
+                  class="block text-label-xs text-on-surface-variant uppercase mb-1"
+                  for="conn-phones"
+                >
+                  WhatsApp adicionales
+                </label>
+                <input
+                  id="conn-phones"
+                  [(ngModel)]="extraPhones"
+                  type="text"
+                  placeholder="+5491122334455"
+                  class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                />
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+
+      @if (formError()) {
+        <p class="text-body-sm text-error">{{ formError() }}</p>
+      }
+
+      <button
+        type="button"
+        (click)="submit()"
+        [disabled]="saving() || !canSubmit"
+        class="self-start inline-flex items-center gap-2 bg-primary-container text-on-primary text-label-md py-2.5 px-5 rounded-xl hover:bg-primary transition-colors disabled:opacity-50"
+      >
+        <span class="material-symbols-outlined text-[18px]">{{
+          saving() ? 'progress_activity' : 'save'
+        }}</span>
+        {{ editingId() ? 'Guardar cambios' : 'Conectar y monitorear' }}
+      </button>
+    </div>
+  }
+
+  <!-- Listado -->
+  @if (loading()) {
+    <div class="py-16 flex flex-col items-center gap-3 text-center">
+      <span class="material-symbols-outlined text-primary text-4xl animate-spin"
+        >progress_activity</span
+      >
+      <p class="text-body-sm text-on-surface-variant">Cargando métricas...</p>
+    </div>
+  } @else if (items().length === 0) {
+    <div class="py-16 flex flex-col items-center gap-3 text-center">
+      <span class="material-symbols-outlined text-on-surface-variant text-5xl">monitor_heart</span>
+      <p class="text-body-md text-on-surface">
+        Este proyecto todavía no tiene despliegues conectados.
+      </p>
+      <p class="text-body-sm text-on-surface-variant max-w-md">
+        Conectá el sitio, el servidor por SSH o la cuenta de Render, Netlify o Coolify para ver sus
+        métricas y recibir avisos cuando algo falle.
+      </p>
+      <button
+        type="button"
+        (click)="openCreate()"
+        class="inline-flex items-center gap-2 bg-primary-container text-on-primary text-label-md py-2.5 px-5 rounded-xl hover:bg-primary transition-colors"
+      >
+        <span class="material-symbols-outlined text-[18px]">add_link</span>
+        Conectar despliegue
+      </button>
+    </div>
+  } @else {
+    <div class="flex flex-col gap-3">
+      @for (item of items(); track item.connection._id) {
+        <article
+          class="bg-surface-container-lowest border rounded-2xl p-3 md:p-4 ambient-shadow-sm"
+          [class.border-surface-container-highest]="item.connection.isActive"
+          [class.border-outline-variant]="!item.connection.isActive"
+          [class.opacity-60]="!item.connection.isActive"
+        >
+          <!-- Cabecera -->
+          <div class="flex items-start gap-3">
+            <div
+              class="w-10 h-10 shrink-0 rounded-full bg-primary-fixed text-primary flex items-center justify-center"
+            >
+              <span class="material-symbols-outlined text-[20px]">{{
+                typeIcon(item.connection.type)
+              }}</span>
+            </div>
+
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <p class="text-body-md font-medium text-on-surface truncate">
+                  {{ item.connection.name }}
+                </p>
+                <span
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-label-xs {{
+                    statusClass(item.connection.status)
+                  }}"
+                >
+                  <span class="material-symbols-outlined text-[14px]">{{
+                    statusIcon(item.connection.status)
+                  }}</span>
+                  {{ statusLabel(item.connection.status) }}
+                </span>
+                @if (!item.connection.isActive) {
+                  <span
+                    class="inline-flex items-center px-2 py-0.5 rounded-full text-label-xs bg-surface-container-high text-on-surface-variant"
+                  >
+                    Pausada
+                  </span>
+                }
+              </div>
+              <p class="text-label-xs text-on-surface-variant break-all">
+                {{ typeLabel(item.connection.type) }} · {{ targetOf(item.connection) }}
+              </p>
+            </div>
+
+            <div class="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                (click)="runCheck(item.connection)"
+                [disabled]="isChecking(item.connection._id)"
+                class="ticket-row-action"
+                title="Probar ahora"
+                aria-label="Probar la conexión ahora"
+              >
+                <span
+                  class="material-symbols-outlined text-[20px]"
+                  [class.animate-spin]="isChecking(item.connection._id)"
+                >
+                  {{ isChecking(item.connection._id) ? 'progress_activity' : 'play_arrow' }}
+                </span>
+              </button>
+              <button
+                type="button"
+                (click)="openEdit(item.connection)"
+                class="ticket-row-action"
+                title="Editar"
+                aria-label="Editar conexión"
+              >
+                <span class="material-symbols-outlined text-[20px]">edit</span>
+              </button>
+              <button
+                type="button"
+                (click)="remove(item.connection)"
+                class="ticket-row-action ticket-row-action--danger"
+                title="Eliminar"
+                aria-label="Eliminar conexión"
+              >
+                <span class="material-symbols-outlined text-[20px]">delete</span>
+              </button>
+            </div>
+          </div>
+
+          @if (item.connection.lastError) {
+            <p
+              class="mt-3 text-body-sm text-on-error-container bg-error-container rounded-xl px-3 py-2 break-words"
+            >
+              {{ item.connection.lastError }}
+            </p>
+          }
+
+          <!-- Resumen de la ventana -->
+          <div class="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div class="bg-surface rounded-xl px-3 py-2">
+              <p class="text-label-xs text-on-surface-variant uppercase">Disponibilidad</p>
+              <p class="text-body-md font-medium {{ uptimeClass(item) }}">
+                {{ uptimeLabel(item) }}
+              </p>
+            </div>
+            <div class="bg-surface rounded-xl px-3 py-2">
+              <p class="text-label-xs text-on-surface-variant uppercase">Latencia media</p>
+              <p class="text-body-md font-medium text-on-surface">
+                {{ latencyLabel(item.avgLatencyMs) }}
+              </p>
+            </div>
+            <div class="bg-surface rounded-xl px-3 py-2">
+              <p class="text-label-xs text-on-surface-variant uppercase">Latencia máx.</p>
+              <p class="text-body-md font-medium text-on-surface">
+                {{ latencyLabel(item.maxLatencyMs) }}
+              </p>
+            </div>
+            <div class="bg-surface rounded-xl px-3 py-2">
+              <p class="text-label-xs text-on-surface-variant uppercase">Chequeos</p>
+              <p class="text-body-md font-medium text-on-surface">{{ item.checksCount }}</p>
+            </div>
+          </div>
+
+          <!-- Historial -->
+          @if (item.history.length > 1) {
+            <div class="mt-3">
+              @if (sparkline(item)) {
+                <svg
+                  viewBox="0 0 100 32"
+                  preserveAspectRatio="none"
+                  class="w-full h-10"
+                  aria-hidden="true"
+                >
+                  <polyline
+                    [attr.points]="sparkline(item)"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.5"
+                    vector-effect="non-scaling-stroke"
+                    class="text-primary"
+                  />
+                </svg>
+              }
+              <div
+                class="flex items-end gap-px h-4 mt-1"
+                role="img"
+                aria-label="Historial de estado"
+              >
+                @for (bar of statusBars(item); track $index) {
+                  <span
+                    class="flex-1 h-full rounded-sm {{ barClass(bar.status) }}"
+                    [title]="bar.at"
+                  ></span>
+                }
+              </div>
+              <p class="mt-1 text-label-xs text-on-surface-variant">
+                Últimas {{ hours() }} h
+                @if (item.connection.lastCheckedAt) {
+                  · último chequeo {{ item.connection.lastCheckedAt | date: 'dd/MM/yy HH:mm' }}
+                }
+              </p>
+            </div>
+          }
+
+          <!-- Métricas -->
+          <div class="mt-3 pt-3 border-t border-surface-container-highest">
+            <button
+              type="button"
+              (click)="toggleExpanded(item.connection._id)"
+              class="w-full flex items-center justify-between gap-2 py-2 text-left"
+            >
+              <span class="text-label-md text-on-surface inline-flex items-center gap-2">
+                <span class="material-symbols-outlined text-[20px] text-primary">query_stats</span>
+                Métricas ({{ metricRows(item).length }})
+              </span>
+              <span class="material-symbols-outlined text-[22px] text-on-surface-variant">
+                {{ isExpanded(item.connection._id) ? 'expand_less' : 'expand_more' }}
+              </span>
+            </button>
+
+            @if (isExpanded(item.connection._id)) {
+              @if (metricRows(item).length === 0) {
+                <p class="mt-2 text-body-sm text-on-surface-variant">
+                  Todavía no se ejecutó ningún chequeo. Probá con el botón de reproducir.
+                </p>
+              } @else {
+                <dl class="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1">
+                  @for (metric of metricRows(item); track metric.key) {
+                    <div
+                      class="flex items-start justify-between gap-3 py-1 border-b border-surface-container-high"
+                    >
+                      <dt
+                        class="text-body-sm text-on-surface-variant inline-flex items-center gap-1.5 min-w-0"
+                      >
+                        <span class="material-symbols-outlined text-[16px] shrink-0">{{
+                          metric.icon
+                        }}</span>
+                        <span class="truncate">{{ metric.label }}</span>
+                      </dt>
+                      <dd
+                        class="text-body-sm text-right break-all min-w-0"
+                        [class.text-on-surface]="metric.tone === 'normal'"
+                        [class.text-emerald-600]="metric.tone === 'good'"
+                        [class.text-amber-600]="metric.tone === 'warn'"
+                        [class.text-error]="metric.tone === 'bad'"
+                      >
+                        {{ metric.value }}
+                      </dd>
+                    </div>
+                  }
+                </dl>
+              }
+
+              <!-- Alertas activas -->
+              <div class="mt-3 flex flex-wrap items-center gap-1.5">
+                <span class="text-label-xs text-on-surface-variant uppercase mr-1">Avisos</span>
+                @if (!item.connection.alerts.enabled) {
+                  <span class="ticket-chip">Desactivados</span>
+                } @else {
+                  @for (option of activeEvents(item.connection); track option.key) {
+                    <span class="ticket-chip ticket-chip--on">{{ option.label }}</span>
+                  }
+                  @if (item.connection.alerts.email) {
+                    <span class="ticket-chip inline-flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[14px]">mail</span>
+                      Correo
+                    </span>
+                  }
+                  @if (item.connection.alerts.whatsapp) {
+                    <span class="ticket-chip inline-flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[14px]">chat</span>
+                      WhatsApp
+                    </span>
+                  }
+                }
+              </div>
+
+              <label class="check-row mt-3">
+                <input
+                  type="checkbox"
+                  [checked]="item.connection.isActive"
+                  (change)="toggleActive(item.connection)"
+                  class="h-5 w-5 rounded border border-outline-variant accent-primary cursor-pointer"
+                />
+                <span class="text-label-xs text-on-surface">
+                  Monitorear cada {{ item.connection.intervalMinutes }} min
+                </span>
+              </label>
+            }
+          </div>
+        </article>
+      }
+    </div>
+  }
+</div>

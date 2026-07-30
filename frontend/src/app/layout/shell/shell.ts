@@ -30,6 +30,7 @@ const NAV_ITEMS: NavItem[] = [
     primary: true,
   },
   { label: 'Centro de Ayuda', icon: 'help', path: '/help-center', primary: true },
+  { label: 'Monitoreo', icon: 'monitor_heart', path: '/monitoring', roles: ['admin', 'agent'] },
   { label: 'Usuarios', icon: 'group', path: '/users', roles: ['admin'] },
   { label: 'Categorías', icon: 'sell', path: '/categories', roles: ['admin'] },
   { label: 'Templates WhatsApp', icon: 'forum', path: '/whatsapp-templates', roles: ['admin'] },

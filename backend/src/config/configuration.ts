@@ -3,6 +3,8 @@ export default () => ({
   nodeEnv: process.env.NODE_ENV ?? 'development',
   corsOrigin: process.env.CORS_ORIGIN ?? 'http://localhost:4200',
   mongodbUri: process.env.MONGODB_URI ?? 'mongodb://localhost:27017/mayahelp',
+  /** Key for the monitoring credentials at rest; falls back to the JWT secret. */
+  encryptionKey: process.env.ENCRYPTION_KEY,
   jwt: {
     accessSecret: process.env.JWT_ACCESS_SECRET ?? 'change-me-access-secret',
     accessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN ?? '15m',
