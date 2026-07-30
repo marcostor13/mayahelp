@@ -9,12 +9,14 @@ import { ProjectDocument } from '../projects/schemas/project.schema';
 import { CategoryDocument } from '../categories/schemas/category.schema';
 
 const MAX_PUBLIC_FILES = 5;
+const AUTO_SUBJECT_MAX_LENGTH = 80;
 
 export interface PublicProjectInfo {
   projectName: string;
   projectDescription?: string;
   defaultCategoryId?: string;
   categories: { id: string; name: string }[];
+  reporters: { id: string; name: string }[];
 }
 
 @Injectable()
@@ -42,6 +44,10 @@ export class PublicService {
         id: category.id,
         name: category.name,
       })),
+      reporters: link.reporters.map((reporter) => ({
+        id: reporter._id.toString(),
+        name: reporter.name,
+      })),
     };
   }
 
@@ -53,18 +59,27 @@ export class PublicService {
     const link = await this.projectsService.resolveShareLink(token);
     const project = link.project as unknown as ProjectDocument;
 
+    const reporter = link.reporters.find(
+      (candidate) => candidate._id.toString() === dto.reporterId,
+    );
+    if (!reporter) {
+      throw new BadRequestException(
+        'La persona seleccionada no está autorizada para este enlace.',
+      );
+    }
+
     const category = await this.categoriesService.findById(dto.category);
     if (category.type !== 'ticket') {
       throw new BadRequestException('Categoría inválida.');
     }
 
     const client = await this.usersService.findOrCreateClient(
-      dto.reporterEmail,
-      dto.reporterName,
+      reporter.email,
+      reporter.name,
     );
 
     const ticket = await this.ticketsService.createFromExternalSource({
-      subject: dto.subject,
+      subject: this.buildSubject(dto.description),
       description: dto.description,
       category: category.id,
       clientId: client.id,
@@ -78,5 +93,13 @@ export class PublicService {
     await this.projectsService.incrementShareLinkUsage(link.id);
 
     return { code: ticket.code };
+  }
+
+  private buildSubject(description: string): string {
+    const firstLine = description.split('\n')[0].trim();
+    if (!firstLine) return 'Observación';
+    return firstLine.length > AUTO_SUBJECT_MAX_LENGTH
+      ? `${firstLine.slice(0, AUTO_SUBJECT_MAX_LENGTH - 1)}…`
+      : firstLine;
   }
 }

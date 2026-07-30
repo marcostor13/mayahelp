@@ -19,9 +19,7 @@ export class PublicObservationService {
 
   submit(token: string, payload: CreatePublicObservationPayload, files: File[]) {
     const formData = new FormData();
-    formData.append('reporterName', payload.reporterName);
-    formData.append('reporterEmail', payload.reporterEmail);
-    formData.append('subject', payload.subject);
+    formData.append('reporterId', payload.reporterId);
     formData.append('description', payload.description);
     formData.append('category', payload.category);
     files.forEach((file) => formData.append('files', file));

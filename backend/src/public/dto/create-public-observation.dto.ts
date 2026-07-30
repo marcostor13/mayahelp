@@ -1,16 +1,8 @@
-import { IsEmail, IsMongoId, IsString, MinLength } from 'class-validator';
+import { IsMongoId, IsString, MinLength } from 'class-validator';
 
 export class CreatePublicObservationDto {
-  @IsString()
-  @MinLength(2)
-  reporterName: string;
-
-  @IsEmail()
-  reporterEmail: string;
-
-  @IsString()
-  @MinLength(3)
-  subject: string;
+  @IsMongoId()
+  reporterId: string;
 
   @IsString()
   @MinLength(5)

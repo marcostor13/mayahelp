@@ -22,6 +22,12 @@ export interface CreateProjectPayload {
   defaultCategory?: string;
 }
 
+export interface ProjectReporter {
+  _id: string;
+  name: string;
+  email: string;
+}
+
 export interface ProjectShareLink {
   _id: string;
   project: string;
@@ -31,4 +37,5 @@ export interface ProjectShareLink {
   expiresAt: string | null;
   usageCount: number;
   createdAt: string;
+  reporters: ProjectReporter[];
 }

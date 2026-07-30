@@ -29,47 +29,37 @@
       @if (p.projectDescription) {
         <p class="text-body-md text-on-surface-variant mb-stack-lg">{{ p.projectDescription }}</p>
       }
-      <p class="text-body-sm text-on-surface-variant mb-stack-lg">
-        Cuéntanos qué observaste en este proyecto. No necesitas una cuenta para enviar tu reporte.
-      </p>
 
-      <form (ngSubmit)="submit()" class="flex flex-col gap-stack-md">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-stack-md">
-          <div>
-            <label class="block text-label-md text-on-background mb-stack-sm" for="reporterName">Tu nombre</label>
-            <input
-              id="reporterName"
-              name="reporterName"
-              type="text"
-              required
-              [(ngModel)]="reporterName"
-              class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-            />
-          </div>
-          <div>
-            <label class="block text-label-md text-on-background mb-stack-sm" for="reporterEmail">Tu correo</label>
-            <input
-              id="reporterEmail"
-              name="reporterEmail"
-              type="email"
-              required
-              [(ngModel)]="reporterEmail"
-              class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-            />
-          </div>
+      @if (p.reporters.length === 0) {
+        <div class="text-center py-8 flex flex-col items-center gap-3">
+          <span class="material-symbols-outlined text-error text-4xl">person_off</span>
+          <p class="text-body-md text-on-surface">
+            Todavía no hay personas autorizadas para reportar por este enlace.
+          </p>
+          <p class="text-body-sm text-on-surface-variant">
+            Contacta a quien te compartió este link para que te agregue.
+          </p>
         </div>
+      } @else {
+        <p class="text-body-sm text-on-surface-variant mb-stack-lg">
+          Cuéntanos qué observaste en este proyecto.
+        </p>
 
+        <form (ngSubmit)="submit()" class="flex flex-col gap-stack-md">
         <div>
-          <label class="block text-label-md text-on-background mb-stack-sm" for="subject">Asunto</label>
-          <input
-            id="subject"
-            name="subject"
-            type="text"
+          <label class="block text-label-md text-on-background mb-stack-sm" for="reporterId">¿Quién reporta?</label>
+          <select
+            id="reporterId"
+            name="reporterId"
             required
-            [(ngModel)]="subject"
-            placeholder="Ej. El botón de guardar no responde"
-            class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
-          />
+            [(ngModel)]="reporterId"
+            class="w-full appearance-none bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all cursor-pointer"
+          >
+            <option value="" disabled>Selecciona tu nombre...</option>
+            @for (option of p.reporters; track option.id) {
+              <option [value]="option.id">{{ option.name }}</option>
+            }
+          </select>
         </div>
 
         <div>
@@ -150,7 +140,8 @@
         >
           {{ submitting() ? 'Enviando...' : 'Enviar observación' }}
         </button>
-      </form>
+        </form>
+      }
     }
   </div>
 </div>

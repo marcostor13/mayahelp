@@ -22,9 +22,7 @@ export class ObservationForm implements OnInit {
   protected readonly ticketCode = signal<string | null>(null);
   protected readonly maxFiles = MAX_FILES;
 
-  protected reporterName = '';
-  protected reporterEmail = '';
-  protected subject = '';
+  protected reporterId = '';
   protected description = '';
   protected category = '';
 
@@ -41,6 +39,9 @@ export class ObservationForm implements OnInit {
       next: (info) => {
         this.project.set(info);
         this.category = info.defaultCategoryId ?? '';
+        if (info.reporters.length === 1) {
+          this.reporterId = info.reporters[0].id;
+        }
         this.loading.set(false);
       },
       error: (err: HttpErrorResponse) => {
@@ -67,13 +68,7 @@ export class ObservationForm implements OnInit {
 
   submit(): void {
     this.submitError.set(null);
-    if (
-      !this.reporterName ||
-      !this.reporterEmail ||
-      !this.subject ||
-      !this.description ||
-      !this.category
-    ) {
+    if (!this.reporterId || !this.description || !this.category) {
       this.submitError.set('Completa todos los campos requeridos.');
       return;
     }
@@ -82,9 +77,7 @@ export class ObservationForm implements OnInit {
       .submit(
         this.token,
         {
-          reporterName: this.reporterName,
-          reporterEmail: this.reporterEmail,
-          subject: this.subject,
+          reporterId: this.reporterId,
           description: this.description,
           category: this.category,
         },

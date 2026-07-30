@@ -1,6 +1,18 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
 
+@Schema({ _id: true })
+export class ProjectReporter {
+  @Prop({ required: true, trim: true })
+  name: string;
+
+  @Prop({ required: true, trim: true, lowercase: true })
+  email: string;
+}
+
+export const ProjectReporterSchema =
+  SchemaFactory.createForClass(ProjectReporter);
+
 export type ProjectShareLinkDocument = HydratedDocument<ProjectShareLink>;
 
 @Schema({ timestamps: true })
@@ -26,6 +38,10 @@ export class ProjectShareLink {
 
   @Prop({ default: 0 })
   usageCount: number;
+
+  /** People staff pre-authorized to submit observations through this link — the public form has them pick from this list instead of typing their name/email. */
+  @Prop({ type: [ProjectReporterSchema], default: [] })
+  reporters: Types.DocumentArray<ProjectReporter>;
 
   declare createdAt: Date;
 }

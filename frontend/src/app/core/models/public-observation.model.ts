@@ -3,17 +3,21 @@ export interface PublicCategoryOption {
   name: string;
 }
 
+export interface PublicReporterOption {
+  id: string;
+  name: string;
+}
+
 export interface PublicProjectInfo {
   projectName: string;
   projectDescription?: string;
   defaultCategoryId?: string;
   categories: PublicCategoryOption[];
+  reporters: PublicReporterOption[];
 }
 
 export interface CreatePublicObservationPayload {
-  reporterName: string;
-  reporterEmail: string;
-  subject: string;
+  reporterId: string;
   description: string;
   category: string;
 }

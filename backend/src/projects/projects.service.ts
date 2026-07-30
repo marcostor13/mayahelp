@@ -10,6 +10,7 @@ import {
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { CreateShareLinkDto } from './dto/create-share-link.dto';
+import { ReporterInputDto } from './dto/reporter-input.dto';
 
 @Injectable()
 export class ProjectsService {
@@ -76,7 +77,38 @@ export class ProjectsService {
       label: dto.label,
       expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
       createdBy,
+      reporters: dto.reporters ?? [],
     });
+  }
+
+  async addReporter(
+    linkId: string,
+    dto: ReporterInputDto,
+  ): Promise<ProjectShareLinkDocument> {
+    const link = await this.shareLinkModel
+      .findByIdAndUpdate(linkId, { $push: { reporters: dto } }, { new: true })
+      .exec();
+    if (!link) {
+      throw new NotFoundException('Enlace no encontrado');
+    }
+    return link;
+  }
+
+  async removeReporter(
+    linkId: string,
+    reporterId: string,
+  ): Promise<ProjectShareLinkDocument> {
+    const link = await this.shareLinkModel
+      .findByIdAndUpdate(
+        linkId,
+        { $pull: { reporters: { _id: reporterId } } },
+        { new: true },
+      )
+      .exec();
+    if (!link) {
+      throw new NotFoundException('Enlace no encontrado');
+    }
+    return link;
   }
 
   findShareLinksForProject(projectId: string) {

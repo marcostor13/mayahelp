@@ -2,7 +2,7 @@ import { Component, OnInit, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { ProjectService } from '../../../core/services/project.service';
+import { ProjectService, ReporterInput } from '../../../core/services/project.service';
 import { CategoryService } from '../../../core/services/category.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Project, ProjectShareLink, ProjectStatus } from '../../../core/models/project.model';
@@ -22,6 +22,8 @@ export class ProjectDetail implements OnInit {
   protected readonly creatingLink = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly copiedToken = signal<string | null>(null);
+  protected readonly expandedLinkId = signal<string | null>(null);
+  protected readonly newLinkReporters = signal<ReporterInput[]>([]);
 
   protected name = '';
   protected description = '';
@@ -29,6 +31,10 @@ export class ProjectDetail implements OnInit {
   protected defaultCategory = '';
   protected newLinkLabel = '';
   protected newLinkExpiresAt = '';
+  protected newReporterName = '';
+  protected newReporterEmail = '';
+  protected addReporterName: Record<string, string> = {};
+  protected addReporterEmail: Record<string, string> = {};
 
   private projectId = '';
 
@@ -89,15 +95,34 @@ export class ProjectDetail implements OnInit {
       });
   }
 
+  addPendingReporter(): void {
+    const name = this.newReporterName.trim();
+    const email = this.newReporterEmail.trim();
+    if (!name || !email) return;
+    this.newLinkReporters.update((reporters) => [...reporters, { name, email }]);
+    this.newReporterName = '';
+    this.newReporterEmail = '';
+  }
+
+  removePendingReporter(index: number): void {
+    this.newLinkReporters.update((reporters) => reporters.filter((_, i) => i !== index));
+  }
+
   createShareLink(): void {
     this.creatingLink.set(true);
     this.projectService
-      .createShareLink(this.projectId, this.newLinkLabel || undefined, this.newLinkExpiresAt || undefined)
+      .createShareLink(
+        this.projectId,
+        this.newLinkLabel || undefined,
+        this.newLinkExpiresAt || undefined,
+        this.newLinkReporters(),
+      )
       .subscribe({
         next: (link) => {
           this.shareLinks.update((links) => [link, ...links]);
           this.newLinkLabel = '';
           this.newLinkExpiresAt = '';
+          this.newLinkReporters.set([]);
           this.creatingLink.set(false);
         },
         error: () => this.creatingLink.set(false),
@@ -125,6 +150,27 @@ export class ProjectDetail implements OnInit {
     if (!confirm('¿Revocar y eliminar este enlace? Dejará de funcionar de inmediato.')) return;
     this.projectService.removeShareLink(id).subscribe(() => {
       this.shareLinks.update((links) => links.filter((l) => l._id !== id));
+    });
+  }
+
+  toggleExpanded(linkId: string): void {
+    this.expandedLinkId.set(this.expandedLinkId() === linkId ? null : linkId);
+  }
+
+  addReporter(link: ProjectShareLink): void {
+    const name = (this.addReporterName[link._id] ?? '').trim();
+    const email = (this.addReporterEmail[link._id] ?? '').trim();
+    if (!name || !email) return;
+    this.projectService.addReporter(link._id, { name, email }).subscribe((updated) => {
+      this.shareLinks.update((links) => links.map((l) => (l._id === updated._id ? updated : l)));
+      this.addReporterName[link._id] = '';
+      this.addReporterEmail[link._id] = '';
+    });
+  }
+
+  removeReporter(link: ProjectShareLink, reporterId: string): void {
+    this.projectService.removeReporter(link._id, reporterId).subscribe((updated) => {
+      this.shareLinks.update((links) => links.map((l) => (l._id === updated._id ? updated : l)));
     });
   }
 

@@ -105,29 +105,67 @@
         Enlaces públicos de observaciones
       </h3>
       <p class="text-body-sm text-on-surface-variant">
-        Comparte un enlace con un usuario externo (sin necesidad de iniciar sesión) para que reporte
-        observaciones sobre este proyecto. Cada envío crea un ticket con la categoría que el reportante elija
+        Comparte un enlace con las personas que autorices para que reporten observaciones sobre este proyecto,
+        sin necesidad de crear una cuenta. Cada envío crea un ticket con la categoría que la persona elija
         @if (p.defaultCategory) {
           (viene preseleccionada con <span class="text-on-surface font-medium">{{ p.defaultCategory.name }}</span>)
         }.
       </p>
 
-      <div class="flex flex-col sm:flex-row gap-2 bg-surface rounded-xl p-4 border border-surface-container-highest">
-        <input
-          [(ngModel)]="newLinkLabel"
-          placeholder="Etiqueta (opcional, ej. Cliente ACME)"
-          class="flex-1 bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-        />
-        <input
-          [(ngModel)]="newLinkExpiresAt"
-          type="date"
-          class="bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-        />
+      <div class="flex flex-col gap-2 bg-surface rounded-xl p-4 border border-surface-container-highest">
+        <div class="flex flex-col sm:flex-row gap-2">
+          <input
+            [(ngModel)]="newLinkLabel"
+            placeholder="Etiqueta (opcional, ej. Cliente ACME)"
+            class="flex-1 bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+          />
+          <input
+            [(ngModel)]="newLinkExpiresAt"
+            type="date"
+            class="bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+          />
+        </div>
+
+        <p class="text-label-xs text-on-surface-variant uppercase mt-1">Personas autorizadas a reportar</p>
+        <div class="flex flex-col sm:flex-row gap-2">
+          <input
+            [(ngModel)]="newReporterName"
+            placeholder="Nombre"
+            class="flex-1 bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+          />
+          <input
+            [(ngModel)]="newReporterEmail"
+            type="email"
+            placeholder="Correo"
+            class="flex-1 bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+          />
+          <button
+            type="button"
+            (click)="addPendingReporter()"
+            class="border border-outline-variant text-on-surface py-2 px-4 rounded-lg text-label-sm hover:bg-surface-container-low transition-colors shrink-0"
+          >
+            Agregar
+          </button>
+        </div>
+
+        @if (newLinkReporters().length > 0) {
+          <ul class="flex flex-wrap gap-2">
+            @for (reporter of newLinkReporters(); track $index; let i = $index) {
+              <li class="flex items-center gap-1 bg-surface-container-low rounded-full pl-3 pr-1 py-1 text-body-sm">
+                {{ reporter.name }}
+                <button type="button" (click)="removePendingReporter(i)" class="text-on-surface-variant hover:text-error p-1">
+                  <span class="material-symbols-outlined text-[14px]">close</span>
+                </button>
+              </li>
+            }
+          </ul>
+        }
+
         <button
           type="button"
           [disabled]="creatingLink()"
           (click)="createShareLink()"
-          class="bg-primary-container text-on-primary py-2 px-4 rounded-lg text-label-md flex items-center justify-center gap-2 shadow-sm disabled:opacity-60"
+          class="self-start bg-primary-container text-on-primary py-2 px-4 rounded-lg text-label-md flex items-center justify-center gap-2 shadow-sm disabled:opacity-60 mt-1"
         >
           <span class="material-symbols-outlined text-[18px]">add_link</span>
           {{ creatingLink() ? 'Generando...' : 'Generar enlace' }}
@@ -177,6 +215,14 @@
               </button>
               <button
                 type="button"
+                (click)="toggleExpanded(link._id)"
+                class="text-on-surface-variant text-label-sm hover:underline flex items-center gap-1"
+              >
+                <span class="material-symbols-outlined text-[16px]">group</span>
+                {{ link.reporters.length }} persona{{ link.reporters.length === 1 ? '' : 's' }}
+              </button>
+              <button
+                type="button"
                 (click)="removeShareLink(link._id)"
                 class="text-error text-label-sm hover:underline flex items-center gap-1"
               >
@@ -184,6 +230,50 @@
                 Eliminar
               </button>
             </div>
+
+            @if (expandedLinkId() === link._id) {
+              <div class="mt-2 pt-3 border-t border-surface-container-highest flex flex-col gap-2">
+                @for (reporter of link.reporters; track reporter._id) {
+                  <div class="flex items-center justify-between gap-2 bg-surface-container-low rounded-lg px-3 py-2">
+                    <div class="min-w-0">
+                      <p class="text-body-sm text-on-surface truncate">{{ reporter.name }}</p>
+                      <p class="text-label-xs text-on-surface-variant truncate">{{ reporter.email }}</p>
+                    </div>
+                    <button
+                      type="button"
+                      (click)="removeReporter(link, reporter._id)"
+                      class="text-on-surface-variant hover:text-error p-1 shrink-0"
+                      title="Quitar"
+                    >
+                      <span class="material-symbols-outlined text-[18px]">close</span>
+                    </button>
+                  </div>
+                } @empty {
+                  <p class="text-body-sm text-on-surface-variant">Nadie está autorizado a reportar por este enlace todavía.</p>
+                }
+
+                <div class="flex flex-col sm:flex-row gap-2 mt-1">
+                  <input
+                    [(ngModel)]="addReporterName[link._id]"
+                    placeholder="Nombre"
+                    class="flex-1 bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                  />
+                  <input
+                    [(ngModel)]="addReporterEmail[link._id]"
+                    type="email"
+                    placeholder="Correo"
+                    class="flex-1 bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                  />
+                  <button
+                    type="button"
+                    (click)="addReporter(link)"
+                    class="border border-outline-variant text-on-surface py-2 px-4 rounded-lg text-label-sm hover:bg-surface-container-low transition-colors shrink-0"
+                  >
+                    Agregar
+                  </button>
+                </div>
+              </div>
+            }
           </div>
         } @empty {
           <p class="text-body-sm text-on-surface-variant text-center py-6">
