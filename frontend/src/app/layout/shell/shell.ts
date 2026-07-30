@@ -1,5 +1,5 @@
-import { Component, computed } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Component, computed, signal } from '@angular/core';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../core/services/auth.service';
 import { Role } from '../../core/models/user.model';
 
@@ -8,13 +8,21 @@ interface NavItem {
   icon: string;
   path: string;
   roles?: Role[];
+  /** Primary items get a slot in the mobile bottom bar; the rest live in the "Más" sheet. */
+  primary?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Dashboard', icon: 'dashboard', path: '/dashboard' },
-  { label: 'Tickets', icon: 'confirmation_number', path: '/tickets' },
-  { label: 'Proyectos', icon: 'folder_open', path: '/projects', roles: ['admin', 'agent'] },
-  { label: 'Centro de Ayuda', icon: 'help', path: '/help-center' },
+  { label: 'Dashboard', icon: 'dashboard', path: '/dashboard', primary: true },
+  { label: 'Tickets', icon: 'confirmation_number', path: '/tickets', primary: true },
+  {
+    label: 'Proyectos',
+    icon: 'folder_open',
+    path: '/projects',
+    roles: ['admin', 'agent'],
+    primary: true,
+  },
+  { label: 'Centro de Ayuda', icon: 'help', path: '/help-center', primary: true },
   { label: 'Categorías', icon: 'sell', path: '/categories', roles: ['admin'] },
   { label: 'Templates WhatsApp', icon: 'forum', path: '/whatsapp-templates', roles: ['admin'] },
 ];
@@ -26,18 +34,45 @@ const NAV_ITEMS: NavItem[] = [
 })
 export class Shell {
   protected readonly navItems = NAV_ITEMS;
+  protected readonly moreOpen = signal(false);
+  protected search = '';
 
-  constructor(protected readonly auth: AuthService) {}
+  constructor(
+    protected readonly auth: AuthService,
+    private readonly router: Router,
+  ) {}
 
   protected readonly visibleNavItems = computed(() => {
     const role = this.auth.currentUser()?.role;
     return this.navItems.filter((item) => !item.roles || (role && item.roles.includes(role)));
   });
 
+  /** The bottom bar keeps 4 slots so the "Más" button always fits on a narrow screen. */
+  protected readonly bottomNavItems = computed(() =>
+    this.visibleNavItems()
+      .filter((item) => item.primary)
+      .slice(0, 4),
+  );
+
+  /** Everything the bottom bar could not fit, plus Ajustes, lives in the "Más" sheet. */
+  protected readonly moreNavItems = computed(() => {
+    const bottom = new Set(this.bottomNavItems().map((item) => item.path));
+    return this.visibleNavItems().filter((item) => !bottom.has(item.path));
+  });
+
   protected readonly initials = computed(() => {
     const name = this.auth.currentUser()?.name ?? '';
     return name.charAt(0).toUpperCase() || '?';
   });
+
+  submitSearch(): void {
+    const term = this.search.trim();
+    this.router.navigate(['/tickets'], { queryParams: term ? { search: term } : {} });
+  }
+
+  closeMore(): void {
+    this.moreOpen.set(false);
+  }
 
   async logout() {
     await this.auth.logout();

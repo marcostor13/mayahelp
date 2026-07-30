@@ -1,192 +1,379 @@
 @if (loading()) {
-  <p class="text-body-md text-on-surface-variant">Cargando ticket...</p>
-} @else if (ticket(); as t) {
-  <div class="flex items-center justify-between mb-stack-md">
-    <a routerLink="/tickets" class="text-primary text-label-md hover:underline flex items-center gap-1 w-fit">
-      <span class="material-symbols-outlined text-[18px]">arrow_back</span>
-      Volver a tickets
-    </a>
-    <button
-      type="button"
-      (click)="exportMarkdown()"
-      class="text-on-surface-variant hover:text-primary text-label-md flex items-center gap-1 transition-colors"
-      title="Exportar a Markdown"
-    >
-      <span class="material-symbols-outlined text-[18px]">download</span>
-      Exportar a Markdown
-    </button>
+  <div class="py-16 flex flex-col items-center gap-3 text-center">
+    <span class="material-symbols-outlined text-primary text-4xl animate-spin">progress_activity</span>
+    <p class="text-body-sm text-on-surface-variant">Cargando ticket...</p>
   </div>
+} @else if (notFound()) {
+  <div class="py-16 flex flex-col items-center gap-3 text-center">
+    <span class="material-symbols-outlined text-error text-5xl">error</span>
+    <p class="text-body-md text-on-surface">No pudimos cargar este ticket.</p>
+    <a routerLink="/tickets" class="text-primary text-label-md hover:underline">Volver a tickets</a>
+  </div>
+} @else if (ticket(); as t) {
+  <div class="flex flex-col gap-stack-md">
+    <!-- Encabezado -->
+    <div class="flex items-start gap-2">
+      <a routerLink="/tickets" class="ticket-icon-btn shrink-0" title="Volver a tickets" aria-label="Volver a tickets">
+        <span class="material-symbols-outlined text-[22px]">arrow_back</span>
+      </a>
 
-  <div class="flex flex-col lg:flex-row gap-stack-lg">
-    <div class="flex-1 flex flex-col gap-stack-md">
-      <div class="bg-surface-container-lowest rounded-2xl p-6 ambient-shadow-sm">
-        <div class="flex justify-between items-start gap-4 mb-4">
-          <div>
-            <p class="text-label-xs text-primary">{{ t.code }}</p>
-            <h1 class="text-headline-xl text-on-background">{{ t.subject }}</h1>
-          </div>
-          <span class="inline-flex items-center px-3 py-1 rounded-full text-label-xs font-bold uppercase bg-surface-container-low text-on-surface">
-            {{ t.status }}
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-label-md text-primary">{{ t.code }}</span>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-label-xs uppercase {{ statusBadge(t.status) }}">
+            {{ statusLabels[t.status] }}
+          </span>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-label-xs uppercase {{ priorityBadge(t.priority) }}">
+            {{ priorityLabels[t.priority] }}
           </span>
         </div>
-        <p class="text-body-md text-on-surface-variant whitespace-pre-line">{{ t.description }}</p>
+        <h1 class="text-headline-lg-mobile md:text-headline-xl text-on-background mt-1 break-words">{{ t.subject }}</h1>
       </div>
 
-      <div class="bg-surface-container-lowest rounded-2xl p-6 ambient-shadow-sm">
-        <h3 class="text-headline-lg-mobile text-on-background mb-4">Conversación</h3>
-        <div class="flex flex-col gap-4 mb-6">
-          @for (comment of t.comments; track $index) {
-            <div
-              class="p-4 rounded-xl border"
-              [class.bg-surface]="!comment.isInternal"
-              [class.border-surface-variant]="!comment.isInternal"
-              [class.bg-primary-fixed]="comment.isInternal"
-              [class.border-primary-fixed]="comment.isInternal"
-            >
-              <div class="flex justify-between items-center mb-1">
-                <span class="text-label-md text-on-surface flex items-center gap-1">
-                  {{ comment.authorName }}
-                  @if (comment.isInternal) {
-                    <span class="material-symbols-outlined text-[14px] text-primary">auto_awesome</span>
-                    <span class="text-label-xs text-primary uppercase">Sugerencia IA (interna)</span>
-                  }
-                </span>
-                <span class="text-label-xs text-on-surface-variant">{{ comment.createdAt | date: 'short' }}</span>
-              </div>
-              <p class="text-body-sm text-on-surface-variant whitespace-pre-line">{{ comment.message }}</p>
-              @if (comment.isInternal) {
-                <button
-                  type="button"
-                  (click)="useAiSuggestion(comment)"
-                  class="mt-2 text-primary text-label-xs hover:underline flex items-center gap-1"
-                >
-                  <span class="material-symbols-outlined text-[14px]">content_copy</span>
-                  Usar esta respuesta
-                </button>
-              }
-            </div>
-          } @empty {
-            <p class="text-body-sm text-on-surface-variant">Aún no hay comentarios.</p>
-          }
-        </div>
-
-        <form (ngSubmit)="addComment()" class="flex flex-col gap-2">
-          <textarea
-            [(ngModel)]="newComment"
-            name="comment"
-            rows="3"
-            placeholder="Escribe un comentario..."
-            class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none"
-          ></textarea>
-          <button
-            type="submit"
-            [disabled]="sending()"
-            class="self-end bg-primary-container text-on-primary text-label-md py-2 px-5 rounded-lg hover:bg-primary transition-colors disabled:opacity-60"
-          >
-            {{ sending() ? 'Enviando...' : 'Comentar' }}
+      <div class="flex items-center gap-1 shrink-0">
+        <button type="button" (click)="copyLink()" class="ticket-icon-btn" title="Copiar enlace" aria-label="Copiar enlace">
+          <span class="material-symbols-outlined text-[22px]">{{ linkCopied() ? 'check' : 'link' }}</span>
+        </button>
+        <button type="button" (click)="exportMarkdown()" class="ticket-icon-btn" title="Exportar a Markdown" aria-label="Exportar a Markdown">
+          <span class="material-symbols-outlined text-[22px]">download</span>
+        </button>
+        @if (canDelete) {
+          <button type="button" (click)="removeTicket()" class="ticket-icon-btn hover:border-error hover:bg-error-container hover:text-error" title="Eliminar ticket" aria-label="Eliminar ticket">
+            <span class="material-symbols-outlined text-[22px]">delete</span>
           </button>
-        </form>
+        }
       </div>
     </div>
 
-    <aside class="w-full lg:w-80 flex flex-col gap-stack-md">
-      <div class="bg-surface-container-lowest rounded-2xl p-6 ambient-shadow-sm flex flex-col gap-4">
-        <div>
-          <p class="text-label-xs text-on-surface-variant uppercase mb-1">Cliente</p>
-          <p class="text-label-md text-on-surface">{{ t.client.name }}</p>
-          <p class="text-body-sm text-on-surface-variant">{{ t.client.email }}</p>
-        </div>
-        <div>
-          <p class="text-label-xs text-on-surface-variant uppercase mb-1">Categoría</p>
-          <p class="text-label-md text-on-surface">{{ t.category.name }}</p>
-        </div>
-        @if (t.project) {
-          <div>
-            <p class="text-label-xs text-on-surface-variant uppercase mb-1">Proyecto</p>
-            <p class="text-label-md text-on-surface flex items-center gap-1">
-              <span class="material-symbols-outlined text-[16px] text-primary">folder_open</span>
-              {{ t.project.name }}
-            </p>
-          </div>
-        }
+    <div class="flex flex-col lg:flex-row gap-stack-md">
+      <div class="flex-1 min-w-0 flex flex-col gap-stack-md">
+        <!-- Descripción -->
+        <section class="bg-surface-container-lowest rounded-2xl p-4 md:p-6 ambient-shadow-sm">
+          <h2 class="text-label-md text-on-surface-variant uppercase tracking-wider mb-3 flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px] text-primary">description</span>
+            Descripción
+          </h2>
+          <p class="text-body-md text-on-surface whitespace-pre-line break-words">{{ t.description }}</p>
+        </section>
 
-        @if (canManage) {
-          <div>
-            <label class="block text-label-xs text-on-surface-variant uppercase mb-1" for="status">Estado</label>
-            <select
-              id="status"
-              [ngModel]="t.status"
-              (ngModelChange)="updateStatus($event)"
-              class="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none capitalize"
-            >
-              @for (status of statuses; track status) {
-                <option [value]="status">{{ status }}</option>
+        <!-- Adjuntos en miniaturas -->
+        <section class="bg-surface-container-lowest rounded-2xl p-4 md:p-6 ambient-shadow-sm">
+          <div class="flex items-center justify-between gap-2 mb-3">
+            <h2 class="text-label-md text-on-surface-variant uppercase tracking-wider flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px] text-primary">attach_file</span>
+              Adjuntos ({{ attachments().length }})
+            </h2>
+            @if (uploading()) {
+              <span class="material-symbols-outlined text-primary text-[20px] animate-spin">progress_activity</span>
+            }
+          </div>
+
+          <app-media-capture (filesAdded)="onFilesAdded($event)" />
+
+          @if (uploadError()) {
+            <p class="text-body-sm text-error mt-2">{{ uploadError() }}</p>
+          }
+
+          @if (attachments().length > 0) {
+            <div class="mt-4 grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
+              @for (file of attachments(); track file._id) {
+                <figure class="group relative bg-surface border border-outline-variant rounded-xl overflow-hidden">
+                  @if (file.kind === 'image') {
+                    <button
+                      type="button"
+                      (click)="openViewer(file)"
+                      class="block w-full aspect-square bg-surface-container-low"
+                      [attr.aria-label]="'Ver ' + file.filename"
+                    >
+                      <img [src]="file.url" [alt]="file.filename" loading="lazy" class="h-full w-full object-cover" />
+                    </button>
+                  } @else if (file.kind === 'video') {
+                    <a [href]="file.url" target="_blank" rel="noopener" class="block relative w-full aspect-square bg-black">
+                      <video [src]="file.url" muted preload="metadata" playsinline class="h-full w-full object-cover"></video>
+                      <span class="absolute inset-0 flex items-center justify-center">
+                        <span class="material-symbols-outlined icon-fill text-white text-[40px] drop-shadow-lg">play_circle</span>
+                      </span>
+                    </a>
+                  } @else if (file.kind === 'audio') {
+                    <div class="w-full aspect-square bg-surface-container-low flex flex-col items-center justify-center gap-2 p-2">
+                      <span class="material-symbols-outlined text-primary text-[36px]">audiotrack</span>
+                      <audio [src]="file.url" controls class="w-full"></audio>
+                    </div>
+                  } @else {
+                    <a
+                      [href]="file.url"
+                      target="_blank"
+                      rel="noopener"
+                      class="w-full aspect-square bg-surface-container-low flex flex-col items-center justify-center gap-2"
+                    >
+                      <span class="material-symbols-outlined text-primary text-[36px]">{{ iconForKind(file.kind) }}</span>
+                      <span class="text-label-xs text-on-surface-variant">Abrir</span>
+                    </a>
+                  }
+
+                  <figcaption class="px-2 py-1.5 border-t border-outline-variant">
+                    <p class="text-label-xs text-on-surface truncate" [title]="file.filename">{{ file.filename }}</p>
+                    <p class="text-[11px] text-on-surface-variant">{{ formatBytes(file.size) }}</p>
+                  </figcaption>
+
+                  <div class="absolute top-1 right-1 flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                    <a
+                      [href]="file.url"
+                      target="_blank"
+                      rel="noopener"
+                      class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm hover:bg-black/75"
+                      title="Abrir en una pestaña nueva"
+                      aria-label="Abrir en una pestaña nueva"
+                    >
+                      <span class="material-symbols-outlined text-[18px]">open_in_new</span>
+                    </a>
+                    <button
+                      type="button"
+                      (click)="removeAttachment(file, $event)"
+                      class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur-sm hover:bg-error"
+                      title="Eliminar adjunto"
+                      aria-label="Eliminar adjunto"
+                    >
+                      <span class="material-symbols-outlined text-[18px]">delete</span>
+                    </button>
+                  </div>
+                </figure>
               }
-            </select>
+            </div>
+          } @else if (!uploading()) {
+            <p class="text-body-sm text-on-surface-variant mt-3">Sin adjuntos todavía.</p>
+          }
+        </section>
+
+        <!-- Conversación -->
+        <section class="bg-surface-container-lowest rounded-2xl p-4 md:p-6 ambient-shadow-sm">
+          <h2 class="text-label-md text-on-surface-variant uppercase tracking-wider mb-4 flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px] text-primary">forum</span>
+            Conversación ({{ t.comments.length }})
+          </h2>
+
+          <div class="flex flex-col gap-3 mb-5">
+            @for (comment of t.comments; track $index) {
+              <article
+                class="flex gap-3 p-3 rounded-xl border"
+                [class.bg-surface]="!comment.isInternal"
+                [class.border-surface-variant]="!comment.isInternal"
+                [class.bg-primary-fixed]="comment.isInternal"
+                [class.border-primary-fixed-dim]="comment.isInternal"
+              >
+                <div class="w-9 h-9 shrink-0 rounded-full bg-primary-fixed-dim text-on-primary-fixed flex items-center justify-center text-label-md font-bold">
+                  {{ initials(comment.authorName) }}
+                </div>
+                <div class="min-w-0 flex-1">
+                  <div class="flex items-center justify-between gap-2 flex-wrap">
+                    <span class="text-label-md text-on-surface flex items-center gap-1">
+                      {{ comment.authorName }}
+                      @if (comment.isInternal) {
+                        <span class="material-symbols-outlined text-[14px] text-primary">auto_awesome</span>
+                        <span class="text-label-xs text-primary uppercase">Sugerencia IA (interna)</span>
+                      }
+                    </span>
+                    <span class="text-label-xs text-on-surface-variant">{{ comment.createdAt | date: 'dd/MM/yy HH:mm' }}</span>
+                  </div>
+                  <p class="text-body-sm text-on-surface-variant whitespace-pre-line break-words mt-1">{{ comment.message }}</p>
+                  @if (comment.isInternal) {
+                    <button
+                      type="button"
+                      (click)="useAiSuggestion(comment)"
+                      class="mt-2 text-primary text-label-xs hover:underline flex items-center gap-1"
+                    >
+                      <span class="material-symbols-outlined text-[14px]">content_copy</span>
+                      Usar esta respuesta
+                    </button>
+                  }
+                </div>
+              </article>
+            } @empty {
+              <p class="text-body-sm text-on-surface-variant">Aún no hay comentarios.</p>
+            }
           </div>
-          <div>
-            <label class="block text-label-xs text-on-surface-variant uppercase mb-1" for="priority">Prioridad</label>
-            <select
-              id="priority"
-              [ngModel]="t.priority"
-              (ngModelChange)="updatePriority($event)"
-              class="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none capitalize"
+
+          <form (ngSubmit)="addComment()" class="flex flex-col gap-2">
+            <textarea
+              [(ngModel)]="newComment"
+              name="comment"
+              rows="3"
+              placeholder="Escribe un comentario..."
+              class="w-full bg-surface border border-outline-variant rounded-xl px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none"
+            ></textarea>
+            <button
+              type="submit"
+              [disabled]="sending() || !newComment.trim()"
+              class="self-end inline-flex items-center gap-2 bg-primary-container text-on-primary text-label-md py-2.5 px-5 rounded-xl hover:bg-primary transition-colors disabled:opacity-50"
             >
-              @for (priority of priorities; track priority) {
-                <option [value]="priority">{{ priority }}</option>
-              }
-            </select>
-          </div>
-        } @else {
-          <div>
-            <p class="text-label-xs text-on-surface-variant uppercase mb-1">Prioridad</p>
-            <p class="text-label-md text-on-surface capitalize">{{ t.priority }}</p>
-          </div>
-        }
+              <span class="material-symbols-outlined text-[18px]">{{ sending() ? 'progress_activity' : 'send' }}</span>
+              {{ sending() ? 'Enviando...' : 'Comentar' }}
+            </button>
+          </form>
+        </section>
       </div>
 
-      <div class="bg-surface-container-lowest rounded-2xl p-6 ambient-shadow-sm flex flex-col gap-3">
-        <div class="flex items-center justify-between">
-          <p class="text-label-xs text-on-surface-variant uppercase">Adjuntos</p>
-          <label for="attachment-input" class="text-primary hover:bg-surface-container-low p-1 rounded-full transition-colors cursor-pointer">
-            <span class="material-symbols-outlined text-[20px]">add</span>
-          </label>
-          <input
-            id="attachment-input"
-            type="file"
-            class="hidden"
-            accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
-            (change)="onFileSelected($event)"
-          />
-        </div>
-
-        @if (uploading()) {
-          <p class="text-body-sm text-on-surface-variant">Subiendo...</p>
+      <!-- Panel de datos -->
+      <aside class="w-full lg:w-80 shrink-0 flex flex-col gap-stack-md">
+        @if (canManage) {
+          <div class="bg-surface-container-lowest rounded-2xl p-4 md:p-6 ambient-shadow-sm flex flex-col gap-3">
+            <p class="text-label-md text-on-surface-variant uppercase tracking-wider">Gestión</p>
+            <div>
+              <label class="block text-label-xs text-on-surface-variant mb-1" for="status">Estado</label>
+              <select
+                id="status"
+                [ngModel]="t.status"
+                (ngModelChange)="updateStatus($event)"
+                class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+              >
+                @for (status of statuses; track status) {
+                  <option [value]="status">{{ statusLabels[status] }}</option>
+                }
+              </select>
+            </div>
+            <div>
+              <label class="block text-label-xs text-on-surface-variant mb-1" for="priority">Prioridad</label>
+              <select
+                id="priority"
+                [ngModel]="t.priority"
+                (ngModelChange)="updatePriority($event)"
+                class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+              >
+                @for (priority of priorities; track priority) {
+                  <option [value]="priority">{{ priorityLabels[priority] }}</option>
+                }
+              </select>
+            </div>
+          </div>
         }
 
-        @for (file of attachments(); track file._id) {
+        <dl class="bg-surface-container-lowest rounded-2xl p-4 md:p-6 ambient-shadow-sm grid grid-cols-2 lg:grid-cols-1 gap-4">
+          <div class="col-span-2 lg:col-span-1">
+            <dt class="text-label-xs text-on-surface-variant uppercase mb-1">Cliente</dt>
+            <dd class="text-label-md text-on-surface">{{ t.client.name }}</dd>
+            <dd class="text-body-sm text-on-surface-variant break-words">{{ t.client.email }}</dd>
+            @if (t.client.company) {
+              <dd class="text-body-sm text-on-surface-variant">{{ t.client.company }}</dd>
+            }
+            @if (t.client.phone) {
+              <dd class="text-body-sm text-on-surface-variant flex items-center gap-1">
+                <span class="material-symbols-outlined text-[14px]">call</span>
+                {{ t.client.phone }}
+              </dd>
+            }
+          </div>
+
+          <div>
+            <dt class="text-label-xs text-on-surface-variant uppercase mb-1">Categoría</dt>
+            <dd class="text-label-md text-on-surface flex items-center gap-1">
+              <span class="material-symbols-outlined text-[16px] text-primary">{{ t.category.icon || 'label' }}</span>
+              {{ t.category.name }}
+            </dd>
+          </div>
+
+          <div>
+            <dt class="text-label-xs text-on-surface-variant uppercase mb-1">Proyecto</dt>
+            <dd class="text-label-md text-on-surface flex items-center gap-1">
+              @if (t.project) {
+                <span class="material-symbols-outlined text-[16px] text-primary">folder_open</span>
+                {{ t.project.name }}
+              } @else {
+                <span class="text-on-surface-variant">Sin proyecto</span>
+              }
+            </dd>
+          </div>
+
+          <div>
+            <dt class="text-label-xs text-on-surface-variant uppercase mb-1">Agente</dt>
+            <dd class="text-label-md text-on-surface">{{ t.assignedAgent?.name ?? 'Sin asignar' }}</dd>
+          </div>
+
+          @if (!canManage) {
+            <div>
+              <dt class="text-label-xs text-on-surface-variant uppercase mb-1">Prioridad</dt>
+              <dd class="text-label-md text-on-surface">{{ priorityLabels[t.priority] }}</dd>
+            </div>
+          }
+
+          <div>
+            <dt class="text-label-xs text-on-surface-variant uppercase mb-1">Creado</dt>
+            <dd class="text-body-sm text-on-surface">{{ t.createdAt | date: 'dd/MM/yyyy HH:mm' }}</dd>
+          </div>
+
+          <div>
+            <dt class="text-label-xs text-on-surface-variant uppercase mb-1">Actualizado</dt>
+            <dd class="text-body-sm text-on-surface">{{ t.updatedAt | date: 'dd/MM/yyyy HH:mm' }}</dd>
+          </div>
+
+          @if (t.resolvedAt) {
+            <div>
+              <dt class="text-label-xs text-on-surface-variant uppercase mb-1">Resuelto</dt>
+              <dd class="text-body-sm text-on-surface">{{ t.resolvedAt | date: 'dd/MM/yyyy HH:mm' }}</dd>
+            </div>
+          }
+
+          @if (t.satisfaction) {
+            <div>
+              <dt class="text-label-xs text-on-surface-variant uppercase mb-1">Satisfacción</dt>
+              <dd class="text-label-md text-on-surface">{{ t.satisfaction }}/5</dd>
+            </div>
+          }
+        </dl>
+      </aside>
+    </div>
+  </div>
+
+  <!-- Visor de imágenes a pantalla completa -->
+  @if (viewerImage(); as image) {
+    <div
+      class="fixed inset-0 z-[70] bg-black/95 flex flex-col"
+      role="dialog"
+      aria-modal="true"
+      (click)="closeViewer()"
+    >
+      <div class="flex items-center justify-between gap-2 px-4 pt-[max(1rem,env(safe-area-inset-top))]">
+        <p class="text-body-sm text-white/90 truncate">
+          {{ image.filename }}
+          <span class="text-white/60">({{ (viewerIndex() ?? 0) + 1 }}/{{ imageAttachments().length }})</span>
+        </p>
+        <div class="flex items-center gap-1 shrink-0">
           <a
-            [href]="file.url"
+            [href]="image.url"
             target="_blank"
             rel="noopener"
-            class="flex items-center gap-2 bg-surface border border-outline-variant rounded-lg px-3 py-2 hover:border-primary transition-colors group"
+            (click)="$event.stopPropagation()"
+            class="capture-overlay-action"
+            title="Abrir original"
+            aria-label="Abrir original"
           >
-            <span class="material-symbols-outlined text-primary text-[18px]">{{ iconForKind(file.kind) }}</span>
-            <span class="text-body-sm text-on-surface truncate flex-1">{{ file.filename }}</span>
-            <button
-              type="button"
-              (click)="$event.preventDefault(); removeAttachment(file)"
-              class="text-on-surface-variant hover:text-error transition-colors opacity-0 group-hover:opacity-100"
-            >
-              <span class="material-symbols-outlined text-[16px]">close</span>
-            </button>
+            <span class="material-symbols-outlined text-[22px]">open_in_new</span>
           </a>
-        } @empty {
-          @if (!uploading()) {
-            <p class="text-body-sm text-on-surface-variant">Sin adjuntos.</p>
-          }
+          <button type="button" (click)="closeViewer()" class="capture-overlay-action" title="Cerrar" aria-label="Cerrar">
+            <span class="material-symbols-outlined text-[22px]">close</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="flex-1 min-h-0 flex items-center justify-center gap-2 px-2">
+        @if (imageAttachments().length > 1) {
+          <button type="button" (click)="stepViewer(-1, $event)" class="capture-overlay-action shrink-0" title="Anterior" aria-label="Anterior">
+            <span class="material-symbols-outlined text-[24px]">chevron_left</span>
+          </button>
+        }
+        <img
+          [src]="image.url"
+          [alt]="image.filename"
+          (click)="$event.stopPropagation()"
+          class="max-h-full max-w-full object-contain rounded-lg"
+        />
+        @if (imageAttachments().length > 1) {
+          <button type="button" (click)="stepViewer(1, $event)" class="capture-overlay-action shrink-0" title="Siguiente" aria-label="Siguiente">
+            <span class="material-symbols-outlined text-[24px]">chevron_right</span>
+          </button>
         }
       </div>
-    </aside>
-  </div>
+
+      <div class="pb-[max(1rem,env(safe-area-inset-bottom))]"></div>
+    </div>
+  }
 }

@@ -1,6 +1,10 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Ticket, TicketSchema } from './schemas/ticket.schema';
+import {
+  Attachment,
+  AttachmentSchema,
+} from '../attachments/schemas/attachment.schema';
 import { TicketsService } from './tickets.service';
 import { TicketsController } from './tickets.controller';
 import { BulkImportService } from './bulk-import.service';
@@ -15,7 +19,13 @@ import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: Ticket.name, schema: TicketSchema }]),
+    // The Attachment model (not AttachmentsModule) is registered here on purpose:
+    // AttachmentsModule imports TicketsModule, so importing it back would be circular.
+    // The ticket list only needs to *count* attachments.
+    MongooseModule.forFeature([
+      { name: Ticket.name, schema: TicketSchema },
+      { name: Attachment.name, schema: AttachmentSchema },
+    ]),
     CountersModule,
     UsersModule,
     CategoriesModule,

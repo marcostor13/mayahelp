@@ -6,13 +6,24 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, QueryFilter, Types } from 'mongoose';
 import { Ticket, TicketDocument } from './schemas/ticket.schema';
+import {
+  Attachment,
+  AttachmentDocument,
+} from '../attachments/schemas/attachment.schema';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
-import { FilterTicketDto } from './dto/filter-ticket.dto';
+import {
+  FilterTicketDto,
+  SortOrder,
+  TicketSortField,
+} from './dto/filter-ticket.dto';
 import { CountersService } from '../common/counters/counters.service';
 import { TicketAutoReplyService } from './ticket-auto-reply.service';
 import { UsersService } from '../users/users.service';
-import { NotificationsService } from '../notifications/notifications.service';
+import {
+  NotificationsService,
+  NotifyTicket,
+} from '../notifications/notifications.service';
 import { AuthenticatedUser } from '../auth/types/authenticated-user.interface';
 import { Role } from '../common/enums/role.enum';
 import { TicketPriority, TicketStatus } from '../common/enums/ticket.enum';
@@ -20,10 +31,16 @@ import { TicketPriority, TicketStatus } from '../common/enums/ticket.enum';
 const TICKET_COUNTER_KEY = 'ticket';
 const TICKET_CODE_BASE = 8000;
 
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 @Injectable()
 export class TicketsService {
   constructor(
     @InjectModel(Ticket.name) private ticketModel: Model<TicketDocument>,
+    @InjectModel(Attachment.name)
+    private attachmentModel: Model<AttachmentDocument>,
     private readonly countersService: CountersService,
     private readonly autoReplyService: TicketAutoReplyService,
     private readonly usersService: UsersService,
@@ -80,38 +97,129 @@ export class TicketsService {
     const client = await this.usersService.findById(params.clientId);
     await this.notificationsService.notifyTicketCreated(
       { name: client.name, email: client.email, phone: client.phone },
-      { _id: ticket.id, code: ticket.code, subject: ticket.subject },
+      await this.buildNotifyTicket(ticket),
     );
 
     await this.autoReplyService.maybeReply(ticket);
     return ticket;
   }
 
+  /**
+   * Notification payload with the names (category, project) the configurable WhatsApp
+   * template variables can reference — the raw document only holds their ids.
+   */
+  private async buildNotifyTicket(
+    ticket: TicketDocument,
+  ): Promise<NotifyTicket> {
+    const populated = await this.ticketModel
+      .findById(ticket.id)
+      .select('code subject description status priority category project')
+      .populate<{ category?: { name?: string } }>('category', 'name')
+      .populate<{ project?: { name?: string } }>('project', 'name')
+      .lean()
+      .exec();
+
+    return {
+      _id: ticket.id,
+      code: ticket.code,
+      subject: ticket.subject,
+      description: ticket.description,
+      status: ticket.status,
+      priority: ticket.priority,
+      categoryName: populated?.category?.name,
+      projectName: populated?.project?.name,
+    };
+  }
+
+  /**
+   * Ticket list for the UI. Returns plain objects enriched with `commentsCount` /
+   * `attachmentsCount` so the table can show activity without a request per row.
+   */
   async findAll(filter: FilterTicketDto, requester: AuthenticatedUser) {
+    const tickets = await this.queryTickets(filter, requester)
+      .populate('client', 'name email company phone')
+      .populate('category', 'name icon')
+      .populate('assignedAgent', 'name email')
+      .populate('project', 'name')
+      .lean()
+      .exec();
+
+    const counts = await this.countAttachmentsByTicket(
+      tickets.map((ticket) => ticket._id.toString()),
+    );
+
+    return tickets.map((ticket) => ({
+      ...ticket,
+      commentsCount: ticket.comments?.length ?? 0,
+      attachmentsCount: counts.get(ticket._id.toString()) ?? 0,
+      comments: undefined,
+    }));
+  }
+
+  /** Same filter/order semantics as `findAll`, but fully populated for the Markdown export. */
+  async findAllForExport(
+    filter: FilterTicketDto,
+    requester: AuthenticatedUser,
+  ) {
+    return this.queryTickets(filter, requester)
+      .populate('client', 'name email company')
+      .populate('category', 'name icon')
+      .populate('assignedAgent', 'name email')
+      .populate('project', 'name')
+      .populate('comments.author', 'name role')
+      .exec();
+  }
+
+  private queryTickets(filter: FilterTicketDto, requester: AuthenticatedUser) {
     const query: QueryFilter<TicketDocument> = {};
 
     if (requester.role === Role.CLIENT) {
       query.client = requester.userId;
+    } else if (filter.client) {
+      query.client = filter.client;
     }
     if (filter.status) query.status = filter.status;
     if (filter.priority) query.priority = filter.priority;
     if (filter.category) query.category = filter.category;
     if (filter.project) query.project = filter.project;
+    if (filter.unassigned === 'true') {
+      query.assignedAgent = null;
+    } else if (filter.assignedAgent) {
+      query.assignedAgent = filter.assignedAgent;
+    }
     if (filter.search) {
+      // Escaped: a user typing "(" must not blow up the query with an invalid regex.
+      const term = escapeRegex(filter.search);
       query.$or = [
-        { subject: { $regex: filter.search, $options: 'i' } },
-        { code: { $regex: filter.search, $options: 'i' } },
+        { subject: { $regex: term, $options: 'i' } },
+        { code: { $regex: term, $options: 'i' } },
+        { description: { $regex: term, $options: 'i' } },
       ];
     }
 
-    return this.ticketModel
-      .find(query)
-      .populate('client', 'name email company')
-      .populate('category', 'name icon')
-      .populate('assignedAgent', 'name email')
-      .populate('project', 'name')
-      .sort({ createdAt: -1 })
+    const sortField = filter.sort ?? TicketSortField.CREATED_AT;
+    const direction = filter.order === SortOrder.ASC ? 1 : -1;
+
+    return this.ticketModel.find(query).sort({ [sortField]: direction });
+  }
+
+  private async countAttachmentsByTicket(
+    ticketIds: string[],
+  ): Promise<Map<string, number>> {
+    if (ticketIds.length === 0) {
+      return new Map();
+    }
+    const rows = await this.attachmentModel
+      .aggregate<{ _id: Types.ObjectId; total: number }>([
+        {
+          $match: {
+            ticket: { $in: ticketIds.map((id) => new Types.ObjectId(id)) },
+          },
+        },
+        { $group: { _id: '$ticket', total: { $sum: 1 } } },
+      ])
       .exec();
+    return new Map(rows.map((row) => [row._id.toString(), row.total]));
   }
 
   async findById(id: string, requester: AuthenticatedUser) {
@@ -164,7 +272,7 @@ export class TicketsService {
       const client = await this.usersService.findById(ticket.client.toString());
       await this.notificationsService.notifyStatusChanged(
         { name: client.name, email: client.email, phone: client.phone },
-        { _id: ticket.id, code: ticket.code, subject: ticket.subject },
+        await this.buildNotifyTicket(ticket),
         ticket.status,
       );
     }
@@ -195,7 +303,7 @@ export class TicketsService {
         );
         await this.notificationsService.notifyNewComment(
           { name: agent.name, email: agent.email, phone: agent.phone },
-          { _id: ticket.id, code: ticket.code, subject: ticket.subject },
+          await this.buildNotifyTicket(ticket),
           author.name,
           message,
         );
@@ -205,7 +313,7 @@ export class TicketsService {
       const client = await this.usersService.findById(ticket.client.toString());
       await this.notificationsService.notifyNewComment(
         { name: client.name, email: client.email, phone: client.phone },
-        { _id: ticket.id, code: ticket.code, subject: ticket.subject },
+        await this.buildNotifyTicket(ticket),
         author.name,
         message,
       );

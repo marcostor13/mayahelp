@@ -36,7 +36,10 @@ const CAPTURE_SETUP: Record<ActiveMode, { constraints: MediaStreamConstraints; e
 };
 
 function pickSupportedMimeType(candidates: string[]): string {
-  return candidates.find((type) => MediaRecorder.isTypeSupported(type)) ?? candidates[candidates.length - 1];
+  return (
+    candidates.find((type) => MediaRecorder.isTypeSupported(type)) ??
+    candidates[candidates.length - 1]
+  );
 }
 
 @Component({
@@ -220,7 +223,9 @@ export class MediaCapture implements OnDestroy {
   }
 
   private stopStream(): void {
-    this.stream()?.getTracks().forEach((track) => track.stop());
+    this.stream()
+      ?.getTracks()
+      .forEach((track) => track.stop());
     this.stream.set(null);
   }
 

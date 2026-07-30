@@ -1,159 +1,468 @@
-<div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-stack-lg gap-4">
-  <div>
-    <h2 class="text-headline-xl text-on-surface">Gestión de Tickets</h2>
-    <p class="text-body-md text-on-surface-variant mt-1">Administra y resuelve las solicitudes de soporte.</p>
-  </div>
-  <div class="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-    @if (canBulkImport) {
-      <a
-        routerLink="/tickets/bulk-import"
-        class="w-full md:w-auto border border-outline-variant text-on-surface py-3 px-4 rounded-lg text-label-md flex items-center justify-center gap-2 hover:bg-surface-container-low transition-colors"
+<div class="flex flex-col gap-stack-md">
+  <!-- Encabezado -->
+  <div class="flex items-start justify-between gap-3">
+    <div class="min-w-0">
+      <h2 class="text-headline-lg-mobile md:text-headline-xl text-on-surface">Tickets</h2>
+      <p class="text-body-sm md:text-body-md text-on-surface-variant mt-0.5">
+        {{ tickets().length }} ticket(s){{ appliedFilterCount ? ' con los filtros aplicados' : '' }}
+      </p>
+    </div>
+
+    <div class="flex items-center gap-2 shrink-0">
+      @if (canBulkImport) {
+        <a routerLink="/tickets/bulk-import" class="ticket-icon-btn" title="Carga masiva" aria-label="Carga masiva">
+          <span class="material-symbols-outlined text-[22px]">upload_file</span>
+        </a>
+      }
+      <button
+        type="button"
+        (click)="exportMarkdown()"
+        [disabled]="exporting()"
+        class="ticket-icon-btn"
+        [title]="selectedIds().size > 0 ? 'Markdown de los ' + selectedIds().size + ' seleccionados' : 'Markdown de todos los tickets filtrados'"
+        [attr.aria-label]="selectedIds().size > 0 ? 'Descargar markdown de los seleccionados' : 'Descargar markdown de todos'"
       >
-        <span class="material-symbols-outlined">upload_file</span>
-        Carga masiva
+        <span class="material-symbols-outlined text-[22px]">{{ exporting() ? 'progress_activity' : 'description' }}</span>
+      </button>
+      <a routerLink="/tickets/new" class="ticket-icon-btn ticket-icon-btn--primary hidden sm:inline-flex" title="Nuevo ticket" aria-label="Nuevo ticket">
+        <span class="material-symbols-outlined icon-fill text-[22px]">add</span>
       </a>
-    }
-    <a
-      routerLink="/tickets/new"
-      class="w-full md:w-auto bg-primary-container text-on-primary py-3 px-4 rounded-lg text-label-md flex items-center justify-center gap-2 shadow-sm"
-    >
-      <span class="material-symbols-outlined icon-fill">add</span>
-      Nuevo Ticket
-    </a>
+    </div>
   </div>
-</div>
 
-<div class="flex flex-col lg:flex-row gap-stack-lg">
-  <!-- Filtros -->
-  <div class="w-full lg:w-1/4 space-y-stack-md">
-    <div class="bg-surface rounded-xl p-container-padding shadow-sm border border-surface-container-highest">
-      <h3 class="text-label-md text-on-surface mb-4 flex items-center gap-2">
-        <span class="material-symbols-outlined text-primary">filter_alt</span>
-        Filtros
-      </h3>
+  <!-- Buscador + filtros -->
+  <div class="bg-surface-container-lowest border border-surface-container-highest rounded-2xl ambient-shadow-sm">
+    <!-- En mobile la búsqueda ocupa su propia fila; los controles van abajo. -->
+    <div class="p-3 flex flex-col sm:flex-row sm:items-center gap-2">
+      <div class="relative flex-1 min-w-0">
+        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
+        <input
+          [(ngModel)]="search"
+          (keyup.enter)="load()"
+          (search)="load()"
+          type="search"
+          placeholder="Buscar por código, asunto o descripción..."
+          class="w-full pl-10 pr-3 py-2.5 bg-surface border border-outline-variant rounded-xl text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+        />
+      </div>
 
-      <div class="space-y-6">
+      <div class="flex items-center gap-2">
+      <button
+        type="button"
+        (click)="filtersOpen.set(!filtersOpen())"
+        class="ticket-icon-btn relative shrink-0"
+        [class.ticket-icon-btn--active]="filtersOpen() || appliedFilterCount > 0"
+        title="Filtros"
+        aria-label="Filtros"
+      >
+        <span class="material-symbols-outlined text-[22px]">filter_alt</span>
+        @if (appliedFilterCount > 0) {
+          <span class="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-primary text-on-primary text-[11px] font-bold flex items-center justify-center">
+            {{ appliedFilterCount }}
+          </span>
+        }
+      </button>
+
+      <!-- Orden (mobile: el desktop ordena desde los encabezados) -->
+      <div class="lg:hidden flex-1 min-w-0">
+        <select
+          [(ngModel)]="sortField"
+          (ngModelChange)="load()"
+          aria-label="Ordenar por"
+          class="w-full h-11 bg-surface border border-outline-variant rounded-xl px-3 text-body-sm text-on-surface focus:border-primary outline-none"
+        >
+          @for (column of sortableColumns; track column.field) {
+            <option [value]="column.field">{{ column.label }}</option>
+          }
+        </select>
+      </div>
+      <button
+        type="button"
+        (click)="sortBy(sortField)"
+        class="ticket-icon-btn lg:hidden shrink-0"
+        [title]="sortOrder === 'asc' ? 'Ascendente' : 'Descendente'"
+        aria-label="Cambiar dirección del orden"
+      >
+        <span class="material-symbols-outlined text-[22px]">{{ sortOrder === 'asc' ? 'arrow_upward' : 'arrow_downward' }}</span>
+      </button>
+      </div>
+    </div>
+
+    @if (filtersOpen()) {
+      <div class="border-t border-surface-container-highest p-3 flex flex-col gap-4">
         <div>
-          <h4 class="text-label-xs text-on-surface-variant uppercase tracking-wider mb-3">Estado</h4>
-          <div class="space-y-2">
-            @for (option of statusOptions; track option.value) {
-              <label class="flex items-center gap-3 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  [checked]="statusFilter === option.value"
-                  (change)="setStatus(option.value)"
-                  class="h-5 w-5 cursor-pointer rounded border border-outline-variant checked:border-primary checked:bg-primary transition-all"
-                />
-                <span class="text-body-sm text-on-surface group-hover:text-primary transition-colors flex items-center gap-2">
-                  <span class="w-2 h-2 rounded-full {{ option.dot }}"></span> {{ option.label }}
-                </span>
-              </label>
+          <p class="text-label-xs text-on-surface-variant uppercase tracking-wider mb-2">Estado</p>
+          <div class="flex flex-wrap gap-2">
+            @for (meta of statusMeta; track meta.value) {
+              <button
+                type="button"
+                (click)="toggleStatus(meta.value)"
+                class="ticket-chip"
+                [class.ticket-chip--on]="statusFilter === meta.value"
+              >
+                <span class="w-2 h-2 rounded-full {{ meta.dot }}"></span>
+                {{ meta.label }}
+              </button>
             }
           </div>
         </div>
 
-        <hr class="border-surface-container-highest" />
-
         <div>
-          <h4 class="text-label-xs text-on-surface-variant uppercase tracking-wider mb-3">Categoría</h4>
-          <select
-            [(ngModel)]="categoryFilter"
-            (ngModelChange)="load()"
-            class="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 text-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none text-on-surface"
-          >
-            <option value="">Todas las categorías</option>
-            @for (category of categories(); track category._id) {
-              <option [value]="category._id">{{ category.name }}</option>
+          <p class="text-label-xs text-on-surface-variant uppercase tracking-wider mb-2">Prioridad</p>
+          <div class="flex flex-wrap gap-2">
+            @for (meta of priorityMeta; track meta.value) {
+              <button
+                type="button"
+                (click)="togglePriority(meta.value)"
+                class="ticket-chip"
+                [class.ticket-chip--on]="priorityFilter === meta.value"
+              >
+                <span class="material-symbols-outlined text-[16px]">{{ meta.icon }}</span>
+                {{ meta.label }}
+              </button>
             }
-          </select>
+          </div>
         </div>
-      </div>
-    </div>
-  </div>
 
-  <!-- Tabla -->
-  <div class="w-full lg:w-3/4">
-    <div class="bg-surface rounded-2xl shadow-sm border border-surface-container-highest overflow-hidden">
-      <div class="p-4 border-b border-surface-container-highest flex flex-col sm:flex-row justify-between items-center gap-4 bg-surface-container-lowest">
-        <div class="relative w-full sm:w-64">
-          <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
-          <input
-            [(ngModel)]="search"
-            (keyup.enter)="load()"
-            placeholder="Buscar en tickets..."
-            class="w-full pl-10 pr-4 py-2 border border-outline-variant rounded-lg text-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none bg-surface"
-          />
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-label-xs text-on-surface-variant uppercase tracking-wider mb-2" for="category-filter">
+              Categoría
+            </label>
+            <select
+              id="category-filter"
+              [(ngModel)]="categoryFilter"
+              (ngModelChange)="load()"
+              class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+            >
+              <option value="">Todas las categorías</option>
+              @for (category of categories(); track category._id) {
+                <option [value]="category._id">{{ category.name }}</option>
+              }
+            </select>
+          </div>
+
+          @if (canManage) {
+            <div>
+              <label class="block text-label-xs text-on-surface-variant uppercase tracking-wider mb-2" for="project-filter">
+                Proyecto
+              </label>
+              <select
+                id="project-filter"
+                [(ngModel)]="projectFilter"
+                (ngModelChange)="load()"
+                class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+              >
+                <option value="">Todos los proyectos</option>
+                @for (project of projects(); track project._id) {
+                  <option [value]="project._id">{{ project.name }}</option>
+                }
+              </select>
+            </div>
+          }
         </div>
-        @if (selectedIds().size > 0) {
+
+        @if (appliedFilterCount > 0) {
           <button
             type="button"
-            (click)="exportSelected()"
-            class="text-primary text-label-md hover:underline flex items-center gap-1 w-full sm:w-auto justify-center"
+            (click)="clearFilters()"
+            class="self-start text-primary text-label-md flex items-center gap-1 hover:underline"
           >
-            <span class="material-symbols-outlined text-[18px]">download</span>
-            Exportar seleccionados ({{ selectedIds().size }})
+            <span class="material-symbols-outlined text-[18px]">filter_alt_off</span>
+            Limpiar filtros
           </button>
         }
       </div>
+    }
+  </div>
 
+  <!-- Barra de selección -->
+  @if (selectedIds().size > 0) {
+    <div class="sticky top-16 z-30 bg-primary-fixed border border-primary-fixed-dim rounded-2xl px-3 py-2 flex items-center gap-2 ambient-shadow-md">
+      <span class="text-label-md text-on-primary-fixed flex-1 min-w-0 truncate">
+        {{ selectedIds().size }} seleccionado(s)
+      </span>
+      <button type="button" (click)="exportMarkdown()" class="ticket-icon-btn" title="Markdown combinado" aria-label="Markdown combinado">
+        <span class="material-symbols-outlined text-[22px]">description</span>
+      </button>
+      <button type="button" (click)="exportZip()" class="ticket-icon-btn" title="ZIP con un .md por ticket" aria-label="ZIP con un markdown por ticket">
+        <span class="material-symbols-outlined text-[22px]">folder_zip</span>
+      </button>
+      <button type="button" (click)="clearSelection()" class="ticket-icon-btn" title="Quitar selección" aria-label="Quitar selección">
+        <span class="material-symbols-outlined text-[22px]">close</span>
+      </button>
+    </div>
+  }
+
+  @if (loading()) {
+    <div class="py-16 flex flex-col items-center gap-3 text-center">
+      <span class="material-symbols-outlined text-primary text-4xl animate-spin">progress_activity</span>
+      <p class="text-body-sm text-on-surface-variant">Cargando tickets...</p>
+    </div>
+  } @else if (tickets().length === 0) {
+    <div class="py-16 flex flex-col items-center gap-3 text-center">
+      <span class="material-symbols-outlined text-on-surface-variant text-5xl">inbox</span>
+      <p class="text-body-md text-on-surface">No hay tickets para mostrar.</p>
+      @if (appliedFilterCount > 0) {
+        <button type="button" (click)="clearFilters()" class="text-primary text-label-md hover:underline">
+          Limpiar filtros
+        </button>
+      }
+    </div>
+  } @else {
+    <!-- Tabla (desktop) -->
+    <div class="hidden lg:block bg-surface-container-lowest border border-surface-container-highest rounded-2xl ambient-shadow-sm overflow-hidden">
       <div class="overflow-x-auto">
         <table class="w-full text-left border-collapse">
           <thead>
             <tr class="bg-surface-container-low border-b border-surface-container-highest">
-              <th class="py-3 pl-6 pr-2 w-10"></th>
-              <th class="py-3 px-6 text-label-md text-on-surface-variant whitespace-nowrap">ID</th>
-              <th class="py-3 px-6 text-label-md text-on-surface-variant">Asunto / Cliente</th>
-              <th class="py-3 px-6 text-label-md text-on-surface-variant">Prioridad</th>
-              <th class="py-3 px-6 text-label-md text-on-surface-variant">Estado</th>
-              <th class="py-3 px-6 text-label-md text-on-surface-variant text-right">Fecha</th>
+              <th class="py-3 pl-4 pr-2 w-10">
+                <input
+                  type="checkbox"
+                  [checked]="allSelected"
+                  (change)="toggleSelectAll()"
+                  aria-label="Seleccionar todos"
+                  class="h-4 w-4 cursor-pointer rounded border border-outline-variant accent-primary"
+                />
+              </th>
+              @for (column of sortableColumns; track column.field) {
+                <th
+                  class="py-3 px-2 text-label-xs uppercase tracking-wider whitespace-nowrap"
+                  [class.text-primary]="sortField === column.field"
+                  [class.text-on-surface-variant]="sortField !== column.field"
+                >
+                  <button type="button" (click)="sortBy(column.field)" class="flex items-center gap-1 hover:text-primary transition-colors">
+                    {{ column.label }}
+                    <span class="material-symbols-outlined text-[16px]">{{ sortIcon(column.field) }}</span>
+                  </button>
+                </th>
+              }
+              <th class="py-3 px-2 text-label-xs text-on-surface-variant uppercase tracking-wider">Cliente</th>
+              <th class="py-3 px-2 text-label-xs text-on-surface-variant uppercase tracking-wider">Categoría</th>
+              <th class="py-3 px-2 text-label-xs text-on-surface-variant uppercase tracking-wider">Proyecto</th>
+              <th class="py-3 px-2 text-label-xs text-on-surface-variant uppercase tracking-wider">Agente</th>
+              <th class="py-3 px-2 text-label-xs text-on-surface-variant uppercase tracking-wider text-center">Actividad</th>
+              <th class="sticky right-0 z-10 bg-surface-container-low py-3 pl-3 pr-4 text-label-xs text-on-surface-variant uppercase tracking-wider text-right shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.12)]">Acciones</th>
             </tr>
           </thead>
-          <tbody class="divide-y divide-surface-container-highest bg-surface">
-            @if (loading()) {
-              <tr>
-                <td colspan="6" class="py-8 text-center text-body-sm text-on-surface-variant">Cargando tickets...</td>
-              </tr>
-            } @else {
-              @for (ticket of tickets(); track ticket._id) {
-                <tr
-                  [routerLink]="['/tickets', ticket._id]"
-                  class="hover:bg-surface-container-lowest transition-colors cursor-pointer"
-                >
-                  <td class="py-4 pl-6 pr-2" (click)="$event.stopPropagation()">
-                    <input
-                      type="checkbox"
-                      [checked]="isSelected(ticket._id)"
-                      (change)="toggleSelected(ticket._id)"
-                      class="h-5 w-5 cursor-pointer rounded border border-outline-variant checked:border-primary checked:bg-primary transition-all"
-                    />
-                  </td>
-                  <td class="py-4 px-6 text-label-md text-primary">{{ ticket.code }}</td>
-                  <td class="py-4 px-6">
-                    <div class="text-body-md font-medium text-on-surface">{{ ticket.subject }}</div>
-                    <div class="text-body-sm text-on-surface-variant flex items-center gap-1 mt-1">
-                      <span class="material-symbols-outlined text-[14px]">person</span>
-                      {{ ticket.client.name }}
-                    </div>
-                  </td>
-                  <td class="py-4 px-6 text-on-surface-variant font-medium capitalize">{{ ticket.priority }}</td>
-                  <td class="py-4 px-6">
-                    <span class="inline-flex items-center gap-1 text-label-xs bg-surface-container-low text-on-surface px-2 py-1 rounded-full uppercase">
-                      {{ ticket.status }}
+          <tbody class="divide-y divide-surface-container-highest">
+            @for (ticket of tickets(); track ticket._id) {
+              <tr
+                (click)="open(ticket)"
+                class="bg-surface-container-lowest hover:bg-surface-container-low transition-colors cursor-pointer align-top"
+                [class.bg-primary-fixed]="isSelected(ticket._id)"
+              >
+                <td class="py-3 pl-4 pr-2" (click)="$event.stopPropagation()">
+                  <input
+                    type="checkbox"
+                    [checked]="isSelected(ticket._id)"
+                    (change)="toggleSelected(ticket._id)"
+                    [attr.aria-label]="'Seleccionar ' + ticket.code"
+                    class="h-4 w-4 cursor-pointer rounded border border-outline-variant accent-primary"
+                  />
+                </td>
+                <td class="py-3 px-2 text-label-md text-primary whitespace-nowrap">{{ ticket.code }}</td>
+                <td class="py-3 px-2 min-w-[220px] max-w-[340px]">
+                  <p class="text-body-sm font-medium text-on-surface">{{ ticket.subject }}</p>
+                  <p class="text-label-xs text-on-surface-variant line-clamp-2 mt-0.5">{{ ticket.description }}</p>
+                </td>
+                <td class="py-3 px-2">
+                  <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-label-xs {{ priorityFor(ticket.priority).badge }}">
+                    <span class="material-symbols-outlined text-[14px]">{{ priorityFor(ticket.priority).icon }}</span>
+                    {{ priorityFor(ticket.priority).label }}
+                  </span>
+                </td>
+                <td class="py-3 px-2">
+                  <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-label-xs {{ statusFor(ticket.status).badge }}">
+                    <span class="material-symbols-outlined text-[14px]">{{ statusFor(ticket.status).icon }}</span>
+                    {{ statusFor(ticket.status).label }}
+                  </span>
+                </td>
+                <td class="py-3 px-2 text-label-xs text-on-surface-variant whitespace-nowrap">
+                  {{ ticket.createdAt | date: 'dd/MM/yy' }}
+                  <span class="block text-[11px]">{{ ticket.createdAt | date: 'HH:mm' }}</span>
+                </td>
+                <td class="py-3 px-2 text-label-xs text-on-surface-variant whitespace-nowrap">
+                  {{ ticket.updatedAt | date: 'dd/MM/yy' }}
+                  <span class="block text-[11px]">{{ ticket.updatedAt | date: 'HH:mm' }}</span>
+                </td>
+                <td class="py-3 px-2 max-w-[180px]">
+                  <p class="text-body-sm text-on-surface truncate">{{ ticket.client.name }}</p>
+                  <p class="text-label-xs text-on-surface-variant truncate">{{ ticket.client.email }}</p>
+                  @if (ticket.client.company) {
+                    <p class="text-label-xs text-on-surface-variant truncate">{{ ticket.client.company }}</p>
+                  }
+                </td>
+                <td class="py-3 px-2 text-body-sm text-on-surface-variant whitespace-nowrap">
+                  <span class="inline-flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[16px] text-primary">{{ ticket.category.icon || 'label' }}</span>
+                    {{ ticket.category.name }}
+                  </span>
+                </td>
+                <td class="py-3 px-2 text-body-sm text-on-surface-variant">
+                  @if (ticket.project) {
+                    <span class="inline-flex items-center gap-1">
+                      <span class="material-symbols-outlined text-[16px] text-primary">folder_open</span>
+                      {{ ticket.project.name }}
                     </span>
-                  </td>
-                  <td class="py-4 px-6 text-right text-on-surface-variant">{{ ticket.createdAt | date: 'dd/MM/yyyy' }}</td>
-                </tr>
-              } @empty {
-                <tr>
-                  <td colspan="6" class="py-8 text-center text-body-sm text-on-surface-variant">
-                    No se encontraron tickets con estos filtros.
-                  </td>
-                </tr>
-              }
+                  } @else {
+                    <span class="text-on-surface-variant">—</span>
+                  }
+                </td>
+                <td class="py-3 px-2 text-body-sm text-on-surface-variant">
+                  {{ ticket.assignedAgent?.name ?? 'Sin asignar' }}
+                </td>
+                <td class="py-3 px-2">
+                  <div class="flex items-center justify-center gap-2 text-label-xs text-on-surface-variant">
+                    <span class="inline-flex items-center gap-0.5" [title]="(ticket.commentsCount ?? 0) + ' comentario(s)'">
+                      <span class="material-symbols-outlined text-[16px]">forum</span>
+                      {{ ticket.commentsCount ?? 0 }}
+                    </span>
+                    <span class="inline-flex items-center gap-0.5" [title]="(ticket.attachmentsCount ?? 0) + ' adjunto(s)'">
+                      <span class="material-symbols-outlined text-[16px]">attach_file</span>
+                      {{ ticket.attachmentsCount ?? 0 }}
+                    </span>
+                  </div>
+                </td>
+                <td class="sticky right-0 z-10 bg-inherit py-3 pl-3 pr-4 border-l border-surface-container-highest shadow-[-8px_0_8px_-8px_rgba(0,0,0,0.12)]">
+                  <div class="flex items-center justify-end gap-1">
+                    <a
+                      [routerLink]="['/tickets', ticket._id]"
+                      (click)="$event.stopPropagation()"
+                      class="ticket-row-action"
+                      title="Ver detalle"
+                      aria-label="Ver detalle"
+                    >
+                      <span class="material-symbols-outlined text-[20px]">open_in_new</span>
+                    </a>
+                    <button
+                      type="button"
+                      (click)="exportSingle(ticket, $event)"
+                      class="ticket-row-action"
+                      title="Exportar a Markdown"
+                      aria-label="Exportar a Markdown"
+                    >
+                      <span class="material-symbols-outlined text-[20px]">download</span>
+                    </button>
+                    @if (canDelete) {
+                      <button
+                        type="button"
+                        (click)="remove(ticket, $event)"
+                        class="ticket-row-action ticket-row-action--danger"
+                        title="Eliminar ticket"
+                        aria-label="Eliminar ticket"
+                      >
+                        <span class="material-symbols-outlined text-[20px]">delete</span>
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
             }
           </tbody>
         </table>
       </div>
     </div>
-  </div>
+
+    <!-- Cards (mobile / tablet) -->
+    <div class="lg:hidden flex flex-col gap-3">
+      @for (ticket of tickets(); track ticket._id) {
+        <article
+          class="bg-surface-container-lowest border rounded-2xl p-3 ambient-shadow-sm"
+          [class.border-primary]="isSelected(ticket._id)"
+          [class.border-surface-container-highest]="!isSelected(ticket._id)"
+        >
+          <div class="flex items-start gap-2">
+            <input
+              type="checkbox"
+              [checked]="isSelected(ticket._id)"
+              (change)="toggleSelected(ticket._id)"
+              [attr.aria-label]="'Seleccionar ' + ticket.code"
+              class="mt-1 h-4 w-4 shrink-0 cursor-pointer rounded border border-outline-variant accent-primary"
+            />
+            <button type="button" (click)="open(ticket)" class="flex-1 min-w-0 text-left">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-label-md text-primary">{{ ticket.code }}</span>
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-label-xs {{ statusFor(ticket.status).badge }}">
+                  <span class="material-symbols-outlined text-[14px]">{{ statusFor(ticket.status).icon }}</span>
+                  {{ statusFor(ticket.status).label }}
+                </span>
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-label-xs {{ priorityFor(ticket.priority).badge }}">
+                  <span class="material-symbols-outlined text-[14px]">{{ priorityFor(ticket.priority).icon }}</span>
+                  {{ priorityFor(ticket.priority).label }}
+                </span>
+              </div>
+              <p class="text-body-md font-medium text-on-surface mt-1">{{ ticket.subject }}</p>
+              <p class="text-body-sm text-on-surface-variant line-clamp-2 mt-0.5">{{ ticket.description }}</p>
+            </button>
+          </div>
+
+          <dl class="mt-3 grid grid-cols-2 gap-x-3 gap-y-1.5 text-label-xs">
+            <div class="flex items-center gap-1 min-w-0">
+              <span class="material-symbols-outlined text-[16px] text-on-surface-variant">person</span>
+              <span class="text-on-surface truncate">{{ ticket.client.name }}</span>
+            </div>
+            <div class="flex items-center gap-1 min-w-0">
+              <span class="material-symbols-outlined text-[16px] text-on-surface-variant">{{ ticket.category.icon || 'label' }}</span>
+              <span class="text-on-surface truncate">{{ ticket.category.name }}</span>
+            </div>
+            <div class="flex items-center gap-1 min-w-0">
+              <span class="material-symbols-outlined text-[16px] text-on-surface-variant">folder_open</span>
+              <span class="text-on-surface truncate">{{ ticket.project?.name ?? 'Sin proyecto' }}</span>
+            </div>
+            <div class="flex items-center gap-1 min-w-0">
+              <span class="material-symbols-outlined text-[16px] text-on-surface-variant">support_agent</span>
+              <span class="text-on-surface truncate">{{ ticket.assignedAgent?.name ?? 'Sin asignar' }}</span>
+            </div>
+            <div class="flex items-center gap-1 min-w-0">
+              <span class="material-symbols-outlined text-[16px] text-on-surface-variant">schedule</span>
+              <span class="text-on-surface truncate">{{ ticket.createdAt | date: 'dd/MM/yy HH:mm' }}</span>
+            </div>
+            <div class="flex items-center gap-1 min-w-0">
+              <span class="material-symbols-outlined text-[16px] text-on-surface-variant">update</span>
+              <span class="text-on-surface truncate">{{ ticket.updatedAt | date: 'dd/MM/yy HH:mm' }}</span>
+            </div>
+          </dl>
+
+          <div class="mt-3 pt-2 border-t border-surface-container-highest flex items-center justify-between">
+            <div class="flex items-center gap-3 text-label-xs text-on-surface-variant">
+              <span class="inline-flex items-center gap-1">
+                <span class="material-symbols-outlined text-[16px]">forum</span>
+                {{ ticket.commentsCount ?? 0 }}
+              </span>
+              <span class="inline-flex items-center gap-1">
+                <span class="material-symbols-outlined text-[16px]">attach_file</span>
+                {{ ticket.attachmentsCount ?? 0 }}
+              </span>
+            </div>
+            <div class="flex items-center gap-1">
+              <a [routerLink]="['/tickets', ticket._id]" class="ticket-row-action" title="Ver detalle" aria-label="Ver detalle">
+                <span class="material-symbols-outlined text-[20px]">open_in_new</span>
+              </a>
+              <button
+                type="button"
+                (click)="exportSingle(ticket, $event)"
+                class="ticket-row-action"
+                title="Exportar a Markdown"
+                aria-label="Exportar a Markdown"
+              >
+                <span class="material-symbols-outlined text-[20px]">download</span>
+              </button>
+              @if (canDelete) {
+                <button
+                  type="button"
+                  (click)="remove(ticket, $event)"
+                  class="ticket-row-action ticket-row-action--danger"
+                  title="Eliminar ticket"
+                  aria-label="Eliminar ticket"
+                >
+                  <span class="material-symbols-outlined text-[20px]">delete</span>
+                </button>
+              }
+            </div>
+          </div>
+        </article>
+      }
+    </div>
+  }
 </div>

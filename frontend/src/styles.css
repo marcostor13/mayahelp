@@ -132,6 +132,42 @@
     "opsz" 24;
 }
 
+/* Icon-only actions used across the ticket screens (toolbar, rows, cards). */
+.ticket-icon-btn {
+  @apply inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-xl border border-outline-variant bg-surface-container-lowest text-on-surface-variant transition-all;
+  @apply hover:border-primary hover:bg-primary-fixed hover:text-primary active:scale-95;
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+  @apply disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100;
+}
+
+.ticket-icon-btn--primary {
+  @apply border-transparent bg-primary-container text-on-primary hover:bg-primary hover:text-on-primary;
+}
+
+.ticket-icon-btn--active {
+  @apply border-primary bg-primary-fixed text-primary;
+}
+
+/* Compact per-row action (table + card footers). */
+.ticket-row-action {
+  @apply inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-lg text-on-surface-variant transition-colors;
+  @apply hover:bg-primary-fixed hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+}
+
+.ticket-row-action--danger {
+  @apply hover:bg-error-container hover:text-error;
+}
+
+/* Toggleable filter pill. */
+.ticket-chip {
+  @apply inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-outline-variant bg-surface px-3 py-1.5 text-label-xs text-on-surface transition-all;
+  @apply hover:border-primary active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+}
+
+.ticket-chip--on {
+  @apply border-primary bg-primary-fixed text-on-primary-fixed;
+}
+
 /* Icon-only action buttons for the media capture row (photo / video / audio / upload). */
 .capture-action {
   @apply inline-flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-outline-variant bg-surface-container-lowest text-primary transition-all;

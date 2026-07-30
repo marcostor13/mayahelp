@@ -3,6 +3,15 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { CreateTicketPayload, Ticket, TicketFilter } from '../models/ticket.model';
 
+/** Serializes a ticket filter into query params, dropping empty values. */
+export function ticketFilterParams(filter: TicketFilter): Record<string, string> {
+  const params: Record<string, string> = {};
+  for (const [key, value] of Object.entries(filter)) {
+    if (value) params[key] = String(value);
+  }
+  return params;
+}
+
 @Injectable({ providedIn: 'root' })
 export class TicketService {
   private readonly baseUrl = `${environment.apiUrl}/tickets`;
@@ -10,12 +19,7 @@ export class TicketService {
   constructor(private readonly http: HttpClient) {}
 
   list(filter: TicketFilter = {}) {
-    const params: Record<string, string> = {};
-    if (filter.status) params['status'] = filter.status;
-    if (filter.priority) params['priority'] = filter.priority;
-    if (filter.category) params['category'] = filter.category;
-    if (filter.search) params['search'] = filter.search;
-    return this.http.get<Ticket[]>(this.baseUrl, { params });
+    return this.http.get<Ticket[]>(this.baseUrl, { params: ticketFilterParams(filter) });
   }
 
   getById(id: string) {
@@ -36,5 +40,9 @@ export class TicketService {
 
   addComment(id: string, message: string) {
     return this.http.post<Ticket>(`${this.baseUrl}/${id}/comments`, { message });
+  }
+
+  remove(id: string) {
+    return this.http.delete<void>(`${this.baseUrl}/${id}`);
   }
 }

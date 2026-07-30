@@ -206,6 +206,72 @@ estilizados, sin título.
 - El obturador de foto queda deshabilitado hasta que el `<video>` dispara `loadedmetadata` — evita el otro
   camino por el que "no pasaba nada" al primer toque.
 
+## Tickets: lista completa, detalle con miniaturas, notificaciones configurables
+
+Pedido: mejorar la experiencia en `/tickets` y en el detalle (toda la info visible, iconos de opciones,
+responsive tipo app, miniaturas de imágenes), filtrar/ordenar por propiedades y por proyecto, obtener un
+markdown completo de los tickets seleccionados o de todos, WhatsApp al número configurado cuando entra un
+ticket (con template y variables elegibles), correo en creaciones/actualizaciones, y favicon.
+
+### Backend
+
+- `FilterTicketDto` ahora acepta `sort` (whitelist: code, subject, status, priority, createdAt, updatedAt),
+  `order`, `project`, `client`, `assignedAgent` y `unassigned`. El término de búsqueda se **escapa** antes de
+  armar el `$regex` (antes, escribir `(` en el buscador rompía la query) y también busca en la descripción.
+- `TicketsService.findAll` devuelve objetos planos con `commentsCount` y `attachmentsCount` (un único
+  `$group` sobre adjuntos por página, no una consulta por fila). El modelo `Attachment` se registra en
+  `TicketsModule` en vez de importar `AttachmentsModule`, que sería circular (AttachmentsModule ya importa
+  TicketsModule).
+- **Markdown combinado** `POST /tickets/export/combined.md`: un solo `.md` con índice (anclas estilo GitHub) y
+  una sección por ticket, listo para pasarle a Claude Code / Codex. Acepta `ids` (selección) o `filter`
+  (todos los que coincidan). Las imágenes se listan con sintaxis `![]()` para que se previsualicen. Se
+  mantienen el `.md` individual y el ZIP. Cubierto por `markdown-builder.spec.ts`.
+- **Ajustes de notificaciones persistidos** (`app-settings`, documento singleton): números de WhatsApp que
+  reciben avisos, template elegido + idioma, **mapeo de variables** (`variables[0]` llena `{{1}}`, etc.),
+  destinatarios de correo internos, y toggles por evento (creado / actualizado / comentario).
+  `GET`/`PATCH /settings/notifications` (admin) y `POST /settings/notifications/test` para verificar la
+  configuración sin esperar un ticket real.
+- `NotificationsService` ya no depende de variables de entorno para decidir a quién avisar: lee los ajustes,
+  resuelve los tokens (`{{code}}`, `{{subject}}`, `{{client_name}}`, `{{link}}`...) y manda WhatsApp a los
+  números configurados + correo al cliente y a las copias internas. Los parámetros de template se sanitizan
+  (una sola línea, nunca vacíos, recortados a 500) porque Meta rechaza multilínea/vacío — eso hacía que la
+  notificación se cayera sin explicación. Cubierto por `notification-variables.spec.ts`.
+- `WHATSAPP_TEMPLATE_NAME`/`_LANGUAGE` quedan como fallback hasta que un admin elija el template en la UI.
+
+### Frontend
+
+- **Lista de tickets**: tabla desktop con toda la información (código, asunto + extracto, prioridad, estado,
+  creado, actualizado, cliente con correo y empresa, categoría, proyecto, agente, actividad) con encabezados
+  ordenables y la columna de **acciones fija a la derecha** (`sticky`) para que no se pierda al hacer scroll
+  horizontal. En mobile la misma info se muestra como **cards** (la tabla se oculta), con búsqueda en su
+  propia fila, panel de filtros colapsable (estado, prioridad, categoría, proyecto), selector de orden y
+  dirección, selección múltiple y barra de acciones. Acciones solo con iconos (ver, exportar, eliminar).
+- Los filtros se sincronizan con los query params, así el buscador del topbar (que antes no hacía nada) y los
+  enlaces profundos tipo `/tickets?project=...&status=abierto` funcionan.
+- **Detalle de ticket**: encabezado con código/estado/prioridad y acciones solo-ícono (copiar enlace, exportar
+  markdown, eliminar), descripción, panel con todos los datos (cliente con correo/empresa/teléfono, categoría,
+  proyecto, agente, fechas, resuelto, satisfacción), gestión de estado/prioridad, y **adjuntos en miniaturas**:
+  las imágenes se ven como thumbnails y abren un visor a pantalla completa (flechas, teclado, contador),
+  los videos muestran su primer frame con overlay de play, los audios traen reproductor inline y los
+  documentos un tile con su icono. Se reutiliza `app-media-capture`, así que desde el ticket se puede tomar
+  foto o grabar video/audio.
+- **Shell mobile**: la barra inferior tenía 6 ítems apretados y **no había forma de llegar a Ajustes**; ahora
+  son 4 ítems + hoja "Más" con el resto, Ajustes y cerrar sesión. Se respetan `env(safe-area-inset-*)` (con
+  `viewport-fit=cover` en el index) y se quitó el FAB, que tapaba las acciones de las cards.
+- Los overlays a pantalla completa (visor de imágenes y captura de cámara) pasaron a `z-70`: con `z-50`
+  quedaban **por debajo** de la barra inferior de navegación en mobile.
+- **Ajustes**: sección de notificaciones (solo admin) con números de WhatsApp, selector de template traído de
+  Meta, cuerpo del template a la vista, un selector por cada variable detectada (`{{1}}`, `{{2}}`...),
+  destinatarios de correo, toggles por evento y botón "Enviar prueba" que muestra el resultado por
+  destinatario.
+- **Favicon propio** generado desde el logo (el que había era el de Angular por defecto): `favicon.ico` con
+  16/32/48, `favicon-32.png`, `apple-touch-icon.png`, `icon-192/512.png`, `manifest.webmanifest`,
+  `theme-color` y metadatos de app instalable.
+
+Verificado con Playwright interceptando la API (desktop 1440px y mobile 390px): orden por columna pegándole a
+`?sort=&order=`, descarga del markdown combinado, miniaturas + visor con teclado, filtros, hoja "Más",
+mapeo de variables que se ajusta al template elegido, y cero scroll horizontal en mobile.
+
 ## Gaps detectados (backend listo, sin UI todavía)
 
 - [x] **Gestión de categorías** — resuelto: sección `/categories` (solo admin) con tabs Tickets/Artículos, CRUD
