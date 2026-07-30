@@ -7,7 +7,7 @@
   <div class="py-16 flex flex-col items-center gap-3 text-center">
     <span class="material-symbols-outlined text-error text-5xl">error</span>
     <p class="text-body-md text-on-surface">No pudimos cargar este ticket.</p>
-    <a routerLink="/tickets" class="text-primary text-label-md hover:underline">Volver a tickets</a>
+    <a routerLink="/tickets" class="link-action">Volver a tickets</a>
   </div>
 } @else if (ticket(); as t) {
   <div class="flex flex-col gap-stack-md">
@@ -180,7 +180,7 @@
                     <button
                       type="button"
                       (click)="useAiSuggestion(comment)"
-                      class="mt-2 text-primary text-label-xs hover:underline flex items-center gap-1"
+                      class="link-action mt-1 text-label-xs"
                     >
                       <span class="material-symbols-outlined text-[14px]">content_copy</span>
                       Usar esta respuesta

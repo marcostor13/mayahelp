@@ -11,4 +11,10 @@ export class DashboardController {
   getStats(@CurrentUser() user: AuthenticatedUser) {
     return this.dashboardService.getStats(user);
   }
+
+  /** Stats + projects of the signed-in person, for the account screen. */
+  @Get('account')
+  getAccount(@CurrentUser() user: AuthenticatedUser) {
+    return this.dashboardService.getAccountSummary(user);
+  }
 }

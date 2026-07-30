@@ -50,13 +50,16 @@ export interface Ticket {
 }
 
 export interface CreateTicketPayload {
-  subject: string;
+  /** Optional: the API derives it from the first line of the description. */
+  subject?: string;
   description: string;
   category: string;
+  project?: string;
   priority?: TicketPriority;
 }
 
 export interface TicketFilter {
+  client?: string;
   status?: TicketStatus;
   priority?: TicketPriority;
   category?: string;

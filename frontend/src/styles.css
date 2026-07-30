@@ -114,6 +114,23 @@
   body {
     @apply bg-background text-on-background;
   }
+
+  /*
+   * Form controls default to an intrinsic width (~20 characters), so inside a flex row
+   * they refuse to shrink and push the layout past the viewport on narrow screens.
+   * Letting them shrink is what makes `flex-1` behave as expected.
+   */
+  input:not([type='checkbox']):not([type='radio']),
+  select,
+  textarea {
+    min-width: 0;
+  }
+
+  /* Checkboxes and radios must never be squeezed by a long label next to them. */
+  input[type='checkbox'],
+  input[type='radio'] {
+    flex-shrink: 0;
+  }
 }
 
 .material-symbols-outlined {
@@ -156,6 +173,20 @@
 
 .ticket-row-action--danger {
   @apply hover:bg-error-container hover:text-error;
+}
+
+/* Text link that behaves as an action: 44px tall so it is comfortable to tap. */
+.link-action {
+  @apply inline-flex min-h-11 items-center gap-1 text-label-md text-primary transition-colors hover:underline;
+}
+
+.link-action--danger {
+  @apply text-error;
+}
+
+/* Checkbox + label row: 44px tall so the whole row is an easy tap target. */
+.check-row {
+  @apply flex min-h-11 cursor-pointer items-center gap-3;
 }
 
 /* Toggleable filter pill. */

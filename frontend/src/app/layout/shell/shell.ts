@@ -16,6 +16,13 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', icon: 'dashboard', path: '/dashboard', primary: true },
   { label: 'Tickets', icon: 'confirmation_number', path: '/tickets', primary: true },
   {
+    label: 'Mi cuenta',
+    icon: 'account_circle',
+    path: '/mi-cuenta',
+    roles: ['client'],
+    primary: true,
+  },
+  {
     label: 'Proyectos',
     icon: 'folder_open',
     path: '/projects',
@@ -23,6 +30,7 @@ const NAV_ITEMS: NavItem[] = [
     primary: true,
   },
   { label: 'Centro de Ayuda', icon: 'help', path: '/help-center', primary: true },
+  { label: 'Usuarios', icon: 'group', path: '/users', roles: ['admin'] },
   { label: 'Categorías', icon: 'sell', path: '/categories', roles: ['admin'] },
   { label: 'Templates WhatsApp', icon: 'forum', path: '/whatsapp-templates', roles: ['admin'] },
 ];

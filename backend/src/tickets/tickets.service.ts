@@ -22,14 +22,22 @@ import { TicketAutoReplyService } from './ticket-auto-reply.service';
 import { UsersService } from '../users/users.service';
 import {
   NotificationsService,
+  NotifyRecipient,
   NotifyTicket,
 } from '../notifications/notifications.service';
+import { UserDocument } from '../users/schemas/user.schema';
 import { AuthenticatedUser } from '../auth/types/authenticated-user.interface';
 import { Role } from '../common/enums/role.enum';
 import { TicketPriority, TicketStatus } from '../common/enums/ticket.enum';
 
 const TICKET_COUNTER_KEY = 'ticket';
 const TICKET_CODE_BASE = 8000;
+
+/** First line of the description, trimmed to a sensible subject length. */
+function subjectFromDescription(description: string): string {
+  const firstLine = description.split('\n')[0].trim();
+  return firstLine.length > 90 ? `${firstLine.slice(0, 89)}…` : firstLine;
+}
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -54,11 +62,12 @@ export class TicketsService {
       throw new ForbiddenException('Debes indicar el cliente del ticket');
     }
     return this.persistTicket({
-      subject: dto.subject,
+      subject: dto.subject?.trim() || subjectFromDescription(dto.description),
       description: dto.description,
       category: dto.category,
       clientId,
       priority: dto.priority,
+      projectId: dto.project,
     });
   }
 
@@ -96,12 +105,25 @@ export class TicketsService {
 
     const client = await this.usersService.findById(params.clientId);
     await this.notificationsService.notifyTicketCreated(
-      { name: client.name, email: client.email, phone: client.phone },
+      this.recipientFrom(client),
       await this.buildNotifyTicket(ticket),
     );
 
     await this.autoReplyService.maybeReply(ticket);
     return ticket;
+  }
+
+  /** Recipient payload including the per-user notification opt-out. */
+  private recipientFrom(user: UserDocument): NotifyRecipient {
+    return {
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      notifications: {
+        email: user.notifications?.email,
+        whatsapp: user.notifications?.whatsapp,
+      },
+    };
   }
 
   /**
@@ -271,7 +293,7 @@ export class TicketsService {
     if (statusChanged) {
       const client = await this.usersService.findById(ticket.client.toString());
       await this.notificationsService.notifyStatusChanged(
-        { name: client.name, email: client.email, phone: client.phone },
+        this.recipientFrom(client),
         await this.buildNotifyTicket(ticket),
         ticket.status,
       );
@@ -302,7 +324,7 @@ export class TicketsService {
           ticket.assignedAgent.toString(),
         );
         await this.notificationsService.notifyNewComment(
-          { name: agent.name, email: agent.email, phone: agent.phone },
+          this.recipientFrom(agent),
           await this.buildNotifyTicket(ticket),
           author.name,
           message,
@@ -312,7 +334,7 @@ export class TicketsService {
     } else {
       const client = await this.usersService.findById(ticket.client.toString());
       await this.notificationsService.notifyNewComment(
-        { name: client.name, email: client.email, phone: client.phone },
+        this.recipientFrom(client),
         await this.buildNotifyTicket(ticket),
         author.name,
         message,

@@ -1,0 +1,358 @@
+<div class="flex flex-col gap-stack-md">
+  <div class="flex items-start justify-between gap-3">
+    <div class="min-w-0">
+      <h2 class="text-headline-lg-mobile md:text-headline-xl text-on-surface">Usuarios</h2>
+      <p class="text-body-sm md:text-body-md text-on-surface-variant mt-0.5">
+        {{ users().length }} cuenta(s)
+      </p>
+    </div>
+    <button type="button" (click)="openCreate()" class="ticket-icon-btn ticket-icon-btn--primary" title="Nueva cuenta" aria-label="Nueva cuenta">
+      <span class="material-symbols-outlined icon-fill text-[22px]">person_add</span>
+    </button>
+  </div>
+
+  <!-- Credenciales recién creadas -->
+  @if (createdAccounts().length > 0) {
+    <div class="bg-primary-fixed border border-primary-fixed-dim rounded-2xl p-4 flex flex-col gap-2">
+      <div class="flex items-start justify-between gap-2">
+        <p class="text-label-md text-on-primary-fixed flex items-center gap-2">
+          <span class="material-symbols-outlined text-[20px]">key</span>
+          Contraseñas temporales
+        </p>
+        <div class="flex items-center gap-1 shrink-0">
+          <button type="button" (click)="copyCredentials()" class="ticket-row-action" title="Copiar" aria-label="Copiar credenciales">
+            <span class="material-symbols-outlined text-[20px]">content_copy</span>
+          </button>
+          <button type="button" (click)="dismissCredentials()" class="ticket-row-action" title="Cerrar" aria-label="Cerrar">
+            <span class="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+      </div>
+      <p class="text-body-sm text-on-surface-variant">
+        Se muestran una sola vez: copialas y compartilas con cada persona para que entre y las cambie.
+      </p>
+      <ul class="flex flex-col gap-1">
+        @for (account of createdAccounts(); track account.id) {
+          <li class="bg-surface-container-lowest rounded-lg px-3 py-2 text-body-sm text-on-surface break-words">
+            <span class="font-medium">{{ account.name }}</span> — {{ account.email }}
+            <span class="block text-label-md text-primary">{{ account.temporaryPassword }}</span>
+          </li>
+        }
+      </ul>
+    </div>
+  }
+
+  <!-- Buscador + filtro por rol -->
+  <div class="bg-surface-container-lowest border border-surface-container-highest rounded-2xl ambient-shadow-sm p-3 flex flex-col sm:flex-row sm:items-center gap-2">
+    <div class="relative flex-1 min-w-0">
+      <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
+      <input
+        [(ngModel)]="search"
+        (keyup.enter)="load()"
+        (search)="load()"
+        type="search"
+        placeholder="Buscar por nombre, correo o empresa..."
+        class="w-full pl-10 pr-3 py-2.5 bg-surface border border-outline-variant rounded-xl text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+      />
+    </div>
+    <div class="flex flex-wrap items-center gap-2">
+      @for (option of roles; track option) {
+        <button
+          type="button"
+          (click)="setRoleFilter(option)"
+          class="ticket-chip"
+          [class.ticket-chip--on]="roleFilter === option"
+        >
+          {{ roleLabels[option] }}
+        </button>
+      }
+    </div>
+  </div>
+
+  @if (error()) {
+    <p class="text-body-sm text-error">{{ error() }}</p>
+  }
+
+  <!-- Formulario de alta / edición -->
+  @if (formOpen()) {
+    <div class="bg-surface-container-lowest border border-primary rounded-2xl p-4 md:p-6 ambient-shadow-sm flex flex-col gap-3">
+      <div class="flex items-center justify-between gap-2">
+        <h3 class="text-headline-lg-mobile text-on-surface">
+          {{ editingId() ? 'Editar cuenta' : 'Nueva cuenta' }}
+        </h3>
+        <button type="button" (click)="closeForm()" class="ticket-icon-btn" title="Cerrar" aria-label="Cerrar">
+          <span class="material-symbols-outlined text-[22px]">close</span>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-label-xs text-on-surface-variant uppercase mb-1" for="user-name">Nombre</label>
+          <input
+            id="user-name"
+            [(ngModel)]="name"
+            type="text"
+            placeholder="Ana Pérez"
+            class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+          />
+        </div>
+        <div>
+          <label class="block text-label-xs text-on-surface-variant uppercase mb-1" for="user-email">Correo</label>
+          <input
+            id="user-email"
+            [(ngModel)]="email"
+            type="email"
+            placeholder="ana@empresa.com"
+            class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+          />
+        </div>
+        <div>
+          <label class="block text-label-xs text-on-surface-variant uppercase mb-1" for="user-company">Empresa</label>
+          <input
+            id="user-company"
+            [(ngModel)]="company"
+            type="text"
+            class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+          />
+        </div>
+        <div>
+          <label class="block text-label-xs text-on-surface-variant uppercase mb-1" for="user-phone">
+            Teléfono (WhatsApp)
+          </label>
+          <input
+            id="user-phone"
+            [(ngModel)]="phone"
+            type="tel"
+            placeholder="+5491122334455"
+            class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+          />
+        </div>
+        <div>
+          <label class="block text-label-xs text-on-surface-variant uppercase mb-1" for="user-role">Rol</label>
+          <select
+            id="user-role"
+            [(ngModel)]="role"
+            class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+          >
+            @for (option of roles; track option) {
+              <option [value]="option">{{ roleLabels[option] }}</option>
+            }
+          </select>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <p class="text-label-xs text-on-surface-variant uppercase">Notificaciones</p>
+        <label class="check-row">
+          <input type="checkbox" [(ngModel)]="notifyByEmail" class="h-5 w-5 rounded border border-outline-variant accent-primary cursor-pointer" />
+          <span class="text-body-sm text-on-surface">Avisar por correo</span>
+        </label>
+        <label class="check-row">
+          <input type="checkbox" [(ngModel)]="notifyByWhatsApp" class="h-5 w-5 rounded border border-outline-variant accent-primary cursor-pointer" />
+          <span class="text-body-sm text-on-surface">Avisar por WhatsApp</span>
+        </label>
+      </div>
+
+      @if (!editingId()) {
+        <p class="text-body-sm text-on-surface-variant">
+          Se genera una contraseña temporal y se muestra una vez al crear la cuenta.
+        </p>
+      }
+
+      <button
+        type="button"
+        (click)="submit()"
+        [disabled]="saving() || !canSubmit"
+        class="self-start inline-flex items-center gap-2 bg-primary-container text-on-primary text-label-md py-2.5 px-5 rounded-xl hover:bg-primary transition-colors disabled:opacity-50"
+      >
+        <span class="material-symbols-outlined text-[18px]">{{ saving() ? 'progress_activity' : 'save' }}</span>
+        {{ editingId() ? 'Guardar cambios' : 'Crear cuenta' }}
+      </button>
+    </div>
+  }
+
+  <!-- Personas de los enlaces sin cuenta -->
+  @if (pendingReporters().length > 0) {
+    <section class="bg-surface-container-lowest border border-surface-container-highest rounded-2xl ambient-shadow-sm p-4 flex flex-col gap-3">
+      <div class="flex items-start justify-between gap-2">
+        <div class="min-w-0">
+          <h3 class="text-label-md text-on-surface flex items-center gap-2">
+            <span class="material-symbols-outlined text-[20px] text-primary">link</span>
+            Personas de los enlaces sin cuenta
+          </h3>
+          <p class="text-body-sm text-on-surface-variant mt-0.5">
+            Ya reportan por un enlace público. Creales una cuenta para que entren a la plataforma.
+          </p>
+        </div>
+        <button type="button" (click)="toggleAllReporters()" class="ticket-row-action shrink-0" title="Seleccionar todos" aria-label="Seleccionar todos">
+          <span class="material-symbols-outlined text-[20px]">select_all</span>
+        </button>
+      </div>
+
+      <ul class="flex flex-col gap-2">
+        @for (reporter of pendingReporters(); track reporter.email) {
+          <li class="flex items-center gap-3 bg-surface border border-outline-variant rounded-xl px-3 py-2">
+            <label class="inline-flex cursor-pointer p-2 -m-2 shrink-0">
+              <input
+                type="checkbox"
+                [checked]="isReporterSelected(reporter.email)"
+                (change)="toggleReporter(reporter.email)"
+                [attr.aria-label]="'Seleccionar ' + reporter.name"
+                class="h-5 w-5 cursor-pointer rounded border border-outline-variant accent-primary"
+              />
+            </label>
+            <div class="min-w-0 flex-1">
+              <p class="text-body-sm text-on-surface truncate">{{ reporter.name }}</p>
+              <p class="text-label-xs text-on-surface-variant truncate">{{ reporter.email }}</p>
+              @if (reporter.projects.length > 0) {
+                <p class="text-label-xs text-on-surface-variant truncate">
+                  {{ reporter.projects.join(', ') }}
+                </p>
+              }
+            </div>
+          </li>
+        }
+      </ul>
+
+      <button
+        type="button"
+        (click)="createSelectedAccounts()"
+        [disabled]="saving() || selectedReporters().size === 0"
+        class="self-start inline-flex items-center gap-2 bg-primary-container text-on-primary text-label-md py-2.5 px-5 rounded-xl hover:bg-primary transition-colors disabled:opacity-50"
+      >
+        <span class="material-symbols-outlined text-[18px]">group_add</span>
+        Crear {{ selectedReporters().size || '' }} cuenta(s)
+      </button>
+    </section>
+  }
+
+  <!-- Listado -->
+  @if (loading()) {
+    <div class="py-16 flex flex-col items-center gap-3 text-center">
+      <span class="material-symbols-outlined text-primary text-4xl animate-spin">progress_activity</span>
+      <p class="text-body-sm text-on-surface-variant">Cargando usuarios...</p>
+    </div>
+  } @else if (users().length === 0) {
+    <div class="py-16 flex flex-col items-center gap-3 text-center">
+      <span class="material-symbols-outlined text-on-surface-variant text-5xl">group</span>
+      <p class="text-body-md text-on-surface">No hay usuarios con estos filtros.</p>
+    </div>
+  } @else {
+    <div class="flex flex-col gap-3">
+      @for (user of users(); track user._id) {
+        <article
+          class="bg-surface-container-lowest border rounded-2xl p-3 md:p-4 ambient-shadow-sm"
+          [class.border-surface-container-highest]="user.isActive"
+          [class.border-outline-variant]="!user.isActive"
+          [class.opacity-60]="!user.isActive"
+        >
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 shrink-0 rounded-full bg-primary-fixed text-primary flex items-center justify-center text-label-md font-bold">
+              {{ initials(user.name) }}
+            </div>
+
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <p class="text-body-md font-medium text-on-surface truncate">{{ user.name }}</p>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-label-xs {{ roleBadge(user.role) }}">
+                  {{ roleLabels[user.role] }}
+                </span>
+                @if (!user.isActive) {
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-label-xs bg-error-container text-on-error-container">
+                    Inactiva
+                  </span>
+                }
+              </div>
+              <p class="text-body-sm text-on-surface-variant break-words">{{ user.email }}</p>
+              <div class="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-label-xs text-on-surface-variant">
+                @if (user.company) {
+                  <span class="inline-flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[16px]">business</span>
+                    {{ user.company }}
+                  </span>
+                }
+                @if (user.phone) {
+                  <span class="inline-flex items-center gap-1">
+                    <span class="material-symbols-outlined text-[16px]">call</span>
+                    {{ user.phone }}
+                  </span>
+                }
+                <span class="inline-flex items-center gap-1">
+                  <span class="material-symbols-outlined text-[16px]">schedule</span>
+                  {{ user.createdAt | date: 'dd/MM/yy' }}
+                </span>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-1 shrink-0">
+              <a
+                [routerLink]="['/tickets']"
+                [queryParams]="{ client: user._id }"
+                class="ticket-row-action"
+                [title]="(user.ticketsCount ?? 0) + ' ticket(s)'"
+                aria-label="Ver tickets del usuario"
+              >
+                <span class="material-symbols-outlined text-[20px]">confirmation_number</span>
+              </a>
+              <button type="button" (click)="openEdit(user)" class="ticket-row-action" title="Editar" aria-label="Editar usuario">
+                <span class="material-symbols-outlined text-[20px]">edit</span>
+              </button>
+              <button
+                type="button"
+                (click)="remove(user)"
+                class="ticket-row-action ticket-row-action--danger"
+                title="Eliminar"
+                aria-label="Eliminar usuario"
+              >
+                <span class="material-symbols-outlined text-[20px]">delete</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="mt-3 pt-3 border-t border-surface-container-highest flex flex-wrap items-center gap-x-4 gap-y-2">
+            <span class="text-label-xs text-on-surface-variant inline-flex items-center gap-1">
+              <span class="material-symbols-outlined text-[16px]">confirmation_number</span>
+              {{ user.ticketsCount ?? 0 }} ticket(s)
+            </span>
+
+            <label class="check-row" [title]="'Notificar por correo a ' + user.name">
+              <input
+                type="checkbox"
+                [checked]="user.notifications?.email ?? true"
+                (change)="toggleNotification(user, 'email')"
+                class="h-5 w-5 rounded border border-outline-variant accent-primary cursor-pointer"
+              />
+              <span class="text-label-xs text-on-surface inline-flex items-center gap-1">
+                <span class="material-symbols-outlined text-[16px]">mail</span>
+                Correo
+              </span>
+            </label>
+
+            <label class="check-row" [title]="'Notificar por WhatsApp a ' + user.name">
+              <input
+                type="checkbox"
+                [checked]="user.notifications?.whatsapp ?? true"
+                (change)="toggleNotification(user, 'whatsapp')"
+                class="h-5 w-5 rounded border border-outline-variant accent-primary cursor-pointer"
+              />
+              <span class="text-label-xs text-on-surface inline-flex items-center gap-1">
+                <span class="material-symbols-outlined text-[16px]">chat</span>
+                WhatsApp
+              </span>
+            </label>
+
+            <label class="check-row gap-2 ml-auto">
+              <input
+                type="checkbox"
+                [checked]="user.isActive"
+                (change)="toggleActive(user)"
+                class="h-5 w-5 rounded border border-outline-variant accent-primary cursor-pointer"
+              />
+              <span class="text-label-xs text-on-surface">Cuenta activa</span>
+            </label>
+          </div>
+        </article>
+      }
+    </div>
+  }
+</div>

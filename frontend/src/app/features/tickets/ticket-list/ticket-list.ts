@@ -116,6 +116,8 @@ export class TicketList implements OnInit {
   protected priorityFilter: TicketPriority | '' = '';
   protected categoryFilter = '';
   protected projectFilter = '';
+  /** Set from ?client= (the admin's "see this person's tickets" link). */
+  protected clientFilter = '';
   protected search = '';
   protected sortField: TicketSortField = 'createdAt';
   protected sortOrder: SortOrder = 'desc';
@@ -145,6 +147,7 @@ export class TicketList implements OnInit {
       this.priorityFilter = isPriority(priority) ? priority : '';
       this.categoryFilter = params.get('category') ?? '';
       this.projectFilter = params.get('project') ?? '';
+      this.clientFilter = params.get('client') ?? '';
       if (this.appliedFilterCount > 0) this.filtersOpen.set(true);
       this.load();
     });
@@ -158,6 +161,7 @@ export class TicketList implements OnInit {
       priority: this.priorityFilter || undefined,
       category: this.categoryFilter || undefined,
       project: this.projectFilter || undefined,
+      client: this.clientFilter || undefined,
       search: this.search.trim() || undefined,
       sort: this.sortField,
       order: this.sortOrder,
@@ -182,6 +186,7 @@ export class TicketList implements OnInit {
       this.priorityFilter,
       this.categoryFilter,
       this.projectFilter,
+      this.clientFilter,
       this.search.trim(),
     ].filter(Boolean).length;
   }
@@ -201,7 +206,10 @@ export class TicketList implements OnInit {
     this.priorityFilter = '';
     this.categoryFilter = '';
     this.projectFilter = '';
+    this.clientFilter = '';
     this.search = '';
+    // Drop the query params too, otherwise a deep link would re-apply them.
+    this.router.navigate([], { relativeTo: this.route, queryParams: {} });
     this.load();
   }
 

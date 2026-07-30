@@ -68,6 +68,15 @@ export const routes: Routes = [
           import('./features/projects/project-detail/project-detail').then((m) => m.ProjectDetail),
       },
       {
+        path: 'mi-cuenta',
+        loadComponent: () => import('./features/account/account').then((m) => m.Account),
+      },
+      {
+        path: 'users',
+        canActivate: [roleGuard(['admin'])],
+        loadComponent: () => import('./features/users/users').then((m) => m.Users),
+      },
+      {
         path: 'categories',
         canActivate: [roleGuard(['admin'])],
         loadComponent: () =>

@@ -7,6 +7,8 @@ export interface User {
   role: Role;
   company?: string;
   phone?: string;
+  isActive?: boolean;
+  notifications?: { email: boolean; whatsapp: boolean };
 }
 
 export interface AuthResponse {

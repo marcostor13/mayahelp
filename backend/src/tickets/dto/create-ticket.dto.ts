@@ -8,9 +8,12 @@ import {
 import { TicketPriority } from '../../common/enums/ticket.enum';
 
 export class CreateTicketDto {
+  /** Optional: when omitted it is derived from the first line of the description,
+   *  the same way the public observation link does it. */
   @IsString()
   @MinLength(5)
-  subject: string;
+  @IsOptional()
+  subject?: string;
 
   @IsString()
   @MinLength(10)
@@ -22,6 +25,10 @@ export class CreateTicketDto {
   @IsMongoId()
   @IsOptional()
   client?: string;
+
+  @IsMongoId()
+  @IsOptional()
+  project?: string;
 
   @IsEnum(TicketPriority)
   @IsOptional()

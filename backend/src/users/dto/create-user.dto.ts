@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsEmail,
   IsEnum,
   IsOptional,
@@ -15,9 +16,14 @@ export class CreateUserDto {
   @IsEmail()
   email: string;
 
+  /**
+   * Optional when an admin creates the account: the API generates a temporary password
+   * and returns it once so it can be handed to the person.
+   */
   @IsString()
   @MinLength(8)
-  password: string;
+  @IsOptional()
+  password?: string;
 
   @IsEnum(Role)
   @IsOptional()
@@ -30,4 +36,12 @@ export class CreateUserDto {
   @IsString()
   @IsOptional()
   phone?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  notifyByEmail?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  notifyByWhatsApp?: boolean;
 }

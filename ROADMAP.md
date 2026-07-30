@@ -302,6 +302,50 @@ Verificado con Playwright interceptando la API (desktop 1440px y mobile 390px): 
 `?sort=&order=`, descarga del markdown combinado, miniaturas + visor con teclado, filtros, hoja "Más",
 mapeo de variables que se ajusta al template elegido, y cero scroll horizontal en mobile.
 
+## Cuentas de usuario, cuenta del cliente y auditoría mobile
+
+Pedido: administrar usuarios y crear sus cuentas desde el admin (también a partir de las personas ya
+asignadas a los enlaces), que cada usuario vea sus tickets, estadísticas e info del proyecto y pueda crear
+tickets como desde el enlace, que el admin pueda activar o desactivar las notificaciones de cada usuario por
+canal, y revisar toda la plataforma en mobile.
+
+### Usuarios (admin)
+
+- Pantalla `/users`: búsqueda por nombre/correo/empresa, filtro por rol, alta de cuentas (con **contraseña
+  temporal** generada por el servidor y mostrada una sola vez), edición, activar/desactivar, eliminar, y
+  acceso directo a los tickets de esa persona (`/tickets?client=…`, la lista ya soportaba el filtro).
+- **Preferencias de notificación por usuario y por canal** (`User.notifications.email` / `.whatsapp`), con
+  interruptores en la ficha. `NotificationsService` las respeta: si un canal está apagado para esa persona, no
+  se le envía, aunque el canal esté activo globalmente.
+- **Alta desde los enlaces**: `GET /users/pending-reporters` junta las personas autorizadas en los share links
+  que todavía no tienen cuenta (con los proyectos donde reportan) y `POST /users/from-reporters` las crea en
+  lote devolviendo sus contraseñas temporales.
+- Se cerró un hueco de seguridad de paso: `PATCH /users/me` aceptaba el mismo DTO que el endpoint de admin, así
+  que un cliente podía **promoverse a admin**. Ahora el self-service usa `UpdateProfileDto` (nombre, empresa,
+  teléfono) y el rol/estado solo se tocan desde `PATCH /users/:id`, que es admin.
+
+### Cuenta del cliente
+
+- `GET /dashboard/account`: totales y desglose por estado y prioridad de **sus** tickets, los proyectos donde
+  participa (como cliente del proyecto o por sus tickets) con cuántos tickets tiene en cada uno, y los últimos 5.
+- Pantalla `/mi-cuenta`: tarjetas de resumen, barras por estado, tarjetas de proyecto con acceso a sus tickets,
+  últimos tickets y un **compositor igual al del enlace público** (categoría, proyecto, descripción y adjuntos
+  con cámara/galería). `CreateTicketDto` acepta `project` y hace opcional el `subject`: si no viene, se arma con
+  la primera línea de la descripción, igual que el enlace.
+
+### Auditoría mobile
+
+Script que recorre 17 rutas × 5 anchos (320/360/390/414/768) midiendo desbordes horizontales, targets táctiles
+y errores de JS. Arrancó en **74 problemas** y quedó en **0**:
+
+- **Causa raíz de los desbordes**: los controles de formulario tienen ancho intrínseco (~20 caracteres), así que
+  dentro de un `flex` no encogen y empujan el layout fuera del viewport. Regla base `min-width: 0` para
+  `input/select/textarea` (excluyendo checkbox y radio, que además llevan `flex-shrink: 0` para que una etiqueta
+  larga no los aplaste — efecto colateral que la propia auditoría detectó).
+- Targets táctiles: checkboxes de 16px pasaron a 20px con área envolvente, filas de checkbox + etiqueta a 44px
+  (`.check-row`), enlaces de acción a 44px (`.link-action`), y el logo del topbar con área ampliada.
+- La barra inferior ya mostraba 4 ítems + hoja "Más"; con Usuarios y Mi cuenta sumados sigue entrando en 320px.
+
 ## Gaps detectados (backend listo, sin UI todavía)
 
 - [x] **Gestión de categorías** — resuelto: sección `/categories` (solo admin) con tabs Tickets/Artículos, CRUD

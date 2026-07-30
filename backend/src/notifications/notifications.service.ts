@@ -20,6 +20,8 @@ export interface NotifyRecipient {
   name: string;
   email: string;
   phone?: string;
+  /** Per-user opt-out set by an admin; absent means "both channels allowed". */
+  notifications?: { email?: boolean; whatsapp?: boolean };
 }
 
 export interface NotifyTicket {
@@ -297,8 +299,16 @@ export class NotificationsService {
       message: params.message,
     });
 
+    const recipientWantsEmail = params.recipient.notifications?.email !== false;
+    const recipientWantsWhatsApp =
+      params.recipient.notifications?.whatsapp !== false;
+
     if (settings.email.enabled) {
-      if (settings.email.notifyClient && params.recipient.email) {
+      if (
+        settings.email.notifyClient &&
+        params.recipient.email &&
+        recipientWantsEmail
+      ) {
         await this.sendEmail(params.recipient.email, params.clientEmail);
       }
       for (const to of settings.email.recipients) {
@@ -314,7 +324,11 @@ export class NotificationsService {
       };
       const bodyParams = resolveVariables(settings.whatsapp.variables, context);
       const phones = [...settings.whatsapp.recipients];
-      if (settings.whatsapp.notifyClient && params.recipient.phone) {
+      if (
+        settings.whatsapp.notifyClient &&
+        params.recipient.phone &&
+        recipientWantsWhatsApp
+      ) {
         phones.push(params.recipient.phone);
       }
       for (const phone of [...new Set(phones)]) {

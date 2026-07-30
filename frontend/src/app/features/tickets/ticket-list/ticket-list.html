@@ -6,6 +6,17 @@
       <p class="text-body-sm md:text-body-md text-on-surface-variant mt-0.5">
         {{ tickets().length }} ticket(s){{ appliedFilterCount ? ' con los filtros aplicados' : '' }}
       </p>
+      @if (clientFilter) {
+        <button
+          type="button"
+          (click)="clearFilters()"
+          class="mt-1 inline-flex items-center gap-1 rounded-full bg-primary-fixed px-3 py-1 text-label-xs text-on-primary-fixed"
+        >
+          <span class="material-symbols-outlined text-[16px]">person</span>
+          Tickets de {{ tickets()[0]?.client?.name ?? 'un usuario' }}
+          <span class="material-symbols-outlined text-[16px]">close</span>
+        </button>
+      }
     </div>
 
     <div class="flex items-center gap-2 shrink-0">
@@ -166,7 +177,7 @@
           <button
             type="button"
             (click)="clearFilters()"
-            class="self-start text-primary text-label-md flex items-center gap-1 hover:underline"
+            class="link-action self-start"
           >
             <span class="material-symbols-outlined text-[18px]">filter_alt_off</span>
             Limpiar filtros
@@ -204,7 +215,7 @@
       <span class="material-symbols-outlined text-on-surface-variant text-5xl">inbox</span>
       <p class="text-body-md text-on-surface">No hay tickets para mostrar.</p>
       @if (appliedFilterCount > 0) {
-        <button type="button" (click)="clearFilters()" class="text-primary text-label-md hover:underline">
+        <button type="button" (click)="clearFilters()" class="link-action">
           Limpiar filtros
         </button>
       }
@@ -217,13 +228,15 @@
           <thead>
             <tr class="bg-surface-container-low border-b border-surface-container-highest">
               <th class="py-3 pl-4 pr-2 w-10">
-                <input
-                  type="checkbox"
-                  [checked]="allSelected"
-                  (change)="toggleSelectAll()"
-                  aria-label="Seleccionar todos"
-                  class="h-4 w-4 cursor-pointer rounded border border-outline-variant accent-primary"
-                />
+                <label class="inline-flex cursor-pointer p-2 -m-2">
+                  <input
+                    type="checkbox"
+                    [checked]="allSelected"
+                    (change)="toggleSelectAll()"
+                    aria-label="Seleccionar todos"
+                    class="h-5 w-5 cursor-pointer rounded border border-outline-variant accent-primary"
+                  />
+                </label>
               </th>
               @for (column of sortableColumns; track column.field) {
                 <th
@@ -253,13 +266,15 @@
                 [class.bg-primary-fixed]="isSelected(ticket._id)"
               >
                 <td class="py-3 pl-4 pr-2" (click)="$event.stopPropagation()">
-                  <input
-                    type="checkbox"
-                    [checked]="isSelected(ticket._id)"
-                    (change)="toggleSelected(ticket._id)"
-                    [attr.aria-label]="'Seleccionar ' + ticket.code"
-                    class="h-4 w-4 cursor-pointer rounded border border-outline-variant accent-primary"
-                  />
+                  <label class="inline-flex cursor-pointer p-2 -m-2">
+                    <input
+                      type="checkbox"
+                      [checked]="isSelected(ticket._id)"
+                      (change)="toggleSelected(ticket._id)"
+                      [attr.aria-label]="'Seleccionar ' + ticket.code"
+                      class="h-5 w-5 cursor-pointer rounded border border-outline-variant accent-primary"
+                    />
+                  </label>
                 </td>
                 <td class="py-3 px-2 text-label-md text-primary whitespace-nowrap">{{ ticket.code }}</td>
                 <td class="py-3 px-2 min-w-[220px] max-w-[340px]">
@@ -373,13 +388,15 @@
           [class.border-surface-container-highest]="!isSelected(ticket._id)"
         >
           <div class="flex items-start gap-2">
-            <input
-              type="checkbox"
-              [checked]="isSelected(ticket._id)"
-              (change)="toggleSelected(ticket._id)"
-              [attr.aria-label]="'Seleccionar ' + ticket.code"
-              class="mt-1 h-4 w-4 shrink-0 cursor-pointer rounded border border-outline-variant accent-primary"
-            />
+            <label class="inline-flex cursor-pointer p-2 -m-1 shrink-0">
+              <input
+                type="checkbox"
+                [checked]="isSelected(ticket._id)"
+                (change)="toggleSelected(ticket._id)"
+                [attr.aria-label]="'Seleccionar ' + ticket.code"
+                class="h-5 w-5 cursor-pointer rounded border border-outline-variant accent-primary"
+              />
+            </label>
             <button type="button" (click)="open(ticket)" class="flex-1 min-w-0 text-left">
               <div class="flex items-center gap-2 flex-wrap">
                 <span class="text-label-md text-primary">{{ ticket.code }}</span>

@@ -4,6 +4,20 @@ import { Role } from '../../common/enums/role.enum';
 
 export type UserDocument = HydratedDocument<User>;
 
+/** Per-user opt-out. An admin can silence a channel for one person from the users screen. */
+@Schema({ _id: false })
+export class UserNotificationPreferences {
+  @Prop({ default: true })
+  email: boolean;
+
+  @Prop({ default: true })
+  whatsapp: boolean;
+}
+
+export const UserNotificationPreferencesSchema = SchemaFactory.createForClass(
+  UserNotificationPreferences,
+);
+
 @Schema({ timestamps: true })
 export class User {
   @Prop({ required: true, trim: true })
@@ -25,6 +39,9 @@ export class User {
   @Prop({ trim: true })
   phone?: string;
 
+  @Prop({ type: UserNotificationPreferencesSchema, default: () => ({}) })
+  notifications: UserNotificationPreferences;
+
   @Prop({ default: true })
   isActive: boolean;
 
@@ -33,6 +50,8 @@ export class User {
 
   @Prop({ select: false })
   refreshTokenHash?: string;
+
+  declare createdAt: Date;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

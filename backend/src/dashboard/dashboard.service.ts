@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Ticket, TicketDocument } from '../tickets/schemas/ticket.schema';
+import { Project, ProjectDocument } from '../projects/schemas/project.schema';
 import { TicketStatus } from '../common/enums/ticket.enum';
 import { AuthenticatedUser } from '../auth/types/authenticated-user.interface';
 import { Role } from '../common/enums/role.enum';
@@ -13,7 +14,112 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 export class DashboardService {
   constructor(
     @InjectModel(Ticket.name) private ticketModel: Model<TicketDocument>,
+    // Project model registered in DashboardModule; ProjectsModule is not imported to
+    // keep the dependency graph flat.
+    @InjectModel(Project.name) private projectModel: Model<ProjectDocument>,
   ) {}
+
+  /**
+   * Everything the account screen shows: how the person's own tickets are doing and the
+   * projects they are involved in (either as the project's client or through their tickets).
+   */
+  async getAccountSummary(requester: AuthenticatedUser) {
+    const clientId = new Types.ObjectId(requester.userId);
+    const scope = requester.role === Role.CLIENT ? { client: clientId } : {};
+
+    const [byStatusRaw, byPriorityRaw, total, recentTickets, projectIds] =
+      await Promise.all([
+        this.ticketModel.aggregate<{ _id: string; total: number }>([
+          { $match: scope },
+          { $group: { _id: '$status', total: { $sum: 1 } } },
+        ]),
+        this.ticketModel.aggregate<{ _id: string; total: number }>([
+          { $match: scope },
+          { $group: { _id: '$priority', total: { $sum: 1 } } },
+        ]),
+        this.ticketModel.countDocuments(scope),
+        this.ticketModel
+          .find(scope)
+          .populate('category', 'name icon')
+          .populate('project', 'name')
+          .sort({ createdAt: -1 })
+          .limit(5)
+          .lean()
+          .exec(),
+        this.ticketModel.distinct('project', scope),
+      ]);
+
+    const byStatus = Object.fromEntries(
+      byStatusRaw.map((row) => [row._id, row.total]),
+    ) as Record<string, number>;
+    const byPriority = Object.fromEntries(
+      byPriorityRaw.map((row) => [row._id, row.total]),
+    ) as Record<string, number>;
+
+    const projects = await this.projectModel
+      .find({
+        $or: [
+          { client: clientId },
+          { _id: { $in: projectIds.filter(Boolean) } },
+        ],
+      })
+      .populate('defaultCategory', 'name icon')
+      .sort({ createdAt: -1 })
+      .lean()
+      .exec();
+
+    const projectTicketCounts = await this.ticketModel.aggregate<{
+      _id: Types.ObjectId;
+      total: number;
+      open: number;
+    }>([
+      { $match: { ...scope, project: { $in: projects.map((p) => p._id) } } },
+      {
+        $group: {
+          _id: '$project',
+          total: { $sum: 1 },
+          open: {
+            $sum: {
+              $cond: [
+                {
+                  $in: [
+                    '$status',
+                    [TicketStatus.ABIERTO, TicketStatus.EN_PROCESO],
+                  ],
+                },
+                1,
+                0,
+              ],
+            },
+          },
+        },
+      },
+    ]);
+    const countsByProject = new Map(
+      projectTicketCounts.map((row) => [row._id?.toString(), row]),
+    );
+
+    return {
+      tickets: {
+        total,
+        open:
+          (byStatus[TicketStatus.ABIERTO] ?? 0) +
+          (byStatus[TicketStatus.EN_PROCESO] ?? 0),
+        resolved:
+          (byStatus[TicketStatus.RESUELTO] ?? 0) +
+          (byStatus[TicketStatus.CERRADO] ?? 0),
+        byStatus,
+        byPriority,
+      },
+      projects: projects.map((project) => ({
+        ...project,
+        ticketsCount: countsByProject.get(project._id.toString())?.total ?? 0,
+        openTicketsCount:
+          countsByProject.get(project._id.toString())?.open ?? 0,
+      })),
+      recentTickets,
+    };
+  }
 
   async getStats(requester: AuthenticatedUser) {
     const scope =

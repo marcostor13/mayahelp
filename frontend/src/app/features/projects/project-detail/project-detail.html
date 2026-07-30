@@ -1,4 +1,4 @@
-<a routerLink="/projects" class="text-primary text-label-md hover:underline flex items-center gap-1 mb-stack-md w-fit">
+<a routerLink="/projects" class="link-action mb-stack-sm w-fit">
   <span class="material-symbols-outlined text-[18px]">arrow_back</span>
   Volver a proyectos
 </a>
@@ -12,7 +12,7 @@
       <button
         type="button"
         (click)="deleteProject()"
-        class="text-error text-label-md hover:underline flex items-center gap-1"
+        class="link-action link-action--danger"
       >
         <span class="material-symbols-outlined text-[18px]">delete</span>
         Eliminar proyecto
@@ -195,7 +195,7 @@
               <button
                 type="button"
                 (click)="copyUrl(link.token)"
-                class="text-primary text-label-sm hover:underline flex items-center gap-1 shrink-0"
+                class="link-action shrink-0"
               >
                 <span class="material-symbols-outlined text-[16px]">{{ copiedToken() === link.token ? 'check' : 'content_copy' }}</span>
                 {{ copiedToken() === link.token ? 'Copiado' : 'Copiar' }}

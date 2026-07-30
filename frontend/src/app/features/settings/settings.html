@@ -84,30 +84,30 @@
         <div>
           <p class="text-label-md text-on-surface mb-2">Avisar cuando</p>
           <div class="flex flex-col gap-2">
-            <label class="flex items-center gap-3 cursor-pointer">
+            <label class="check-row">
               <input
                 type="checkbox"
                 [checked]="s.events.ticketCreated"
                 (change)="patchEvents({ ticketCreated: !s.events.ticketCreated })"
-                class="h-4 w-4 rounded border border-outline-variant accent-primary cursor-pointer"
+                class="h-5 w-5 rounded border border-outline-variant accent-primary cursor-pointer"
               />
               <span class="text-body-sm text-on-surface">Entra un ticket nuevo</span>
             </label>
-            <label class="flex items-center gap-3 cursor-pointer">
+            <label class="check-row">
               <input
                 type="checkbox"
                 [checked]="s.events.ticketUpdated"
                 (change)="patchEvents({ ticketUpdated: !s.events.ticketUpdated })"
-                class="h-4 w-4 rounded border border-outline-variant accent-primary cursor-pointer"
+                class="h-5 w-5 rounded border border-outline-variant accent-primary cursor-pointer"
               />
               <span class="text-body-sm text-on-surface">Un ticket cambia de estado</span>
             </label>
-            <label class="flex items-center gap-3 cursor-pointer">
+            <label class="check-row">
               <input
                 type="checkbox"
                 [checked]="s.events.newComment"
                 (change)="patchEvents({ newComment: !s.events.newComment })"
-                class="h-4 w-4 rounded border border-outline-variant accent-primary cursor-pointer"
+                class="h-5 w-5 rounded border border-outline-variant accent-primary cursor-pointer"
               />
               <span class="text-body-sm text-on-surface">Hay un comentario nuevo</span>
             </label>
@@ -118,12 +118,12 @@
 
         <!-- WhatsApp -->
         <div class="flex flex-col gap-3">
-          <label class="flex items-center gap-3 cursor-pointer">
+          <label class="check-row">
             <input
               type="checkbox"
               [checked]="s.whatsapp.enabled"
               (change)="patchWhatsApp({ enabled: !s.whatsapp.enabled })"
-              class="h-4 w-4 rounded border border-outline-variant accent-primary cursor-pointer"
+              class="h-5 w-5 rounded border border-outline-variant accent-primary cursor-pointer"
             />
             <span class="text-label-md text-on-surface flex items-center gap-2">
               <span class="material-symbols-outlined text-[20px] text-primary">chat</span>
@@ -156,7 +156,7 @@
                     <button
                       type="button"
                       (click)="removePhone(recipient)"
-                      class="inline-flex h-6 w-6 items-center justify-center rounded-full text-on-surface-variant hover:bg-error-container hover:text-error"
+                      class="inline-flex h-8 w-8 items-center justify-center rounded-full text-on-surface-variant hover:bg-error-container hover:text-error"
                       [attr.aria-label]="'Quitar ' + recipient"
                       title="Quitar número"
                     >
@@ -172,12 +172,12 @@
             }
           </div>
 
-          <label class="flex items-center gap-3 cursor-pointer">
+          <label class="check-row">
             <input
               type="checkbox"
               [checked]="s.whatsapp.notifyClient"
               (change)="patchWhatsApp({ notifyClient: !s.whatsapp.notifyClient })"
-              class="h-4 w-4 rounded border border-outline-variant accent-primary cursor-pointer"
+              class="h-5 w-5 rounded border border-outline-variant accent-primary cursor-pointer"
             />
             <span class="text-body-sm text-on-surface">
               Avisar también al cliente del ticket (si tiene teléfono cargado)
@@ -218,7 +218,7 @@
             }
             <a
               routerLink="/whatsapp-templates"
-              class="text-primary text-label-xs hover:underline inline-flex items-center gap-1 mt-1"
+              class="link-action text-label-xs"
             >
               <span class="material-symbols-outlined text-[16px]">open_in_new</span>
               Administrar templates
@@ -306,12 +306,12 @@
 
         <!-- Email -->
         <div class="flex flex-col gap-3">
-          <label class="flex items-center gap-3 cursor-pointer">
+          <label class="check-row">
             <input
               type="checkbox"
               [checked]="s.email.enabled"
               (change)="patchEmail({ enabled: !s.email.enabled })"
-              class="h-4 w-4 rounded border border-outline-variant accent-primary cursor-pointer"
+              class="h-5 w-5 rounded border border-outline-variant accent-primary cursor-pointer"
             />
             <span class="text-label-md text-on-surface flex items-center gap-2">
               <span class="material-symbols-outlined text-[20px] text-primary">mail</span>
@@ -319,12 +319,12 @@
             </span>
           </label>
 
-          <label class="flex items-center gap-3 cursor-pointer">
+          <label class="check-row">
             <input
               type="checkbox"
               [checked]="s.email.notifyClient"
               (change)="patchEmail({ notifyClient: !s.email.notifyClient })"
-              class="h-4 w-4 rounded border border-outline-variant accent-primary cursor-pointer"
+              class="h-5 w-5 rounded border border-outline-variant accent-primary cursor-pointer"
             />
             <span class="text-body-sm text-on-surface">Avisar al cliente que abrió el ticket</span>
           </label>
@@ -354,7 +354,7 @@
                     <button
                       type="button"
                       (click)="removeEmail(recipient)"
-                      class="inline-flex h-6 w-6 items-center justify-center rounded-full text-on-surface-variant hover:bg-error-container hover:text-error"
+                      class="inline-flex h-8 w-8 items-center justify-center rounded-full text-on-surface-variant hover:bg-error-container hover:text-error"
                       [attr.aria-label]="'Quitar ' + recipient"
                       title="Quitar correo"
                     >
