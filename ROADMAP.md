@@ -135,6 +135,28 @@ crearlos manualmente en Meta Business Manager.
   y usado en: login, register, página pública de observaciones, y sidebar/topbar del Shell — reemplaza el
   placeholder cuadrado morado con "M".
 
+## Captura nativa de adjuntos (foto/video/audio/archivo)
+
+Pedido: que tanto la página pública de observaciones como la creación de tickets en la plataforma permitan
+tomar foto, grabar video, grabar audio o subir un archivo, usando la cámara/micrófono reales del dispositivo
+(celular o desktop), no solo el selector de archivos de siempre.
+
+- Componente compartido `frontend/src/app/shared/media-capture/` (`<app-media-capture (filesAdded)="...">`),
+  reutilizado en `ticket-create` (creación interna) y `observation-form` (enlace público) — un solo lugar donde
+  vive esta lógica en vez de duplicarla.
+- **Tomar foto**: `getUserMedia({video})` + preview en vivo + captura a `<canvas>` → `image/jpeg`. Funciona igual
+  en celular y desktop (usa la cámara real, no el picker nativo de "cámara" del sistema operativo).
+- **Grabar video / Grabar audio**: `getUserMedia` + `MediaRecorder`, con indicador de grabación y cronómetro.
+  Mismo comportamiento en celular y desktop (a diferencia del atributo HTML `capture`, que en desktop la mayoría
+  de navegadores lo ignora y solo abre el selector de archivos común).
+- El tipo MIME que llega al backend es el **mimetype base sin parámetros de códec** (ej. `video/webm`, no
+  `video/webm;codecs=vp9,opus`) — Mongoose/Multer comparan el mimetype exacto contra la whitelist, así que el
+  string con códec se descarta antes de crear el `File`.
+- Se agregó `audio/webm` a `ALLOWED_MIMETYPES` (`backend/src/attachments/attachment-types.ts`) — es el formato
+  que produce `MediaRecorder` para audio en Chrome/Firefox (Safari usa `audio/mp4`, ya soportado).
+- Si el navegador no soporta `getUserMedia`/`MediaRecorder` (o el usuario niega permisos), se degrada con un
+  mensaje de error y el botón de "Subir archivo" (selector normal) sigue funcionando siempre.
+
 ## Gaps detectados (backend listo, sin UI todavía)
 
 - [x] **Gestión de categorías** — resuelto: sección `/categories` (solo admin) con tabs Tickets/Artículos, CRUD

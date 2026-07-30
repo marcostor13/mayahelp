@@ -96,24 +96,8 @@
       </div>
 
       <div>
-        <label class="block text-label-md text-on-background mb-stack-sm">Adjuntos (opcional)</label>
-        <label
-          for="files"
-          class="flex flex-col items-center justify-center gap-2 border-2 border-dashed border-outline-variant rounded-lg px-4 py-6 cursor-pointer hover:border-primary transition-colors text-center"
-        >
-          <span class="material-symbols-outlined text-primary text-3xl">upload_file</span>
-          <span class="text-body-sm text-on-surface-variant">
-            Imágenes, videos, audios o documentos (máx. 25MB c/u)
-          </span>
-        </label>
-        <input
-          id="files"
-          type="file"
-          multiple
-          class="hidden"
-          accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
-          (change)="onFilesSelected($event)"
-        />
+        <label class="block text-label-md text-on-background mb-stack-sm">Adjuntos (opcional, máx. 25MB c/u)</label>
+        <app-media-capture (filesAdded)="onFilesAdded($event)" />
 
         @if (selectedFiles().length > 0) {
           <ul class="mt-3 flex flex-col gap-2">

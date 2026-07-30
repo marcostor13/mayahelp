@@ -1,0 +1,120 @@
+<div class="flex flex-col gap-3">
+  <div class="flex flex-wrap gap-2">
+    <label
+      for="capture-file-input"
+      class="flex items-center gap-2 border border-outline-variant text-on-surface py-2 px-4 rounded-lg text-label-sm cursor-pointer hover:bg-surface-container-low transition-colors"
+    >
+      <span class="material-symbols-outlined text-[18px]">upload_file</span>
+      Subir archivo
+    </label>
+    <input
+      id="capture-file-input"
+      type="file"
+      multiple
+      class="hidden"
+      accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
+      (change)="onFilesSelected($event)"
+    />
+
+    @if (cameraSupported) {
+      <button
+        type="button"
+        (click)="openPhoto()"
+        class="flex items-center gap-2 border border-outline-variant text-on-surface py-2 px-4 rounded-lg text-label-sm hover:bg-surface-container-low transition-colors"
+      >
+        <span class="material-symbols-outlined text-[18px]">photo_camera</span>
+        Tomar foto
+      </button>
+      <button
+        type="button"
+        (click)="openVideo()"
+        class="flex items-center gap-2 border border-outline-variant text-on-surface py-2 px-4 rounded-lg text-label-sm hover:bg-surface-container-low transition-colors"
+      >
+        <span class="material-symbols-outlined text-[18px]">videocam</span>
+        Grabar video
+      </button>
+      <button
+        type="button"
+        (click)="openAudio()"
+        class="flex items-center gap-2 border border-outline-variant text-on-surface py-2 px-4 rounded-lg text-label-sm hover:bg-surface-container-low transition-colors"
+      >
+        <span class="material-symbols-outlined text-[18px]">mic</span>
+        Grabar audio
+      </button>
+    }
+  </div>
+
+  @if (error()) {
+    <p class="text-body-sm text-error">{{ error() }}</p>
+  }
+
+  @if (mode() !== 'idle') {
+    <div class="bg-surface border border-outline-variant rounded-xl p-4 flex flex-col items-center gap-3">
+      @if (mode() === 'photo' || mode() === 'video') {
+        <video
+          #videoPreview
+          autoplay
+          muted
+          playsinline
+          class="w-full max-w-sm rounded-lg bg-black aspect-video object-cover"
+        ></video>
+      } @else {
+        <div class="w-full max-w-sm aspect-video rounded-lg bg-surface-container-low flex items-center justify-center">
+          <span
+            class="material-symbols-outlined text-primary text-5xl"
+            [class.animate-pulse]="recording()"
+          >
+            mic
+          </span>
+        </div>
+      }
+
+      @if (recording()) {
+        <p class="text-label-md text-error flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-error animate-pulse"></span>
+          Grabando {{ elapsedLabel }}
+        </p>
+      }
+
+      <div class="flex gap-2">
+        @if (mode() === 'photo') {
+          <button
+            type="button"
+            (click)="capturePhoto()"
+            class="bg-primary-container text-on-primary py-2 px-5 rounded-lg text-label-md flex items-center gap-2"
+          >
+            <span class="material-symbols-outlined text-[18px]">photo_camera</span>
+            Capturar
+          </button>
+        } @else if (!recording()) {
+          <button
+            type="button"
+            (click)="startRecording()"
+            class="bg-primary-container text-on-primary py-2 px-5 rounded-lg text-label-md flex items-center gap-2"
+          >
+            <span class="material-symbols-outlined text-[18px]">fiber_manual_record</span>
+            Iniciar grabación
+          </button>
+        } @else {
+          <button
+            type="button"
+            (click)="stopRecording()"
+            class="bg-error text-on-primary py-2 px-5 rounded-lg text-label-md flex items-center gap-2"
+          >
+            <span class="material-symbols-outlined text-[18px]">stop</span>
+            Detener
+          </button>
+        }
+        <button
+          type="button"
+          (click)="closeCapture()"
+          class="text-on-surface-variant py-2 px-4 rounded-lg text-label-md hover:bg-surface-container-low transition-colors"
+        >
+          Cancelar
+        </button>
+      </div>
+    </div>
+  }
+
+  <canvas #canvas class="hidden"></canvas>
+</div>

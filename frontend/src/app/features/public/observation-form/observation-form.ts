@@ -4,12 +4,13 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { PublicObservationService } from '../../../core/services/public-observation.service';
 import { PublicProjectInfo } from '../../../core/models/public-observation.model';
+import { MediaCapture } from '../../../shared/media-capture/media-capture';
 
 const MAX_FILES = 5;
 
 @Component({
   selector: 'app-observation-form',
-  imports: [FormsModule],
+  imports: [FormsModule, MediaCapture],
   templateUrl: './observation-form.html',
 })
 export class ObservationForm implements OnInit {
@@ -55,11 +56,8 @@ export class ObservationForm implements OnInit {
     });
   }
 
-  onFilesSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (!input.files?.length) return;
-    this.selectedFiles.update((files) => [...files, ...Array.from(input.files!)].slice(0, MAX_FILES));
-    input.value = '';
+  onFilesAdded(files: File[]): void {
+    this.selectedFiles.update((current) => [...current, ...files].slice(0, MAX_FILES));
   }
 
   removeFile(index: number): void {

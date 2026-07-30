@@ -9,10 +9,11 @@ import { AttachmentService } from '../../../core/services/attachment.service';
 import { AiService } from '../../../core/services/ai.service';
 import { Category } from '../../../core/models/category.model';
 import { TicketPriority } from '../../../core/models/ticket.model';
+import { MediaCapture } from '../../../shared/media-capture/media-capture';
 
 @Component({
   selector: 'app-ticket-create',
-  imports: [FormsModule],
+  imports: [FormsModule, MediaCapture],
   templateUrl: './ticket-create.html',
 })
 export class TicketCreate implements OnInit {
@@ -64,11 +65,8 @@ export class TicketCreate implements OnInit {
     this.categoryService.list('ticket').subscribe((categories) => this.categories.set(categories));
   }
 
-  onFilesSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    if (!input.files?.length) return;
-    this.selectedFiles.update((files) => [...files, ...Array.from(input.files!)]);
-    input.value = '';
+  onFilesAdded(files: File[]): void {
+    this.selectedFiles.update((current) => [...current, ...files]);
   }
 
   removeFile(index: number): void {

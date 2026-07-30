@@ -14,6 +14,7 @@ export const ALLOWED_MIMETYPES: Record<string, AttachmentKind> = {
   'audio/wav': 'audio',
   'audio/ogg': 'audio',
   'audio/mp4': 'audio',
+  'audio/webm': 'audio',
   'application/pdf': 'document',
   'application/msword': 'document',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
