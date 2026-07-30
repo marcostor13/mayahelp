@@ -232,6 +232,35 @@
             </div>
           }
 
+          <!-- Los saltos de línea solo pueden venir del cuerpo del template -->
+          <div class="bg-primary-fixed/50 border border-primary-fixed rounded-xl p-3 flex flex-col gap-2">
+            <p class="text-label-md text-on-surface flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px] text-primary">format_align_left</span>
+              ¿Querés el aviso en renglones?
+            </p>
+            <p class="text-body-sm text-on-surface-variant">
+              WhatsApp no acepta saltos de línea dentro de una variable: por eso "Ticket completo" llega en una
+              sola línea. Para que el mensaje se vea ordenado en renglones, los saltos tienen que estar en el
+              cuerpo de la plantilla. Podemos crear la plantilla recomendada (una variable por línea) y dejarla
+              configurada.
+            </p>
+            <button
+              type="button"
+              (click)="applyTemplatePreset()"
+              [disabled]="applyingPreset()"
+              class="self-start inline-flex items-center gap-2 border border-primary text-primary text-label-md py-2 px-4 rounded-xl hover:bg-primary-fixed transition-colors disabled:opacity-60"
+            >
+              <span class="material-symbols-outlined text-[18px]">{{ applyingPreset() ? 'progress_activity' : 'auto_fix_high' }}</span>
+              {{ applyingPreset() ? 'Creando...' : 'Crear plantilla con renglones' }}
+            </button>
+            @if (presetResult(); as message) {
+              <p class="text-body-sm text-on-surface flex items-start gap-1">
+                <span class="material-symbols-outlined text-[18px] text-primary mt-0.5">check_circle</span>
+                <span>{{ message }}</span>
+              </p>
+            }
+          </div>
+
           <!-- Variables -->
           <div>
             <p class="text-label-md text-on-surface mb-1">Variables del template</p>

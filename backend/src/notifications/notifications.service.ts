@@ -8,6 +8,13 @@ import {
   resolveVariables,
 } from '../app-settings/notification-variables';
 import { AppSettingsDocument } from '../app-settings/schemas/app-settings.schema';
+import {
+  EmailAccent,
+  EmailContent,
+  EmailRow,
+  renderNotificationEmail,
+  renderNotificationText,
+} from './email-template';
 
 export interface NotifyRecipient {
   name: string;
@@ -30,7 +37,26 @@ type NotificationEvent = 'ticketCreated' | 'ticketUpdated' | 'newComment';
 
 interface EmailBody {
   subject: string;
-  html: string;
+  content: EmailContent;
+}
+
+/** Status drives the accent colour of the email, so an update reads at a glance. */
+const STATUS_ACCENT: Record<string, EmailAccent> = {
+  abierto: 'primary',
+  en_proceso: 'warning',
+  resuelto: 'success',
+  cerrado: 'neutral',
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  abierto: 'Abierto',
+  en_proceso: 'En proceso',
+  resuelto: 'Resuelto',
+  cerrado: 'Cerrado',
+};
+
+function capitalize(value: string): string {
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 @Injectable()
@@ -58,15 +84,32 @@ export class NotificationsService {
       event: 'Nuevo ticket',
       clientEmail: {
         subject: `Hemos recibido tu ticket ${ticket.code}`,
-        html: `<p>Hola ${recipient.name},</p>
-       <p>Recibimos tu solicitud "<strong>${ticket.subject}</strong>" (${ticket.code}). Un agente la revisará pronto.</p>
-       <p><a href="${link}">Ver el ticket</a></p>`,
+        content: {
+          preheader: `Registramos "${ticket.subject}" con el código ${ticket.code}.`,
+          badge: 'Ticket recibido',
+          title: `Hola ${recipient.name}, recibimos tu solicitud`,
+          intro: `Registramos "${ticket.subject}" con el código ${ticket.code}. Un agente la va a revisar y te avisamos por acá en cuanto haya novedades.`,
+          accent: 'primary',
+          rows: this.ticketRows(ticket, recipient),
+          action: { label: 'Ver el ticket', url: link },
+          footerNote:
+            'Podés responder a este correo si necesitás agregar información.',
+        },
       },
       internalEmail: {
         subject: `Nuevo ticket ${ticket.code}: ${ticket.subject}`,
-        html: `<p>Entró un nuevo ticket en MayaHelp.</p>
-       ${this.ticketSummaryHtml(ticket, recipient)}
-       <p><a href="${link}">Abrir el ticket</a></p>`,
+        content: {
+          preheader: `${ticket.subject} — ${recipient.name}`,
+          badge: 'Nuevo ticket',
+          title: ticket.subject,
+          intro: `Entró un ticket nuevo de ${recipient.name} (${recipient.email}).`,
+          accent: 'primary',
+          rows: this.ticketRows(ticket, recipient),
+          quote: ticket.description
+            ? { author: recipient.name, text: ticket.description }
+            : undefined,
+          action: { label: 'Abrir el ticket', url: link },
+        },
       },
     });
   }
@@ -86,16 +129,29 @@ export class NotificationsService {
       message,
       clientEmail: {
         subject: `Nueva respuesta en tu ticket ${ticket.code}`,
-        html: `<p>Hola ${recipient.name},</p>
-       <p><strong>${authorName}</strong> respondió en "${ticket.subject}" (${ticket.code}):</p>
-       <blockquote>${message}</blockquote>
-       <p><a href="${link}">Ver la conversación</a></p>`,
+        content: {
+          preheader: `${authorName} respondió en ${ticket.code}.`,
+          badge: 'Nueva respuesta',
+          title: `${authorName} respondió tu ticket`,
+          intro: `Hay una respuesta nueva en "${ticket.subject}" (${ticket.code}).`,
+          accent: 'primary',
+          rows: this.ticketRows(ticket, recipient),
+          quote: { author: authorName, text: message },
+          action: { label: 'Ver la conversación', url: link },
+        },
       },
       internalEmail: {
         subject: `Comentario en ${ticket.code}: ${ticket.subject}`,
-        html: `<p><strong>${authorName}</strong> comentó en ${ticket.code}:</p>
-       <blockquote>${message}</blockquote>
-       <p><a href="${link}">Abrir el ticket</a></p>`,
+        content: {
+          preheader: `${authorName}: ${message}`,
+          badge: 'Nuevo comentario',
+          title: ticket.subject,
+          intro: `${authorName} comentó en ${ticket.code}.`,
+          accent: 'primary',
+          rows: this.ticketRows(ticket, recipient),
+          quote: { author: authorName, text: message },
+          action: { label: 'Abrir el ticket', url: link },
+        },
       },
     });
   }
@@ -112,14 +168,27 @@ export class NotificationsService {
       event: `Ticket actualizado a ${status}`,
       clientEmail: {
         subject: `Actualización de tu ticket ${ticket.code}`,
-        html: `<p>Hola ${recipient.name},</p>
-       <p>Tu ticket "<strong>${ticket.subject}</strong>" (${ticket.code}) cambió de estado a: <strong>${status}</strong>.</p>
-       <p><a href="${link}">Ver el ticket</a></p>`,
+        content: {
+          preheader: `${ticket.code} pasó a ${this.statusLabel(status)}.`,
+          badge: this.statusLabel(status),
+          title: `Tu ticket pasó a "${this.statusLabel(status)}"`,
+          intro: `Hola ${recipient.name}, actualizamos el estado de "${ticket.subject}" (${ticket.code}).`,
+          accent: this.statusAccent(status),
+          rows: this.ticketRows({ ...ticket, status }, recipient),
+          action: { label: 'Ver el ticket', url: link },
+        },
       },
       internalEmail: {
         subject: `${ticket.code} cambió a ${status}`,
-        html: `<p>El ticket ${ticket.code} ("${ticket.subject}") cambió de estado a <strong>${status}</strong>.</p>
-       <p><a href="${link}">Abrir el ticket</a></p>`,
+        content: {
+          preheader: `${ticket.subject} → ${this.statusLabel(status)}`,
+          badge: this.statusLabel(status),
+          title: ticket.subject,
+          intro: `El ticket ${ticket.code} cambió de estado a ${this.statusLabel(status)}.`,
+          accent: this.statusAccent(status),
+          rows: this.ticketRows({ ...ticket, status }, recipient),
+          action: { label: 'Abrir el ticket', url: link },
+        },
       },
     });
   }
@@ -167,12 +236,25 @@ export class NotificationsService {
 
     const email: { to: string; sent: boolean }[] = [];
     for (const to of settings.email.recipients) {
-      await this.emailService.send(
-        to,
-        '[Prueba] Notificaciones de MayaHelp',
-        `<p>Esta es una notificación de prueba enviada desde la configuración de MayaHelp.</p>
-         ${this.ticketSummaryHtml(ticket, { name: 'Cliente de prueba', email: 'cliente@ejemplo.com' })}`,
-      );
+      await this.sendEmail(to, {
+        subject: '[Prueba] Notificaciones de MayaHelp',
+        content: {
+          preheader: 'Así se van a ver los avisos de tickets.',
+          badge: 'Prueba',
+          title: 'Notificaciones configuradas',
+          intro:
+            'Esta es una notificación de prueba enviada desde Ajustes. Si la estás viendo, el correo de MayaHelp funciona.',
+          accent: 'success',
+          rows: this.ticketRows(ticket, {
+            name: 'Cliente de prueba',
+            email: 'cliente@ejemplo.com',
+          }),
+          quote: ticket.description
+            ? { author: 'Cliente de prueba', text: ticket.description }
+            : undefined,
+          action: { label: 'Ir a MayaHelp', url: this.appUrl },
+        },
+      });
       email.push({ to, sent: settings.email.enabled });
     }
 
@@ -217,19 +299,11 @@ export class NotificationsService {
 
     if (settings.email.enabled) {
       if (settings.email.notifyClient && params.recipient.email) {
-        await this.emailService.send(
-          params.recipient.email,
-          params.clientEmail.subject,
-          params.clientEmail.html,
-        );
+        await this.sendEmail(params.recipient.email, params.clientEmail);
       }
       for (const to of settings.email.recipients) {
         if (to === params.recipient.email.toLowerCase()) continue;
-        await this.emailService.send(
-          to,
-          params.internalEmail.subject,
-          params.internalEmail.html,
-        );
+        await this.sendEmail(to, params.internalEmail);
       }
     }
 
@@ -277,33 +351,44 @@ export class NotificationsService {
     };
   }
 
-  private ticketSummaryHtml(
+  private async sendEmail(to: string, body: EmailBody): Promise<void> {
+    await this.emailService.send(
+      to,
+      body.subject,
+      renderNotificationEmail(body.content, { appUrl: this.appUrl }),
+      renderNotificationText(body.content),
+    );
+  }
+
+  /** Ticket facts shown as a labelled block in every email. */
+  private ticketRows(
     ticket: NotifyTicket,
     client: { name: string; email: string },
-  ): string {
-    const rows: string[] = [
-      `<li><strong>Código:</strong> ${ticket.code}</li>`,
-      `<li><strong>Asunto:</strong> ${ticket.subject}</li>`,
-      `<li><strong>Cliente:</strong> ${client.name} (${client.email})</li>`,
-    ];
-    if (ticket.categoryName) {
-      rows.push(`<li><strong>Categoría:</strong> ${ticket.categoryName}</li>`);
-    }
-    if (ticket.projectName) {
-      rows.push(`<li><strong>Proyecto:</strong> ${ticket.projectName}</li>`);
+  ): EmailRow[] {
+    const rows: EmailRow[] = [{ label: 'Ticket', value: ticket.code }];
+    rows.push({ label: 'Asunto', value: ticket.subject });
+    if (ticket.status) {
+      rows.push({ label: 'Estado', value: this.statusLabel(ticket.status) });
     }
     if (ticket.priority) {
-      rows.push(`<li><strong>Prioridad:</strong> ${ticket.priority}</li>`);
+      rows.push({ label: 'Prioridad', value: capitalize(ticket.priority) });
     }
-    if (ticket.status) {
-      rows.push(`<li><strong>Estado:</strong> ${ticket.status}</li>`);
+    if (ticket.categoryName) {
+      rows.push({ label: 'Categoría', value: ticket.categoryName });
     }
-    if (ticket.description) {
-      rows.push(
-        `<li><strong>Descripción:</strong> ${ticket.description.slice(0, 500)}</li>`,
-      );
+    if (ticket.projectName) {
+      rows.push({ label: 'Proyecto', value: ticket.projectName });
     }
-    return `<ul>${rows.join('')}</ul>`;
+    rows.push({ label: 'Cliente', value: `${client.name} (${client.email})` });
+    return rows;
+  }
+
+  private statusLabel(status: string): string {
+    return STATUS_LABEL[status] ?? status;
+  }
+
+  private statusAccent(status: string): EmailAccent {
+    return STATUS_ACCENT[status] ?? 'primary';
   }
 
   private ticketLink(ticket: NotifyTicket): string {

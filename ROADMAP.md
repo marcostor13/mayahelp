@@ -237,6 +237,29 @@ ticket (con template y variables elegibles), correo en creaciones/actualizacione
   (una sola línea, nunca vacíos, recortados a 500) porque Meta rechaza multilínea/vacío — eso hacía que la
   notificación se cayera sin explicación. Cubierto por `notification-variables.spec.ts`.
 - `WHATSAPP_TEMPLATE_NAME`/`_LANGUAGE` quedan como fallback hasta que un admin elija el template en la UI.
+## Notificaciones en renglones + correo rediseñado
+
+Pedido: que el aviso de WhatsApp llegue "con saltos de línea bien ordenado" (llegaba todo en una línea) y
+que el correo tenga un diseño mucho mejor, con el logo.
+
+- **Por qué llegaba en una línea**: la WhatsApp Cloud API rechaza un *parámetro* de template que contenga
+  saltos de línea, tabulaciones o más de 4 espacios seguidos ("cannot have new-line/tab characters..."), así
+  que ninguna variable puede traer renglones por más que se los pongamos. Los saltos solo se respetan en el
+  **cuerpo de la plantilla**.
+- Solución: **plantilla `mayahelp_ticket_completo`** lista para usar, con una variable por renglón
+  (🎫 código / 📌 asunto / 🔄 estado / ⚡ prioridad / 🏷️ categoría / 📁 proyecto / 👤 cliente / 📝 descripción /
+  🔗 enlace). Un botón en Ajustes la crea en Meta vía la API, la deja seleccionada y mapea sus 9 variables de
+  una. Como Meta debe aprobarla, la UI muestra el estado devuelto (`PENDING`/`APPROVED`) y avisa que hasta la
+  aprobación los envíos con esa plantilla fallan. `{{ticket_completo}}` sigue existiendo para plantillas de una
+  sola variable, con el aviso de que llega en una línea.
+- **Correo rediseñado** (`notifications/email-template.ts`): layout de tarjeta con el logo de MayaHelp (servido
+  desde el frontend, sin adjuntos), franja y botón con color según el estado (morado / ámbar / verde / gris),
+  badge del evento, bloque de datos del ticket (código, asunto, estado, prioridad, categoría, proyecto,
+  cliente), cita para la descripción o el comentario, CTA y pie. Está escrito para clientes de correo: tablas,
+  estilos inline, sin flex/grid ni `<style>` (Gmail y Outlook los descartan), con preheader oculto y
+  alternativa en texto plano (mejor entregabilidad). Todos los valores se escapan porque vienen de tickets y
+  usuarios.
+
 - Variable **`{{ticket_completo}}`**: manda todos los datos del ticket en un solo parámetro, en orden fijo
   (código · asunto · estado · prioridad · categoría · proyecto · cliente · descripción · enlace), saltando los
   campos vacíos. Va en una sola línea a propósito: Meta rechaza parámetros con saltos de línea, así que los

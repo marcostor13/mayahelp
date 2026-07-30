@@ -33,6 +33,8 @@ export class Settings implements OnInit {
   protected readonly settingsSaved = signal(false);
   protected readonly settingsError = signal<string | null>(null);
   protected readonly testing = signal(false);
+  protected readonly applyingPreset = signal(false);
+  protected readonly presetResult = signal<string | null>(null);
   protected readonly testResult = signal<NotificationTestResult | null>(null);
 
   protected newPhone = '';
@@ -116,9 +118,8 @@ export class Settings implements OnInit {
     const token = this.variableAt(index);
     if (!token) return null;
     return (
-      this.settings()?.availableVariables.find(
-        (variable) => variable.token === token,
-      )?.example ?? null
+      this.settings()?.availableVariables.find((variable) => variable.token === token)?.example ??
+      null
     );
   }
 
@@ -235,6 +236,39 @@ export class Settings implements OnInit {
           this.savingSettings.set(false);
         },
       });
+  }
+
+  /**
+   * WhatsApp refuses newlines inside a parameter, so a multi-line notification can only
+   * come from a template whose body already has the line breaks. This creates that one.
+   */
+  applyTemplatePreset(): void {
+    this.applyingPreset.set(true);
+    this.settingsError.set(null);
+    this.presetResult.set(null);
+    this.appSettingsService.applyTemplatePreset().subscribe({
+      next: (result) => {
+        this.settings.set(result);
+        this.templates.update((list) =>
+          list.some((template) => template.name === result.template.name)
+            ? list
+            : [...list, result.template],
+        );
+        this.presetResult.set(
+          result.template.status === 'APPROVED'
+            ? `Plantilla "${result.template.name}" creada y seleccionada. Ya se envía en renglones.`
+            : `Plantilla "${result.template.name}" creada y seleccionada. Meta la tiene que aprobar (estado: ${result.template.status}); hasta entonces los envíos con esta plantilla van a fallar.`,
+        );
+        this.applyingPreset.set(false);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.settingsError.set(
+          (err.error as { message?: string | string[] })?.message?.toString() ??
+            'No se pudo crear la plantilla recomendada.',
+        );
+        this.applyingPreset.set(false);
+      },
+    });
   }
 
   sendTest(): void {

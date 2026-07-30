@@ -6,6 +6,7 @@ import {
   NotificationTestResult,
   UpdateNotificationSettingsPayload,
 } from '../models/app-settings.model';
+import { WhatsAppTemplate } from '../models/whatsapp-template.model';
 
 @Injectable({ providedIn: 'root' })
 export class AppSettingsService {
@@ -23,5 +24,16 @@ export class AppSettingsService {
 
   sendTest() {
     return this.http.post<NotificationTestResult>(`${this.baseUrl}/test`, {});
+  }
+
+  /**
+   * Creates the recommended multi-line template in Meta and leaves it selected with
+   * every `{{n}}` already mapped.
+   */
+  applyTemplatePreset() {
+    return this.http.post<NotificationSettings & { template: WhatsAppTemplate }>(
+      `${this.baseUrl}/whatsapp-template-preset`,
+      {},
+    );
   }
 }

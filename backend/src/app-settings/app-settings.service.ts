@@ -8,6 +8,14 @@ import {
   AppSettingsDocument,
 } from './schemas/app-settings.schema';
 import { UpdateNotificationSettingsDto } from './dto/update-notification-settings.dto';
+import {
+  buildTicketTemplatePreset,
+  TICKET_TEMPLATE_PRESET_VARIABLES,
+} from './ticket-template-preset';
+import {
+  WhatsAppTemplatesService,
+  WhatsAppTemplateSummary,
+} from '../whatsapp-templates/whatsapp-templates.service';
 
 @Injectable()
 export class AppSettingsService {
@@ -15,6 +23,7 @@ export class AppSettingsService {
     @InjectModel(AppSettings.name)
     private readonly settingsModel: Model<AppSettingsDocument>,
     private readonly configService: ConfigService,
+    private readonly whatsappTemplatesService: WhatsAppTemplatesService,
   ) {}
 
   /**
@@ -36,6 +45,28 @@ export class AppSettingsService {
       },
     });
     return created;
+  }
+
+  /**
+   * Creates (in Meta) the multi-line ticket template and points the settings at it,
+   * mapping every `{{n}}` of its body in one go.
+   */
+  async applyTicketTemplatePreset(): Promise<{
+    settings: AppSettingsDocument;
+    template: WhatsAppTemplateSummary;
+  }> {
+    const language = (await this.get()).whatsapp.templateLanguage || 'es';
+    const preset = buildTicketTemplatePreset(language);
+    const template = await this.whatsappTemplatesService.create(preset);
+
+    const settings = await this.updateNotifications({
+      whatsapp: {
+        templateName: template.name,
+        templateLanguage: template.language,
+        variables: [...TICKET_TEMPLATE_PRESET_VARIABLES],
+      },
+    });
+    return { settings, template };
   }
 
   async updateNotifications(

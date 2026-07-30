@@ -12,8 +12,16 @@ export class EmailService {
     this.emailFrom = this.configService.get<string>('resend.emailFrom')!;
   }
 
-  /** Best-effort: logs and returns instead of throwing, so email issues never break the caller. */
-  async send(to: string, subject: string, html: string): Promise<void> {
+  /**
+   * Best-effort: logs and returns instead of throwing, so email issues never break the caller.
+   * `text` is the plain-text alternative — it helps deliverability and text-only clients.
+   */
+  async send(
+    to: string,
+    subject: string,
+    html: string,
+    text?: string,
+  ): Promise<void> {
     if (!this.apiKey) {
       this.logger.warn(
         `RESEND_API_KEY no configurada; se omite el correo "${subject}" a ${to}.`,
@@ -28,7 +36,13 @@ export class EmailService {
           Authorization: `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ from: this.emailFrom, to, subject, html }),
+        body: JSON.stringify({
+          from: this.emailFrom,
+          to,
+          subject,
+          html,
+          ...(text ? { text } : {}),
+        }),
       });
 
       if (!response.ok) {
