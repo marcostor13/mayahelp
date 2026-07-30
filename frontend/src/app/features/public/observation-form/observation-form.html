@@ -99,12 +99,14 @@
             @if (selectedFiles().length > 0) {
               <ul class="mt-3 flex flex-col gap-2">
                 @for (file of selectedFiles(); track file.name; let i = $index) {
-                  <li class="flex items-center justify-between gap-2 bg-surface-container-lowest border border-outline-variant rounded-lg px-3 py-2">
+                  <li class="flex items-center justify-between gap-2 bg-surface-container-lowest border border-outline-variant rounded-xl px-3 py-2">
                     <span class="text-body-sm text-on-surface truncate">{{ file.name }}</span>
                     <button
                       type="button"
                       (click)="removeFile(i)"
-                      class="text-on-surface-variant hover:text-error transition-colors"
+                      class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-error-container hover:text-error"
+                      title="Quitar archivo"
+                      aria-label="Quitar archivo"
                     >
                       <span class="material-symbols-outlined text-[18px]">close</span>
                     </button>

@@ -4,11 +4,13 @@ import {
   EventEmitter,
   OnDestroy,
   Output,
-  ViewChild,
+  effect,
   signal,
+  viewChild,
 } from '@angular/core';
 
 type CaptureMode = 'idle' | 'photo' | 'video' | 'audio';
+type ActiveMode = Exclude<CaptureMode, 'idle'>;
 
 const VIDEO_MIME_CANDIDATES = [
   'video/webm;codecs=vp9,opus',
@@ -17,6 +19,21 @@ const VIDEO_MIME_CANDIDATES = [
   'video/mp4',
 ];
 const AUDIO_MIME_CANDIDATES = ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4'];
+
+const CAPTURE_SETUP: Record<ActiveMode, { constraints: MediaStreamConstraints; error: string }> = {
+  photo: {
+    constraints: { video: { facingMode: 'environment' } },
+    error: 'No se pudo acceder a la cámara. Revisa los permisos del navegador.',
+  },
+  video: {
+    constraints: { video: { facingMode: 'environment' }, audio: true },
+    error: 'No se pudo acceder a la cámara/micrófono. Revisa los permisos del navegador.',
+  },
+  audio: {
+    constraints: { audio: true },
+    error: 'No se pudo acceder al micrófono. Revisa los permisos del navegador.',
+  },
+};
 
 function pickSupportedMimeType(candidates: string[]): string {
   return candidates.find((type) => MediaRecorder.isTypeSupported(type)) ?? candidates[candidates.length - 1];
@@ -29,22 +46,47 @@ function pickSupportedMimeType(candidates: string[]): string {
 export class MediaCapture implements OnDestroy {
   @Output() filesAdded = new EventEmitter<File[]>();
 
-  @ViewChild('videoPreview') videoPreviewRef?: ElementRef<HTMLVideoElement>;
-  @ViewChild('canvas') canvasRef?: ElementRef<HTMLCanvasElement>;
+  private readonly videoPreview = viewChild<ElementRef<HTMLVideoElement>>('videoPreview');
+  private readonly canvas = viewChild<ElementRef<HTMLCanvasElement>>('canvas');
 
   protected readonly mode = signal<CaptureMode>('idle');
+  protected readonly opening = signal(false);
   protected readonly recording = signal(false);
+  protected readonly previewReady = signal(false);
   protected readonly elapsedSeconds = signal(0);
   protected readonly error = signal<string | null>(null);
   protected readonly cameraSupported = !!navigator.mediaDevices?.getUserMedia;
 
-  private stream: MediaStream | null = null;
+  private readonly stream = signal<MediaStream | null>(null);
   private mediaRecorder?: MediaRecorder;
   private recordedChunks: Blob[] = [];
   private timerHandle?: ReturnType<typeof setInterval>;
+  private previousBodyOverflow: string | null = null;
+
+  constructor() {
+    // The preview <video> lives inside an @if, so it does not exist yet at the
+    // moment the stream arrives. Binding from an effect covers both orders —
+    // element rendered after the stream, or stream obtained after the element —
+    // so the preview shows up on the first tap instead of needing a second one.
+    effect(() => {
+      const video = this.videoPreview()?.nativeElement;
+      const stream = this.stream();
+      if (!video) return;
+      if (video.srcObject !== stream) {
+        video.srcObject = stream;
+      }
+      if (stream) {
+        // Safari/iOS may not honour the autoplay attribute for a fresh srcObject.
+        // play() does not return a promise on every engine, hence the optional call.
+        video.play()?.catch(() => undefined);
+      }
+    });
+  }
 
   ngOnDestroy(): void {
     this.stopStream();
+    this.clearTimer();
+    this.restoreBodyScroll();
   }
 
   onFilesSelected(event: Event): void {
@@ -63,23 +105,26 @@ export class MediaCapture implements OnDestroy {
     return `${minutes}:${seconds}`;
   }
 
-  async openPhoto(): Promise<void> {
-    this.error.set(null);
-    try {
-      this.stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
-      });
-      this.mode.set('photo');
-      queueMicrotask(() => this.attachPreview());
-    } catch {
-      this.error.set('No se pudo acceder a la cámara. Revisa los permisos del navegador.');
-    }
+  openPhoto(): Promise<void> {
+    return this.openCapture('photo');
+  }
+
+  openVideo(): Promise<void> {
+    return this.openCapture('video');
+  }
+
+  openAudio(): Promise<void> {
+    return this.openCapture('audio');
   }
 
   capturePhoto(): void {
-    const video = this.videoPreviewRef?.nativeElement;
-    const canvas = this.canvasRef?.nativeElement;
+    const video = this.videoPreview()?.nativeElement;
+    const canvas = this.canvas()?.nativeElement;
     if (!video || !canvas) return;
+    if (!video.videoWidth || !video.videoHeight) {
+      this.error.set('La cámara aún no está lista. Intenta de nuevo.');
+      return;
+    }
 
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
@@ -97,37 +142,14 @@ export class MediaCapture implements OnDestroy {
     );
   }
 
-  async openVideo(): Promise<void> {
-    this.error.set(null);
-    try {
-      this.stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
-        audio: true,
-      });
-      this.mode.set('video');
-      queueMicrotask(() => this.attachPreview());
-    } catch {
-      this.error.set('No se pudo acceder a la cámara/micrófono. Revisa los permisos del navegador.');
-    }
-  }
-
-  async openAudio(): Promise<void> {
-    this.error.set(null);
-    try {
-      this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      this.mode.set('audio');
-    } catch {
-      this.error.set('No se pudo acceder al micrófono. Revisa los permisos del navegador.');
-    }
-  }
-
   startRecording(): void {
-    if (!this.stream) return;
+    const stream = this.stream();
+    if (!stream) return;
     const isVideo = this.mode() === 'video';
     const mimeType = pickSupportedMimeType(isVideo ? VIDEO_MIME_CANDIDATES : AUDIO_MIME_CANDIDATES);
     this.recordedChunks = [];
     try {
-      this.mediaRecorder = new MediaRecorder(this.stream, { mimeType });
+      this.mediaRecorder = new MediaRecorder(stream, { mimeType });
     } catch {
       this.error.set('Tu navegador no soporta grabar este tipo de contenido.');
       this.closeCapture();
@@ -167,18 +189,39 @@ export class MediaCapture implements OnDestroy {
     this.stopStream();
     this.mode.set('idle');
     this.recording.set(false);
+    this.previewReady.set(false);
     this.clearTimer();
+    this.restoreBodyScroll();
   }
 
-  private attachPreview(): void {
-    if (this.videoPreviewRef && this.stream) {
-      this.videoPreviewRef.nativeElement.srcObject = this.stream;
+  protected onPreviewReady(): void {
+    this.previewReady.set(true);
+  }
+
+  private async openCapture(mode: ActiveMode): Promise<void> {
+    if (this.opening()) return;
+    this.error.set(null);
+    this.previewReady.set(false);
+    // Never hold on to a previous stream: overwriting it would leave the camera
+    // track running (and the recording light on) with nobody to stop it.
+    this.stopStream();
+    this.opening.set(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia(CAPTURE_SETUP[mode].constraints);
+      this.stream.set(stream);
+      this.mode.set(mode);
+      this.lockBodyScroll();
+    } catch {
+      this.error.set(CAPTURE_SETUP[mode].error);
+      this.mode.set('idle');
+    } finally {
+      this.opening.set(false);
     }
   }
 
   private stopStream(): void {
-    this.stream?.getTracks().forEach((track) => track.stop());
-    this.stream = null;
+    this.stream()?.getTracks().forEach((track) => track.stop());
+    this.stream.set(null);
   }
 
   private clearTimer(): void {
@@ -186,5 +229,17 @@ export class MediaCapture implements OnDestroy {
       clearInterval(this.timerHandle);
       this.timerHandle = undefined;
     }
+  }
+
+  private lockBodyScroll(): void {
+    if (this.previousBodyOverflow !== null) return;
+    this.previousBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+  }
+
+  private restoreBodyScroll(): void {
+    if (this.previousBodyOverflow === null) return;
+    document.body.style.overflow = this.previousBodyOverflow;
+    this.previousBodyOverflow = null;
   }
 }

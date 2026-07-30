@@ -132,6 +132,41 @@
     "opsz" 24;
 }
 
+/* Icon-only action buttons for the media capture row (photo / video / audio / upload). */
+.capture-action {
+  @apply inline-flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-outline-variant bg-surface-container-lowest text-primary transition-all;
+  @apply hover:border-primary hover:bg-primary-fixed hover:shadow-md active:scale-95;
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
+  @apply disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-outline-variant disabled:hover:bg-surface-container-lowest disabled:active:scale-100;
+  @apply shadow-[0_2px_4px_rgba(109,40,217,0.08)];
+}
+
+/* Secondary control floating over the fullscreen capture view. */
+.capture-overlay-action {
+  @apply inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-black/45 text-white backdrop-blur-sm transition-all;
+  @apply hover:bg-black/65 active:scale-95;
+  @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white;
+}
+
+/* Main shutter / record control of the fullscreen capture view. */
+.capture-shutter {
+  @apply inline-flex h-[72px] w-[72px] shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full bg-white text-on-surface ring-4 ring-white/35 transition-transform;
+  @apply active:scale-95 disabled:cursor-not-allowed disabled:opacity-45 disabled:active:scale-100;
+  @apply shadow-[0_6px_20px_rgba(0,0,0,0.35)];
+}
+
+/* Keep the ligature name from spilling out of the round buttons while the
+   Material Symbols font is still loading. */
+.capture-action .material-symbols-outlined,
+.capture-overlay-action .material-symbols-outlined,
+.capture-shutter .material-symbols-outlined {
+  @apply leading-none;
+}
+
+.capture-shutter--record {
+  @apply bg-error text-white ring-error/30;
+}
+
 .ambient-shadow-sm {
   box-shadow: 0px 2px 4px rgba(109, 40, 217, 0.05);
 }

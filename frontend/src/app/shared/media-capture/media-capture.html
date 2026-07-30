@@ -1,46 +1,51 @@
 <div class="flex flex-col gap-3">
-  <div class="flex flex-wrap gap-2">
-    <label
-      for="capture-file-input"
-      class="flex items-center gap-2 border border-outline-variant text-on-surface py-2 px-4 rounded-lg text-label-sm cursor-pointer hover:bg-surface-container-low transition-colors"
-    >
-      <span class="material-symbols-outlined text-[18px]">upload_file</span>
-      Subir archivo
+  <div class="flex flex-wrap items-center gap-3">
+    <label class="capture-action" title="Subir archivo" aria-label="Subir archivo">
+      <span class="material-symbols-outlined text-[22px]">upload_file</span>
+      <input
+        type="file"
+        multiple
+        class="hidden"
+        accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
+        (change)="onFilesSelected($event)"
+      />
     </label>
-    <input
-      id="capture-file-input"
-      type="file"
-      multiple
-      class="hidden"
-      accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
-      (change)="onFilesSelected($event)"
-    />
 
     @if (cameraSupported) {
       <button
         type="button"
         (click)="openPhoto()"
-        class="flex items-center gap-2 border border-outline-variant text-on-surface py-2 px-4 rounded-lg text-label-sm hover:bg-surface-container-low transition-colors"
+        [disabled]="opening()"
+        class="capture-action"
+        title="Tomar foto"
+        aria-label="Tomar foto"
       >
-        <span class="material-symbols-outlined text-[18px]">photo_camera</span>
-        Tomar foto
+        <span class="material-symbols-outlined text-[22px]">photo_camera</span>
       </button>
       <button
         type="button"
         (click)="openVideo()"
-        class="flex items-center gap-2 border border-outline-variant text-on-surface py-2 px-4 rounded-lg text-label-sm hover:bg-surface-container-low transition-colors"
+        [disabled]="opening()"
+        class="capture-action"
+        title="Grabar video"
+        aria-label="Grabar video"
       >
-        <span class="material-symbols-outlined text-[18px]">videocam</span>
-        Grabar video
+        <span class="material-symbols-outlined text-[22px]">videocam</span>
       </button>
       <button
         type="button"
         (click)="openAudio()"
-        class="flex items-center gap-2 border border-outline-variant text-on-surface py-2 px-4 rounded-lg text-label-sm hover:bg-surface-container-low transition-colors"
+        [disabled]="opening()"
+        class="capture-action"
+        title="Grabar audio"
+        aria-label="Grabar audio"
       >
-        <span class="material-symbols-outlined text-[18px]">mic</span>
-        Grabar audio
+        <span class="material-symbols-outlined text-[22px]">mic</span>
       </button>
+    }
+
+    @if (opening()) {
+      <span class="material-symbols-outlined text-primary text-[22px] animate-spin">progress_activity</span>
     }
   </div>
 
@@ -48,73 +53,90 @@
     <p class="text-body-sm text-error">{{ error() }}</p>
   }
 
-  @if (mode() !== 'idle') {
-    <div class="bg-surface border border-outline-variant rounded-xl p-4 flex flex-col items-center gap-3">
-      @if (mode() === 'photo' || mode() === 'video') {
-        <video
-          #videoPreview
-          autoplay
-          muted
-          playsinline
-          class="w-full max-w-sm rounded-lg bg-black aspect-video object-cover"
-        ></video>
-      } @else {
-        <div class="w-full max-w-sm aspect-video rounded-lg bg-surface-container-low flex items-center justify-center">
+  <canvas #canvas class="hidden"></canvas>
+</div>
+
+@if (mode() !== 'idle') {
+  <div class="fixed inset-0 z-50 bg-black" role="dialog" aria-modal="true">
+    @if (mode() === 'audio') {
+      <div class="absolute inset-0 flex items-center justify-center">
+        <span
+          class="material-symbols-outlined text-white/90 text-[112px]"
+          [class.animate-pulse]="recording()"
+        >
+          mic
+        </span>
+      </div>
+    } @else {
+      <video
+        #videoPreview
+        autoplay
+        muted
+        playsinline
+        disablepictureinpicture
+        (loadedmetadata)="onPreviewReady()"
+        class="absolute inset-0 h-full w-full object-cover"
+      ></video>
+    }
+
+    <div
+      class="absolute inset-0 flex flex-col justify-between bg-gradient-to-b from-black/50 via-transparent to-black/60"
+    >
+      <div class="flex items-start justify-between gap-3 px-4 pt-[max(1rem,env(safe-area-inset-top))]">
+        <button
+          type="button"
+          (click)="closeCapture()"
+          class="capture-overlay-action"
+          title="Cancelar"
+          aria-label="Cancelar"
+        >
+          <span class="material-symbols-outlined text-[24px]">close</span>
+        </button>
+
+        @if (recording()) {
           <span
-            class="material-symbols-outlined text-primary text-5xl"
-            [class.animate-pulse]="recording()"
+            class="flex items-center gap-2 rounded-full bg-black/50 px-3 py-1.5 text-label-md text-white backdrop-blur-sm"
           >
-            mic
+            <span class="h-2.5 w-2.5 rounded-full bg-error animate-pulse"></span>
+            {{ elapsedLabel }}
           </span>
-        </div>
-      }
+        }
+      </div>
 
-      @if (recording()) {
-        <p class="text-label-md text-error flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-error animate-pulse"></span>
-          Grabando {{ elapsedLabel }}
-        </p>
-      }
-
-      <div class="flex gap-2">
+      <div class="flex items-center justify-center px-6 pt-6 pb-[max(2rem,env(safe-area-inset-bottom))]">
         @if (mode() === 'photo') {
           <button
             type="button"
             (click)="capturePhoto()"
-            class="bg-primary-container text-on-primary py-2 px-5 rounded-lg text-label-md flex items-center gap-2"
+            [disabled]="!previewReady()"
+            class="capture-shutter"
+            title="Capturar foto"
+            aria-label="Capturar foto"
           >
-            <span class="material-symbols-outlined text-[18px]">photo_camera</span>
-            Capturar
+            <span class="material-symbols-outlined text-[30px]">photo_camera</span>
           </button>
         } @else if (!recording()) {
           <button
             type="button"
             (click)="startRecording()"
-            class="bg-primary-container text-on-primary py-2 px-5 rounded-lg text-label-md flex items-center gap-2"
+            class="capture-shutter capture-shutter--record"
+            title="Iniciar grabación"
+            aria-label="Iniciar grabación"
           >
-            <span class="material-symbols-outlined text-[18px]">fiber_manual_record</span>
-            Iniciar grabación
+            <span class="material-symbols-outlined icon-fill text-[34px]">fiber_manual_record</span>
           </button>
         } @else {
           <button
             type="button"
             (click)="stopRecording()"
-            class="bg-error text-on-primary py-2 px-5 rounded-lg text-label-md flex items-center gap-2"
+            class="capture-shutter capture-shutter--record"
+            title="Detener grabación"
+            aria-label="Detener grabación"
           >
-            <span class="material-symbols-outlined text-[18px]">stop</span>
-            Detener
+            <span class="material-symbols-outlined icon-fill text-[30px]">stop</span>
           </button>
         }
-        <button
-          type="button"
-          (click)="closeCapture()"
-          class="text-on-surface-variant py-2 px-4 rounded-lg text-label-md hover:bg-surface-container-low transition-colors"
-        >
-          Cancelar
-        </button>
       </div>
     </div>
-  }
-
-  <canvas #canvas class="hidden"></canvas>
-</div>
+  </div>
+}

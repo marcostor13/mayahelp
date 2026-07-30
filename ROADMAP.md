@@ -176,6 +176,36 @@ mantenga seleccionada la persona que reportó.
   descripción, categoría (vuelve a la sugerida del proyecto) y adjuntos, pero **mantiene seleccionada la persona
   que reportó** — pensado para cuando la misma persona reporta varias observaciones seguidas.
 
+## Captura a pantalla completa + controles solo-ícono
+
+Pedido: en el enlace público de tickets, "tomar foto" requería **dos toques** para que apareciera la imagen;
+además la captura de foto y de video debe ocupar toda la pantalla, y los botones deben ser solo iconos
+estilizados, sin título.
+
+- **Causa del doble toque** (`media-capture`): el `<video>` de preview vive dentro de un `@if`, así que al
+  hacer `mode.set('photo')` el elemento todavía no existe. El stream se asignaba desde un `queueMicrotask`,
+  que corre **antes** del render de Angular: el `@ViewChild` seguía `undefined` y el `srcObject` nunca se
+  seteaba (pantalla negra). En el segundo toque el elemento ya existía del render anterior, y ahí sí se veía
+  la cámara. Ahora el binding se hace desde un `effect()` que lee la query de vista con signals
+  (`viewChild`) + el stream como signal, así funciona en cualquier orden (elemento primero o stream primero)
+  y la cámara aparece con **un solo toque**. Cubierto por `media-capture.spec.ts` (el test falla si se
+  vuelve al `queueMicrotask`).
+- Bugs colaterales corregidos en el mismo camino: al abrir la captura dos veces se sobrescribía `this.stream`
+  sin detener el anterior (la cámara quedaba encendida sin nadie que la apagara); `video.play()` no devuelve
+  promesa en todos los motores, así que el `.catch` se hizo opcional; y `capturePhoto()` ahora valida que el
+  video ya tenga dimensiones en vez de generar un JPG vacío.
+- **Pantalla completa**: la vista de captura pasó de una tarjeta dentro del formulario a un overlay
+  `fixed inset-0 z-50` sobre fondo negro, con el video en `object-cover` ocupando todo el viewport, degradado
+  para dar contraste a los controles, y `env(safe-area-inset-*)` para no quedar debajo del notch ni de la barra
+  de gestos. Aplica igual a foto, video y audio. Mientras el overlay está abierto se bloquea el scroll del body.
+- **Solo iconos**: la fila de acciones (subir archivo / foto / video / audio) son botones circulares de 48px
+  sin texto, con `title` + `aria-label` para accesibilidad y tooltip. En la pantalla completa el control
+  principal es un obturador circular de 72px (blanco para foto, rojo para grabar/detener) y el cancelar es un
+  botón circular translúcido arriba a la izquierda; la grabación muestra un chip con punto rojo y cronómetro.
+  Clases reutilizables en `styles.css`: `.capture-action`, `.capture-overlay-action`, `.capture-shutter`.
+- El obturador de foto queda deshabilitado hasta que el `<video>` dispara `loadedmetadata` — evita el otro
+  camino por el que "no pasaba nada" al primer toque.
+
 ## Gaps detectados (backend listo, sin UI todavía)
 
 - [x] **Gestión de categorías** — resuelto: sección `/categories` (solo admin) con tabs Tickets/Artículos, CRUD
