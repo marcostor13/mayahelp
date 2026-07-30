@@ -1,4 +1,4 @@
-import { IsEmail, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsMongoId, IsString, MinLength } from 'class-validator';
 
 export class CreatePublicObservationDto {
   @IsString()
@@ -15,4 +15,7 @@ export class CreatePublicObservationDto {
   @IsString()
   @MinLength(5)
   description: string;
+
+  @IsMongoId()
+  category: string;
 }

@@ -86,6 +86,22 @@
         </div>
 
         <div>
+          <label class="block text-label-md text-on-background mb-stack-sm" for="category">Categoría</label>
+          <select
+            id="category"
+            name="category"
+            required
+            [(ngModel)]="category"
+            class="w-full appearance-none bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all cursor-pointer"
+          >
+            <option value="" disabled>Selecciona una categoría...</option>
+            @for (option of p.categories; track option.id) {
+              <option [value]="option.id">{{ option.name }}</option>
+            }
+          </select>
+        </div>
+
+        <div>
           <label class="block text-label-md text-on-background mb-stack-sm">Adjuntos (opcional)</label>
           <label
             for="files"

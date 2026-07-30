@@ -25,5 +25,6 @@ export class CreateProjectDto {
   client?: string;
 
   @IsMongoId()
-  defaultCategory: string;
+  @IsOptional()
+  defaultCategory?: string;
 }

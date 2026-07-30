@@ -33,8 +33,8 @@ export class ProjectCreate implements OnInit {
 
   submit(): void {
     this.error.set(null);
-    if (!this.name || !this.defaultCategory) {
-      this.error.set('Completa todos los campos requeridos.');
+    if (!this.name) {
+      this.error.set('El nombre es obligatorio.');
       return;
     }
     this.submitting.set(true);
@@ -43,7 +43,7 @@ export class ProjectCreate implements OnInit {
         name: this.name,
         description: this.description || undefined,
         status: this.status,
-        defaultCategory: this.defaultCategory,
+        defaultCategory: this.defaultCategory || undefined,
       })
       .subscribe({
         next: (project) => this.router.navigate(['/projects', project._id]),

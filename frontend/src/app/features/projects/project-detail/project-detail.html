@@ -64,9 +64,26 @@
         </select>
       </div>
 
-      <p class="text-body-sm text-on-surface-variant">
-        Categoría de observaciones: <span class="text-on-surface font-medium">{{ p.defaultCategory.name }}</span>
-      </p>
+      <div>
+        <label class="block text-label-md text-on-background mb-stack-sm" for="defaultCategory">
+          Categoría sugerida (opcional)
+        </label>
+        <select
+          id="defaultCategory"
+          name="defaultCategory"
+          [(ngModel)]="defaultCategory"
+          class="w-full appearance-none bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all cursor-pointer"
+        >
+          <option value="">Sin sugerencia</option>
+          @for (option of categories(); track option._id) {
+            <option [value]="option._id">{{ option.name }}</option>
+          }
+        </select>
+        <p class="text-body-sm text-on-surface-variant mt-1">
+          Quien reporte una observación por el enlace público elige la categoría del ticket; esta solo viene
+          preseleccionada en el formulario.
+        </p>
+      </div>
 
       @if (error()) {
         <p class="text-body-sm text-error">{{ error() }}</p>
@@ -89,8 +106,10 @@
       </h3>
       <p class="text-body-sm text-on-surface-variant">
         Comparte un enlace con un usuario externo (sin necesidad de iniciar sesión) para que reporte
-        observaciones sobre este proyecto. Cada envío crea un ticket bajo la categoría
-        <span class="text-on-surface font-medium">{{ p.defaultCategory.name }}</span>.
+        observaciones sobre este proyecto. Cada envío crea un ticket con la categoría que el reportante elija
+        @if (p.defaultCategory) {
+          (viene preseleccionada con <span class="text-on-surface font-medium">{{ p.defaultCategory.name }}</span>)
+        }.
       </p>
 
       <div class="flex flex-col sm:flex-row gap-2 bg-surface rounded-xl p-4 border border-surface-container-highest">

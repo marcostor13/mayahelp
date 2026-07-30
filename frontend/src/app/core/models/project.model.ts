@@ -9,7 +9,7 @@ export interface Project {
   description?: string;
   status: ProjectStatus;
   client: TicketParticipant | null;
-  defaultCategory: Category;
+  defaultCategory: Category | null;
   createdBy: string;
   createdAt: string;
 }
@@ -19,7 +19,7 @@ export interface CreateProjectPayload {
   description?: string;
   status?: ProjectStatus;
   client?: string;
-  defaultCategory: string;
+  defaultCategory?: string;
 }
 
 export interface ProjectShareLink {

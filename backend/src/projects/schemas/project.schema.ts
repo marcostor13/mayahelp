@@ -23,9 +23,9 @@ export class Project {
   @Prop({ type: Types.ObjectId, ref: 'User', default: null })
   client: Types.ObjectId | null;
 
-  /** Every observation submitted through this project's public link(s) is filed under this category. */
-  @Prop({ type: Types.ObjectId, ref: 'Category', required: true })
-  defaultCategory: Types.ObjectId;
+  /** Optional suggestion pre-selected in the public form; the reporter always picks the final category. */
+  @Prop({ type: Types.ObjectId, ref: 'Category', default: null })
+  defaultCategory: Types.ObjectId | null;
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   createdBy: Types.ObjectId;

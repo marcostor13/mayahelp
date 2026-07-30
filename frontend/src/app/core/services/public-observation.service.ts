@@ -23,6 +23,7 @@ export class PublicObservationService {
     formData.append('reporterEmail', payload.reporterEmail);
     formData.append('subject', payload.subject);
     formData.append('description', payload.description);
+    formData.append('category', payload.category);
     files.forEach((file) => formData.append('files', file));
     return this.http.post<PublicObservationResult>(`${this.baseUrl}/${token}`, formData);
   }

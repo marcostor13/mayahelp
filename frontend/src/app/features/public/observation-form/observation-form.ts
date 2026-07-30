@@ -26,6 +26,7 @@ export class ObservationForm implements OnInit {
   protected reporterEmail = '';
   protected subject = '';
   protected description = '';
+  protected category = '';
 
   private token = '';
 
@@ -39,6 +40,7 @@ export class ObservationForm implements OnInit {
     this.publicObservationService.getProjectInfo(this.token).subscribe({
       next: (info) => {
         this.project.set(info);
+        this.category = info.defaultCategoryId ?? '';
         this.loading.set(false);
       },
       error: (err: HttpErrorResponse) => {
@@ -65,7 +67,13 @@ export class ObservationForm implements OnInit {
 
   submit(): void {
     this.submitError.set(null);
-    if (!this.reporterName || !this.reporterEmail || !this.subject || !this.description) {
+    if (
+      !this.reporterName ||
+      !this.reporterEmail ||
+      !this.subject ||
+      !this.description ||
+      !this.category
+    ) {
       this.submitError.set('Completa todos los campos requeridos.');
       return;
     }
@@ -78,6 +86,7 @@ export class ObservationForm implements OnInit {
           reporterEmail: this.reporterEmail,
           subject: this.subject,
           description: this.description,
+          category: this.category,
         },
         this.selectedFiles(),
       )

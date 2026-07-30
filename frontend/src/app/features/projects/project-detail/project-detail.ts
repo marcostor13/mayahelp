@@ -3,8 +3,10 @@ import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ProjectService } from '../../../core/services/project.service';
+import { CategoryService } from '../../../core/services/category.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { Project, ProjectShareLink, ProjectStatus } from '../../../core/models/project.model';
+import { Category } from '../../../core/models/category.model';
 
 @Component({
   selector: 'app-project-detail',
@@ -14,6 +16,7 @@ import { Project, ProjectShareLink, ProjectStatus } from '../../../core/models/p
 export class ProjectDetail implements OnInit {
   protected readonly project = signal<Project | null>(null);
   protected readonly shareLinks = signal<ProjectShareLink[]>([]);
+  protected readonly categories = signal<Category[]>([]);
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
   protected readonly creatingLink = signal(false);
@@ -23,6 +26,7 @@ export class ProjectDetail implements OnInit {
   protected name = '';
   protected description = '';
   protected status: ProjectStatus = 'in_progress';
+  protected defaultCategory = '';
   protected newLinkLabel = '';
   protected newLinkExpiresAt = '';
 
@@ -32,6 +36,7 @@ export class ProjectDetail implements OnInit {
     private readonly route: ActivatedRoute,
     private readonly router: Router,
     private readonly projectService: ProjectService,
+    private readonly categoryService: CategoryService,
     protected readonly auth: AuthService,
   ) {}
 
@@ -41,6 +46,7 @@ export class ProjectDetail implements OnInit {
 
   ngOnInit(): void {
     this.projectId = this.route.snapshot.paramMap.get('id') ?? '';
+    this.categoryService.list('ticket').subscribe((categories) => this.categories.set(categories));
     this.load();
   }
 
@@ -51,6 +57,7 @@ export class ProjectDetail implements OnInit {
       this.name = project.name;
       this.description = project.description ?? '';
       this.status = project.status;
+      this.defaultCategory = project.defaultCategory?._id ?? '';
       this.loading.set(false);
     });
     this.projectService.listShareLinks(this.projectId).subscribe((links) => this.shareLinks.set(links));
@@ -68,6 +75,7 @@ export class ProjectDetail implements OnInit {
         name: this.name,
         description: this.description || undefined,
         status: this.status,
+        defaultCategory: this.defaultCategory || undefined,
       })
       .subscribe({
         next: (project) => {

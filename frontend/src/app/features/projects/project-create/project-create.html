@@ -35,22 +35,22 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-stack-md">
       <div>
         <label class="block text-label-md text-on-background mb-stack-sm" for="categoria">
-          Categoría de las observaciones
+          Categoría sugerida (opcional)
         </label>
         <select
           id="categoria"
           name="categoria"
-          required
           [(ngModel)]="defaultCategory"
           class="w-full appearance-none bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all cursor-pointer"
         >
-          <option value="" disabled selected>Selecciona categoría...</option>
+          <option value="">Sin sugerencia</option>
           @for (option of categories(); track option._id) {
             <option [value]="option._id">{{ option.name }}</option>
           }
         </select>
         <p class="text-body-sm text-on-surface-variant mt-1">
-          Todos los tickets enviados vía enlace público de este proyecto se archivarán aquí.
+          Quien reporte una observación por el enlace público elige la categoría del ticket; esta solo viene
+          preseleccionada en el formulario para ahorrarle un paso.
         </p>
       </div>
 
