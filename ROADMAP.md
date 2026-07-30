@@ -237,6 +237,13 @@ ticket (con template y variables elegibles), correo en creaciones/actualizacione
   (una sola línea, nunca vacíos, recortados a 500) porque Meta rechaza multilínea/vacío — eso hacía que la
   notificación se cayera sin explicación. Cubierto por `notification-variables.spec.ts`.
 - `WHATSAPP_TEMPLATE_NAME`/`_LANGUAGE` quedan como fallback hasta que un admin elija el template en la UI.
+- Variable **`{{ticket_completo}}`**: manda todos los datos del ticket en un solo parámetro, en orden fijo
+  (código · asunto · estado · prioridad · categoría · proyecto · cliente · descripción · enlace), saltando los
+  campos vacíos. Va en una sola línea a propósito: Meta rechaza parámetros con saltos de línea, así que los
+  campos se separan con "·". La descripción se llena última con el espacio que sobra del límite de 500
+  caracteres, de modo que una descripción larga nunca deja afuera el estado ni el enlace. Cada variable del
+  catálogo viaja con un `example` resuelto por el propio resolver (no se puede desincronizar de lo que se
+  envía) y Ajustes lo muestra debajo del selector.
 
 ### Frontend
 

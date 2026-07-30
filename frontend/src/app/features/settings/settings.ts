@@ -111,6 +111,17 @@ export class Settings implements OnInit {
     return this.settings()?.whatsapp.variables[index] ?? '';
   }
 
+  /** Sample output of the token chosen for a slot, so the admin sees what will be sent. */
+  exampleAt(index: number): string | null {
+    const token = this.variableAt(index);
+    if (!token) return null;
+    return (
+      this.settings()?.availableVariables.find(
+        (variable) => variable.token === token,
+      )?.example ?? null
+    );
+  }
+
   setVariableAt(index: number, token: string): void {
     const settings = this.settings();
     if (!settings) return;

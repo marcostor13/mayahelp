@@ -24,6 +24,8 @@ export interface NotificationEventSettings {
 export interface NotificationVariable {
   token: string;
   label: string;
+  /** What this variable produces for a sample ticket, resolved by the backend itself. */
+  example?: string;
 }
 
 export interface NotificationSettings {

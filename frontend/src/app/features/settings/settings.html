@@ -241,23 +241,31 @@
               </p>
             } @else {
               <p class="text-body-sm text-on-surface-variant mb-2">
-                Elegí qué dato de MayaHelp va en cada posición del template.
+                Elegí qué dato de MayaHelp va en cada posición del template. Si querés mandar todo el ticket
+                en una sola posición, usá <strong>"Ticket completo"</strong>.
               </p>
-              <div class="flex flex-col gap-2">
+              <div class="flex flex-col gap-3">
                 @for (index of variableSlots(); track index) {
-                  <div class="flex items-center gap-2">
-                    <span class="text-label-md text-primary w-12 shrink-0">{{ '{{' }}{{ index + 1 }}{{ '}}' }}</span>
-                    <select
-                      [ngModel]="variableAt(index)"
-                      (ngModelChange)="setVariableAt(index, $event)"
-                      [attr.aria-label]="'Variable ' + (index + 1)"
-                      class="flex-1 bg-surface border border-outline-variant rounded-xl px-3 py-2 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-                    >
-                      <option value="">Sin asignar</option>
-                      @for (variable of s.availableVariables; track variable.token) {
-                        <option [value]="variable.token">{{ variable.label }}</option>
-                      }
-                    </select>
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span class="text-label-md text-primary w-12 shrink-0">{{ '{{' }}{{ index + 1 }}{{ '}}' }}</span>
+                      <select
+                        [ngModel]="variableAt(index)"
+                        (ngModelChange)="setVariableAt(index, $event)"
+                        [attr.aria-label]="'Variable ' + (index + 1)"
+                        class="flex-1 min-w-0 bg-surface border border-outline-variant rounded-xl px-3 py-2 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                      >
+                        <option value="">Sin asignar</option>
+                        @for (variable of s.availableVariables; track variable.token) {
+                          <option [value]="variable.token">{{ variable.label }}</option>
+                        }
+                      </select>
+                    </div>
+                    @if (exampleAt(index); as example) {
+                      <p class="text-label-xs text-on-surface-variant mt-1 sm:pl-14 break-words">
+                        Ej.: {{ example }}
+                      </p>
+                    }
                   </div>
                 }
               </div>
