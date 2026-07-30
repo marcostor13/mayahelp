@@ -123,12 +123,23 @@ crearlos manualmente en Meta Business Manager.
 
 - [x] Backend: `WhatsAppTemplatesService` (list/create contra Graph API) + controller admin-only
 - [x] Frontend: sección `/whatsapp-templates` (listar + crear)
-- [ ] Pendiente del usuario: cargar `WHATSAPP_BUSINESS_ACCOUNT_ID` en `.env` y en Coolify para que funcione en producción
+- [x] `WHATSAPP_BUSINESS_ACCOUNT_ID` cargado en `.env` local y confirmado presente en las env vars de producción de Coolify (backend)
 
 ## Branding
 
 - Logo oficial (`kitui/mayahelp_logo/screen.png`, wordmark con ícono) copiado a `frontend/public/mayahelp-logo.png`
   y usado en: login, register, página pública de observaciones, y sidebar/topbar del Shell — reemplaza el
   placeholder cuadrado morado con "M".
+
+## Gaps detectados (backend listo, sin UI todavía)
+
+- [x] **Gestión de categorías** — resuelto: sección `/categories` (solo admin) con tabs Tickets/Artículos, CRUD
+  completo (crear, editar, eliminar) y selector de `autoReplyMode` (`off`/`draft`/`auto`) por categoría de tipo
+  ticket. Ya se puede activar la respuesta automática con IA (feature 5) sin tocar la base de datos.
+- **Filtro de tickets por proyecto**: `FilterTicketDto`/`TicketsService.findAll` ya aceptan `filter.project`, pero
+  `ticket-list` (frontend) no tiene control de UI para filtrar por proyecto — solo se puede ver la asociación
+  proyecto↔ticket abriendo el detalle de un ticket individual.
+- **Proyecto → tickets**: la página de detalle de un proyecto no lista los tickets generados a través de sus
+  enlaces públicos (habría que consultar `/tickets?project=:id`, que el backend ya soporta).
 
 _Última actualización: ver historial de commits de este archivo (`git log -p ROADMAP.md`)._

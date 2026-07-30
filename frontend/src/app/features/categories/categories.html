@@ -1,0 +1,182 @@
+<div class="mb-stack-lg">
+  <h2 class="text-headline-xl text-on-surface">Categorías</h2>
+  <p class="text-body-md text-on-surface-variant mt-1">
+    Administra las categorías de tickets y artículos, y configura la respuesta automática con IA por categoría.
+  </p>
+</div>
+
+<div class="flex gap-2 mb-stack-lg">
+  <button
+    type="button"
+    (click)="setActiveType('ticket')"
+    class="px-4 py-2 rounded-lg text-label-md transition-colors"
+    [class.bg-primary-container]="activeType === 'ticket'"
+    [class.text-on-primary]="activeType === 'ticket'"
+    [class.bg-surface-container-low]="activeType !== 'ticket'"
+    [class.text-on-surface-variant]="activeType !== 'ticket'"
+  >
+    Tickets
+  </button>
+  <button
+    type="button"
+    (click)="setActiveType('article')"
+    class="px-4 py-2 rounded-lg text-label-md transition-colors"
+    [class.bg-primary-container]="activeType === 'article'"
+    [class.text-on-primary]="activeType === 'article'"
+    [class.bg-surface-container-low]="activeType !== 'article'"
+    [class.text-on-surface-variant]="activeType !== 'article'"
+  >
+    Artículos (Centro de Ayuda)
+  </button>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-stack-lg">
+  <div class="lg:col-span-2 bg-surface rounded-2xl shadow-sm border border-surface-container-highest overflow-hidden h-fit">
+    @if (loading()) {
+      <p class="p-6 text-center text-body-sm text-on-surface-variant">Cargando categorías...</p>
+    } @else {
+      <div class="divide-y divide-surface-container-highest">
+        @for (category of visibleCategories; track category._id) {
+          <div class="p-4 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+              <span class="material-symbols-outlined text-primary shrink-0">{{ category.icon }}</span>
+              <div class="min-w-0">
+                <p class="text-label-md text-on-surface truncate">{{ category.name }}</p>
+                @if (category.description) {
+                  <p class="text-body-sm text-on-surface-variant truncate">{{ category.description }}</p>
+                }
+                @if (category.type === 'ticket') {
+                  <p class="text-label-xs text-on-surface-variant uppercase mt-1">
+                    Respuesta IA: {{ autoReplyLabels[category.autoReplyMode] }}
+                  </p>
+                }
+              </div>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                (click)="startEdit(category)"
+                class="text-on-surface-variant hover:text-primary hover:bg-surface-container-low rounded-full p-2 transition-colors"
+                title="Editar"
+              >
+                <span class="material-symbols-outlined text-[20px]">edit</span>
+              </button>
+              <button
+                type="button"
+                (click)="removeCategory(category)"
+                class="text-on-surface-variant hover:text-error hover:bg-surface-container-low rounded-full p-2 transition-colors"
+                title="Eliminar"
+              >
+                <span class="material-symbols-outlined text-[20px]">delete</span>
+              </button>
+            </div>
+          </div>
+        } @empty {
+          <p class="p-6 text-center text-body-sm text-on-surface-variant">
+            No hay categorías de este tipo todavía.
+          </p>
+        }
+      </div>
+    }
+  </div>
+
+  <div class="bg-surface-container-lowest rounded-2xl p-6 ambient-shadow-sm h-fit flex flex-col gap-stack-md">
+    <h3 class="text-headline-lg-mobile text-on-background flex items-center gap-2">
+      <span class="material-symbols-outlined text-primary">{{ editingId() ? 'edit' : 'add_circle' }}</span>
+      {{ editingId() ? 'Editar categoría' : 'Nueva categoría' }}
+    </h3>
+
+    <form (ngSubmit)="submit()" class="flex flex-col gap-stack-md">
+      <div>
+        <label class="block text-label-md text-on-background mb-stack-sm" for="name">Nombre</label>
+        <input
+          id="name"
+          name="name"
+          type="text"
+          required
+          [(ngModel)]="name"
+          class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+        />
+      </div>
+
+      <div class="grid grid-cols-2 gap-stack-md">
+        <div>
+          <label class="block text-label-md text-on-background mb-stack-sm" for="type">Tipo</label>
+          <select
+            id="type"
+            name="type"
+            [(ngModel)]="type"
+            class="w-full appearance-none bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all cursor-pointer"
+          >
+            <option value="ticket">Ticket</option>
+            <option value="article">Artículo</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-label-md text-on-background mb-stack-sm" for="icon">Ícono</label>
+          <input
+            id="icon"
+            name="icon"
+            type="text"
+            [(ngModel)]="icon"
+            placeholder="label"
+            class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+          />
+        </div>
+      </div>
+      <p class="text-label-xs text-on-surface-variant -mt-2">
+        El ícono usa nombres de Material Symbols, ej. <code>bug_report</code>, <code>payments</code>, <code>settings</code>.
+      </p>
+
+      <div>
+        <label class="block text-label-md text-on-background mb-stack-sm" for="description">Descripción (opcional)</label>
+        <textarea
+          id="description"
+          name="description"
+          rows="2"
+          [(ngModel)]="description"
+          class="w-full bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all resize-none"
+        ></textarea>
+      </div>
+
+      @if (type === 'ticket') {
+        <div>
+          <label class="block text-label-md text-on-background mb-stack-sm" for="autoReplyMode">Respuesta automática con IA</label>
+          <select
+            id="autoReplyMode"
+            name="autoReplyMode"
+            [(ngModel)]="autoReplyMode"
+            class="w-full appearance-none bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all cursor-pointer"
+          >
+            <option value="off">Desactivada</option>
+            <option value="draft">Sugerir (un agente revisa y aprueba)</option>
+            <option value="auto">Automática (responde sola, sin revisión)</option>
+          </select>
+        </div>
+      }
+
+      @if (error()) {
+        <p class="text-body-sm text-error">{{ error() }}</p>
+      }
+
+      <div class="flex gap-2">
+        <button
+          type="submit"
+          [disabled]="submitting()"
+          class="bg-primary-container text-on-primary text-label-md py-3 px-6 rounded-lg hover:bg-primary transition-colors shadow-sm disabled:opacity-60"
+        >
+          {{ submitting() ? 'Guardando...' : editingId() ? 'Guardar cambios' : 'Crear categoría' }}
+        </button>
+        @if (editingId()) {
+          <button
+            type="button"
+            (click)="cancelEdit()"
+            class="text-on-surface-variant text-label-md py-3 px-4 rounded-lg hover:bg-surface-container-low transition-colors"
+          >
+            Cancelar
+          </button>
+        }
+      </div>
+    </form>
+  </div>
+</div>
