@@ -7,8 +7,8 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { randomUUID } from 'node:crypto';
+import { Model, Types } from 'mongoose';
+import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 import {
   DeleteObjectCommand,
   GetObjectCommand,
@@ -31,6 +31,12 @@ import { AuthenticatedUser } from '../auth/types/authenticated-user.interface';
  * que una corrida de Claude Code descargue los adjuntos.
  */
 const SIGNED_URL_TTL_SECONDS = 7 * 24 * 60 * 60;
+
+/** El redirect del proxy se sigue al instante; la firma no necesita durar más. */
+const REDIRECT_SIGNED_URL_TTL_SECONDS = 15 * 60;
+
+/** Sal del HMAC que autentica los links del proxy de adjuntos. */
+const FILE_TOKEN_SALT = 'mayahelp-attachment-file';
 
 /** Un adjunto más el link con el que cualquiera puede bajarlo (público o firmado). */
 export interface AttachmentWithDownloadUrl {
@@ -62,6 +68,8 @@ export class AttachmentsService {
   private readonly bucket: string;
   private readonly publicUrl: string;
   private readonly endpoint: string;
+  private readonly apiUrl: string;
+  private readonly tokenSecret: string;
 
   constructor(
     @InjectModel(Attachment.name)
@@ -76,11 +84,26 @@ export class AttachmentsService {
     this.endpoint = accountId
       ? `https://${accountId}.r2.cloudflarestorage.com`
       : '';
+    // `PUBLIC_API_URL` se configura como el dominio pelado de la API, pero todas las rutas
+    // cuelgan del prefijo global `/api` (ver `main.ts`), así que se agrega si falta.
+    const apiBase = (
+      this.configService.get<string>('publicApiUrl') ?? ''
+    ).replace(/\/+$/, '');
+    this.apiUrl =
+      apiBase && !/\/api$/.test(apiBase) ? `${apiBase}/api` : apiBase;
+    this.tokenSecret =
+      this.configService.get<string>('encryptionKey') ||
+      this.configService.get<string>('jwt.accessSecret') ||
+      '';
 
     if (!this.publicUrl) {
       this.logger.warn(
-        'R2_PUBLIC_URL no está configurada: los adjuntos se compartirán con links firmados ' +
-          `que expiran en ${SIGNED_URL_TTL_SECONDS / 86400} días.`,
+        this.apiUrl
+          ? 'R2_PUBLIC_URL no está configurada: los adjuntos se sirven a través de esta API ' +
+              `(${this.apiUrl}/attachments/:id/file), que redirige a un link firmado de R2. ` +
+              'Configurala si preferís que el bucket los sirva directo.'
+          : 'Ni R2_PUBLIC_URL ni PUBLIC_API_URL están configuradas: los adjuntos solo se pueden ' +
+              `compartir con links firmados que expiran en ${SIGNED_URL_TTL_SECONDS / 86400} días.`,
       );
     }
 
@@ -129,7 +152,10 @@ export class AttachmentsService {
       }),
     );
 
+    // El id se genera acá porque la url del proxy lo lleva adentro.
+    const id = new Types.ObjectId();
     return this.attachmentModel.create({
+      _id: id,
       ticket: ticketId,
       commentId: commentId ?? null,
       uploadedBy,
@@ -138,7 +164,9 @@ export class AttachmentsService {
       kind,
       size: file.size,
       storageKey,
-      url: this.objectUrl(storageKey),
+      url: this.publicUrl
+        ? this.objectUrl(storageKey)
+        : (this.proxyUrl(id.toString()) ?? this.objectUrl(storageKey)),
     });
   }
 
@@ -147,6 +175,21 @@ export class AttachmentsService {
       .find({ ticket: ticketId })
       .sort({ createdAt: 1 })
       .exec();
+  }
+
+  /**
+   * Lo mismo que `findByTicket`, pero con la `url` resuelta al vuelo: así las miniaturas
+   * del front funcionan aunque el bucket no tenga dominio público o la fila se haya
+   * guardado antes, cuando la url quedaba incompleta.
+   */
+  async findByTicketWithLinks(ticketId: string) {
+    const attachments = await this.findByTicket(ticketId);
+    return Promise.all(
+      attachments.map(async (attachment) => ({
+        ...attachment.toObject(),
+        url: await this.downloadUrl(attachment),
+      })),
+    );
   }
 
   /**
@@ -161,21 +204,41 @@ export class AttachmentsService {
   }
 
   /**
+   * Link del proxy de esta API: `/attachments/:id/file?t=...`, que redirige a R2 con una
+   * firma fresca. Es la alternativa al dominio público del bucket — no expira, así que
+   * sirve tanto para las miniaturas del front como para un Markdown que se lee días
+   * después. `null` si no se sabe la URL pública de la API.
+   */
+  private proxyUrl(id: string): string | null {
+    if (!this.apiUrl || !this.tokenSecret) return null;
+    return `${this.apiUrl}/attachments/${id}/file?t=${this.fileToken(id)}`;
+  }
+
+  /** Derivado por adjunto: sin el token, adivinar el id no alcanza para bajar el archivo. */
+  private fileToken(id: string): string {
+    return createHmac('sha256', this.tokenSecret)
+      .update(`${FILE_TOKEN_SALT}:${id}`)
+      .digest('base64url');
+  }
+
+  /**
    * Link con el que un tercero sin sesión —Claude Code corriendo en GitHub Actions, por
-   * ejemplo— puede bajar el archivo. Sale del dominio público del bucket cuando está
-   * configurado y, si no, de una firma temporal. Se calcula desde `storageKey`, así que
+   * ejemplo— puede bajar el archivo. Por orden: el dominio público del bucket, el proxy
+   * de esta API, o una firma temporal de R2. Se calcula desde `storageKey`, así que
    * también arregla los adjuntos viejos que quedaron con una `url` incompleta.
    */
-  async downloadUrl(attachment: { storageKey: string }): Promise<string> {
+  async downloadUrl(attachment: {
+    _id?: Types.ObjectId | string;
+    storageKey: string;
+  }): Promise<string> {
     if (this.publicUrl) return this.objectUrl(attachment.storageKey);
-    return getSignedUrl(
-      this.s3,
-      new GetObjectCommand({
-        Bucket: this.bucket,
-        Key: attachment.storageKey,
-      }),
-      { expiresIn: SIGNED_URL_TTL_SECONDS },
-    );
+
+    const proxied = attachment._id
+      ? this.proxyUrl(String(attachment._id))
+      : null;
+    if (proxied) return proxied;
+
+    return this.signedUrl(attachment.storageKey, SIGNED_URL_TTL_SECONDS);
   }
 
   /** Resuelve el link de descarga de varios adjuntos a la vez, para las exportaciones. */
@@ -190,6 +253,42 @@ export class AttachmentsService {
         url: attachment.url,
         downloadUrl: await this.downloadUrl(attachment),
       })),
+    );
+  }
+
+  /**
+   * Resuelve un pedido al proxy: valida el token en tiempo constante y devuelve el link
+   * firmado de R2 al que hay que redirigir. Es la única vía sin sesión, así que el token
+   * es lo que separa un adjunto de ser público.
+   */
+  async resolveFileRedirect(id: string, token: string): Promise<string> {
+    if (!Types.ObjectId.isValid(id) || !this.isValidFileToken(id, token)) {
+      throw new NotFoundException('Adjunto no encontrado');
+    }
+    const attachment = await this.attachmentModel.findById(id).exec();
+    if (!attachment) {
+      throw new NotFoundException('Adjunto no encontrado');
+    }
+    return this.signedUrl(
+      attachment.storageKey,
+      REDIRECT_SIGNED_URL_TTL_SECONDS,
+    );
+  }
+
+  private isValidFileToken(id: string, received: string): boolean {
+    if (!this.tokenSecret) return false;
+    const expected = Buffer.from(this.fileToken(id));
+    const actual = Buffer.from(received ?? '');
+    return (
+      expected.length === actual.length && timingSafeEqual(expected, actual)
+    );
+  }
+
+  private signedUrl(storageKey: string, expiresIn: number): Promise<string> {
+    return getSignedUrl(
+      this.s3,
+      new GetObjectCommand({ Bucket: this.bucket, Key: storageKey }),
+      { expiresIn },
     );
   }
 

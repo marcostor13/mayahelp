@@ -55,7 +55,7 @@ export class AttachmentsController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     await this.ticketsService.findById(ticketId, user);
-    return this.attachmentsService.findByTicket(ticketId);
+    return this.attachmentsService.findByTicketWithLinks(ticketId);
   }
 
   @Delete('attachments/:id')

@@ -469,6 +469,23 @@ Ahora:
   con los `curl` listos para bajar cada archivo, y las instrucciones para la IA dicen explícitamente que hay que
   descargarlos y abrirlos —las capturas se leen como archivo— sin necesitar ninguna credencial.
 
+### `R2_PUBLIC_URL` dejó de ser obligatoria
+
+Un bucket de R2 no es público hasta que se le habilita el dominio `r2.dev` o uno propio, así que la instalación
+podía quedar sin ningún link que sirviera. Ahora la API sirve los adjuntos ella misma cuando falta esa variable:
+
+- `GET /api/attachments/:id/file?t=<hmac>` (`AttachmentFilesController`, `@Public()`) responde un **302** al link
+  firmado de R2, generado en el momento con 15 minutos de vida. El token es un HMAC derivado por adjunto de
+  `ENCRYPTION_KEY` (o del `JWT_ACCESS_SECRET`) y se compara en tiempo constante: adivinar el `ObjectId` no
+  alcanza. Vive en su propio controlador por el mismo motivo que el callback del workflow — `RolesGuard` lee los
+  roles de la *clase*.
+- El link del proxy no caduca, así que sirve igual para las miniaturas del front que para un Markdown que se lee
+  una semana después; el redirect es lo único que se firma. `curl -fsSL` lo sigue solo.
+- El orden al resolver un link quedó: dominio público del bucket → proxy de la API (`PUBLIC_API_URL`, que ya
+  existía para el callback; el prefijo `/api` se agrega solo si falta) → firma directa de R2 a 7 días.
+- `GET /tickets/:id/attachments` devuelve la `url` recalculada en vez de la guardada, así que las filas viejas
+  con links rotos vuelven a mostrarse sin migración.
+
 ## Gaps detectados (backend listo, sin UI todavía)
 
 - [x] **Gestión de categorías** — resuelto: sección `/categories` (solo admin) con tabs Tickets/Artículos, CRUD
