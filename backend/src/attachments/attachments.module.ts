@@ -3,6 +3,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { Attachment, AttachmentSchema } from './schemas/attachment.schema';
 import { AttachmentsService } from './attachments.service';
 import { AttachmentsController } from './attachments.controller';
+import { AttachmentFilesController } from './attachment-files.controller';
 import { TicketsModule } from '../tickets/tickets.module';
 
 @Module({
@@ -12,7 +13,7 @@ import { TicketsModule } from '../tickets/tickets.module';
     ]),
     TicketsModule,
   ],
-  controllers: [AttachmentsController],
+  controllers: [AttachmentsController, AttachmentFilesController],
   providers: [AttachmentsService],
   exports: [AttachmentsService],
 })

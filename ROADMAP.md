@@ -450,6 +450,42 @@ request llega sin usuario. El endpoint quedó en su propio controlador (`Impleme
 un test del guard que documenta el comportamiento para que nadie los vuelva a juntar. El callback se
 autentica con un token HMAC derivado por corrida, comparado en tiempo constante.
 
+## Adjuntos legibles por la IA en el Markdown del ticket
+
+El Markdown que se exporta (y el prompt que viaja al workflow) listaba los adjuntos con la `url` guardada al
+subirlos, y esa URL no siempre servía: se armaba concatenando `R2_PUBLIC_URL` sin normalizar —si la variable
+faltaba quedaba un path relativo inservible— y la key incluía el nombre original del archivo, así que un
+"Captura de pantalla ñ.png" producía un link con espacios que ningún cliente podía abrir. La IA veía el
+adjunto mencionado pero no podía leerlo.
+
+Ahora:
+
+- La key de R2 se sanea (sin espacios, acentos ni caracteres raros) y el objeto se sube con `Content-Disposition`
+  para que quien lo baje recupere igual el nombre original.
+- `AttachmentsService.downloadUrl()` arma el link **desde `storageKey`**, no desde lo guardado: usa el dominio
+  público del bucket cuando `R2_PUBLIC_URL` está configurada y, si no, firma un link temporal (7 días, el máximo
+  de SigV4). Eso también repara los adjuntos viejos que quedaron con una `url` incompleta.
+- El Markdown escribe ese link resuelto entre `<>` (las URLs firmadas traen `?` y `&`), agrega un bloque `bash`
+  con los `curl` listos para bajar cada archivo, y las instrucciones para la IA dicen explícitamente que hay que
+  descargarlos y abrirlos —las capturas se leen como archivo— sin necesitar ninguna credencial.
+
+### `R2_PUBLIC_URL` dejó de ser obligatoria
+
+Un bucket de R2 no es público hasta que se le habilita el dominio `r2.dev` o uno propio, así que la instalación
+podía quedar sin ningún link que sirviera. Ahora la API sirve los adjuntos ella misma cuando falta esa variable:
+
+- `GET /api/attachments/:id/file?t=<hmac>` (`AttachmentFilesController`, `@Public()`) responde un **302** al link
+  firmado de R2, generado en el momento con 15 minutos de vida. El token es un HMAC derivado por adjunto de
+  `ENCRYPTION_KEY` (o del `JWT_ACCESS_SECRET`) y se compara en tiempo constante: adivinar el `ObjectId` no
+  alcanza. Vive en su propio controlador por el mismo motivo que el callback del workflow — `RolesGuard` lee los
+  roles de la *clase*.
+- El link del proxy no caduca, así que sirve igual para las miniaturas del front que para un Markdown que se lee
+  una semana después; el redirect es lo único que se firma. `curl -fsSL` lo sigue solo.
+- El orden al resolver un link quedó: dominio público del bucket → proxy de la API (`PUBLIC_API_URL`, que ya
+  existía para el callback; el prefijo `/api` se agrega solo si falta) → firma directa de R2 a 7 días.
+- `GET /tickets/:id/attachments` devuelve la `url` recalculada en vez de la guardada, así que las filas viejas
+  con links rotos vuelven a mostrarse sin migración.
+
 ## Gaps detectados (backend listo, sin UI todavía)
 
 - [x] **Gestión de categorías** — resuelto: sección `/categories` (solo admin) con tabs Tickets/Artículos, CRUD
