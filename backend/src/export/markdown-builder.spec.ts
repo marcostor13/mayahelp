@@ -1,10 +1,10 @@
 import {
   buildCombinedMarkdown,
   buildTicketMarkdown,
+  ExportableAttachment,
   MarkdownableTicket,
   TicketWithAttachments,
 } from './markdown-builder';
-import { Attachment } from '../attachments/schemas/attachment.schema';
 
 function ticket(
   overrides: Partial<MarkdownableTicket> = {},
@@ -32,14 +32,17 @@ function ticket(
   };
 }
 
-function attachment(overrides: Partial<Attachment> = {}): Attachment {
+function attachment(
+  overrides: Partial<ExportableAttachment> = {},
+): ExportableAttachment {
   return {
     filename: 'captura.png',
     url: 'https://cdn.example.com/captura.png',
+    downloadUrl: 'https://cdn.example.com/captura.png',
     kind: 'image',
     size: 2048,
     ...overrides,
-  } as Attachment;
+  };
 }
 
 describe('buildTicketMarkdown', () => {
@@ -52,9 +55,48 @@ describe('buildTicketMarkdown', () => {
     expect(markdown).toContain('Pasa en Chrome y en Safari.');
     // Images use image syntax so Markdown viewers preview them inline.
     expect(markdown).toContain(
-      '![captura.png](https://cdn.example.com/captura.png)',
+      '![captura.png](<https://cdn.example.com/captura.png>)',
     );
     expect(markdown).toContain('## Contexto para implementación');
+  });
+
+  it('writes the public download link and how to fetch it, not the stored url', () => {
+    const markdown = buildTicketMarkdown(ticket(), [
+      attachment({
+        filename: 'log del error.txt',
+        kind: 'document',
+        size: 512,
+        url: 'https://bucket.r2.cloudflarestorage.com/mayahelp/log.txt',
+        downloadUrl: 'https://cdn.example.com/log.txt?sig=abc&exp=1',
+      }),
+    ]);
+
+    // El link firmado trae query string: va entre <> para que no se corte.
+    expect(markdown).toContain(
+      '[log del error.txt](<https://cdn.example.com/log.txt?sig=abc&exp=1>)',
+    );
+    expect(markdown).not.toContain('r2.cloudflarestorage.com');
+    // El comando lleva la URL pelada, sin el <> del link Markdown.
+    expect(markdown).toContain(
+      'curl -fsSL -o "/tmp/log-del-error.txt" "https://cdn.example.com/log.txt?sig=abc&exp=1"',
+    );
+    expect(markdown).toContain('Links de descarga directa');
+  });
+
+  it('falls back to the stored url when there is no resolved download link', () => {
+    const markdown = buildTicketMarkdown(ticket(), [
+      attachment({ downloadUrl: undefined }),
+    ]);
+
+    expect(markdown).toContain(
+      '![captura.png](<https://cdn.example.com/captura.png>)',
+    );
+  });
+
+  it('tells the AI to download the attachments before working', () => {
+    const markdown = buildTicketMarkdown(ticket(), [attachment()]);
+
+    expect(markdown).toContain('link de descarga directo');
   });
 
   it('omits the project line when the ticket has none', () => {

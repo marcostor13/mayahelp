@@ -1,4 +1,15 @@
-import { Attachment } from '../attachments/schemas/attachment.schema';
+/**
+ * Adjunto tal como se escribe en el Markdown. `downloadUrl` es el link resuelto por
+ * `AttachmentsService` (dominio público de R2, o firmado si el bucket no es público);
+ * si falta se cae a `url`, que es lo que quedó guardado al subir el archivo.
+ */
+export interface ExportableAttachment {
+  filename: string;
+  kind: string;
+  size: number;
+  url: string;
+  downloadUrl?: string;
+}
 
 interface PopulatedRef {
   name?: string;
@@ -31,12 +42,15 @@ export interface MarkdownableTicket {
 
 export interface TicketWithAttachments {
   ticket: MarkdownableTicket;
-  attachments: Attachment[];
+  attachments: ExportableAttachment[];
 }
 
 const AI_INSTRUCTIONS = [
   '- Revisa la descripción y el hilo de conversación completo antes de proponer cambios.',
   '- Si hay adjuntos (capturas de pantalla, logs, documentos), revísalos: suelen contener el contexto clave.',
+  '- Los adjuntos están subidos a almacenamiento de objetos y cada uno tiene un link de descarga directo. ' +
+    'Descárgalos y ábrelos localmente — por ejemplo `curl -fsSL -o /tmp/<archivo> "<link>"` y luego lee el archivo ' +
+    '(las imágenes se leen con la herramienta de lectura de archivos, no hace falta ninguna credencial).',
   '- Cita el código del ticket (ej. `TCK-8001`) en los commits o en el PR que resuelva cada caso.',
 ];
 
@@ -123,23 +137,61 @@ function ticketSection(entry: TicketWithAttachments, level: number): string[] {
   lines.push('');
   if (attachments.length === 0) {
     lines.push('_Sin adjuntos._');
+    lines.push('');
   } else {
+    lines.push(
+      'Links de descarga directa (no requieren sesión). Bájalos y ábrelos antes de programar:',
+    );
+    lines.push('');
     for (const attachment of attachments) {
       // Images use image syntax so previews render inline in Markdown viewers.
       const prefix = attachment.kind === 'image' ? '!' : '';
       lines.push(
-        `- ${prefix}[${attachment.filename}](${attachment.url}) (${attachment.kind}, ${formatBytes(attachment.size)})`,
+        `- ${prefix}[${attachment.filename}](${markdownLink(attachment)}) (${attachment.kind}, ${formatBytes(attachment.size)})`,
       );
     }
+    lines.push('');
+    lines.push('```bash');
+    for (const attachment of attachments) {
+      // Acá va la URL pelada: el `<>` del link Markdown rompería el comando.
+      lines.push(
+        `curl -fsSL -o "${localName(attachment)}" "${downloadUrl(attachment)}"`,
+      );
+    }
+    lines.push('```');
+    lines.push('');
   }
-  lines.push('');
 
   return lines;
 }
 
+/** Link público (o firmado) del adjunto; cae en la url guardada si no se resolvió. */
+function downloadUrl(attachment: ExportableAttachment): string {
+  return attachment.downloadUrl ?? attachment.url;
+}
+
+/**
+ * Destino del link Markdown. Va entre `<>` porque las URLs firmadas traen `?` y `&`, y
+ * un `(` o `)` en el nombre del archivo cortaría el link.
+ */
+function markdownLink(attachment: ExportableAttachment): string {
+  return `<${downloadUrl(attachment)}>`;
+}
+
+/** Nombre con el que conviene guardar el adjunto al bajarlo, sin espacios ni acentos. */
+function localName(attachment: ExportableAttachment): string {
+  const safe = attachment.filename
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9._-]+/g, '-')
+    .replace(/-*\.-*/g, '.')
+    .replace(/^[-.]+|-+$/g, '');
+  return `/tmp/${safe || 'adjunto'}`;
+}
+
 export function buildTicketMarkdown(
   ticket: MarkdownableTicket,
-  attachments: Attachment[],
+  attachments: ExportableAttachment[],
 ): string {
   const lines = ticketSection({ ticket, attachments }, 1);
 

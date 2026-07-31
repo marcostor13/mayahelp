@@ -24,10 +24,9 @@ export class ExportService {
     requester: AuthenticatedUser,
   ): Promise<{ code: string; markdown: string }> {
     const ticket = await this.ticketsService.findById(ticketId, requester);
-    const attachments = await this.attachmentsService.findByTicket(ticketId);
     const markdown = buildTicketMarkdown(
       ticket as unknown as MarkdownableTicket,
-      attachments,
+      await this.linkedAttachments(ticketId),
     );
     return { code: ticket.code, markdown };
   }
@@ -82,6 +81,18 @@ export class ExportService {
     await archive.finalize();
   }
 
+  /**
+   * Adjuntos del ticket con el link con el que se pueden bajar sin sesión: es lo que se
+   * escribe en el Markdown para que la IA que lo lee pueda abrir las capturas y archivos.
+   */
+  private linkedAttachments(ticketId: string) {
+    return this.attachmentsService
+      .findByTicket(ticketId)
+      .then((attachments) =>
+        this.attachmentsService.withDownloadUrls(attachments),
+      );
+  }
+
   /** Skips ids the requester cannot see instead of failing the whole export. */
   private async collectByIds(
     ids: string[],
@@ -91,10 +102,9 @@ export class ExportService {
     for (const id of ids) {
       try {
         const ticket = await this.ticketsService.findById(id, requester);
-        const attachments = await this.attachmentsService.findByTicket(id);
         entries.push({
           ticket: ticket as unknown as MarkdownableTicket,
-          attachments,
+          attachments: await this.linkedAttachments(id),
         });
       } catch {
         continue;
@@ -113,10 +123,9 @@ export class ExportService {
     );
     const entries: TicketWithAttachments[] = [];
     for (const ticket of tickets) {
-      const attachments = await this.attachmentsService.findByTicket(ticket.id);
       entries.push({
         ticket: ticket as unknown as MarkdownableTicket,
-        attachments,
+        attachments: await this.linkedAttachments(ticket.id),
       });
     }
     return entries;

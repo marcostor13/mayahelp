@@ -450,6 +450,25 @@ request llega sin usuario. El endpoint quedó en su propio controlador (`Impleme
 un test del guard que documenta el comportamiento para que nadie los vuelva a juntar. El callback se
 autentica con un token HMAC derivado por corrida, comparado en tiempo constante.
 
+## Adjuntos legibles por la IA en el Markdown del ticket
+
+El Markdown que se exporta (y el prompt que viaja al workflow) listaba los adjuntos con la `url` guardada al
+subirlos, y esa URL no siempre servía: se armaba concatenando `R2_PUBLIC_URL` sin normalizar —si la variable
+faltaba quedaba un path relativo inservible— y la key incluía el nombre original del archivo, así que un
+"Captura de pantalla ñ.png" producía un link con espacios que ningún cliente podía abrir. La IA veía el
+adjunto mencionado pero no podía leerlo.
+
+Ahora:
+
+- La key de R2 se sanea (sin espacios, acentos ni caracteres raros) y el objeto se sube con `Content-Disposition`
+  para que quien lo baje recupere igual el nombre original.
+- `AttachmentsService.downloadUrl()` arma el link **desde `storageKey`**, no desde lo guardado: usa el dominio
+  público del bucket cuando `R2_PUBLIC_URL` está configurada y, si no, firma un link temporal (7 días, el máximo
+  de SigV4). Eso también repara los adjuntos viejos que quedaron con una `url` incompleta.
+- El Markdown escribe ese link resuelto entre `<>` (las URLs firmadas traen `?` y `&`), agrega un bloque `bash`
+  con los `curl` listos para bajar cada archivo, y las instrucciones para la IA dicen explícitamente que hay que
+  descargarlos y abrirlos —las capturas se leen como archivo— sin necesitar ninguna credencial.
+
 ## Gaps detectados (backend listo, sin UI todavía)
 
 - [x] **Gestión de categorías** — resuelto: sección `/categories` (solo admin) con tabs Tickets/Artículos, CRUD

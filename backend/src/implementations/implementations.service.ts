@@ -495,6 +495,7 @@ export class ImplementationsService {
       '- Leé el código existente antes de tocarlo y seguí sus convenciones (nombres, estilo, densidad de comentarios).',
       '- Hacé el cambio completo: si algo del pedido no se puede resolver, implementá todo lo demás y explicá en la descripción del pull request qué quedó afuera y por qué.',
       '- Corré los tests y el linter del proyecto antes de commitear. Si hay tests, agregá los que cubran el cambio.',
+      '- Los adjuntos de cada ticket vienen con un link de descarga directa: bajálos con `curl` y abrilos (las capturas se leen como archivo) antes de decidir el cambio.',
       '- No toques credenciales, variables de entorno ni archivos de despliegue salvo que el ticket lo pida.',
       '- Commiteá y abrí un pull request con un resumen de qué cambiaste y cómo verificarlo.',
       `- Titulá el pull request: "${params.title}".`,
