@@ -383,6 +383,77 @@ export class TicketList implements OnInit {
       });
   }
 
+  // --- cambio de estado ---------------------------------------------------
+
+  /** Id del ticket cuyo menú de estado está abierto, o `'bulk'` para el de la selección. */
+  protected readonly statusMenuFor = signal<string | null>(null);
+  protected readonly changingStatus = signal(false);
+  protected readonly statusError = signal<string | null>(null);
+
+  openStatusMenu(key: string, event: Event): void {
+    event.stopPropagation();
+    this.statusError.set(null);
+    this.statusMenuFor.update((current) => (current === key ? null : key));
+  }
+
+  closeStatusMenu(): void {
+    this.statusMenuFor.set(null);
+  }
+
+  /** Un solo ticket, desde la tabla o desde la tarjeta en mobile. */
+  changeStatus(ticket: Ticket, status: TicketStatus): void {
+    this.closeStatusMenu();
+    if (ticket.status === status || this.changingStatus()) return;
+    this.applyStatus([ticket._id], status);
+  }
+
+  /** Todos los seleccionados. Los que ya estaban en ese estado no se tocan. */
+  changeStatusForSelected(status: TicketStatus): void {
+    this.closeStatusMenu();
+    const ids = this.selectedTickets
+      .filter((ticket) => ticket.status !== status)
+      .map((ticket) => ticket._id);
+    if (ids.length === 0 || this.changingStatus()) return;
+    this.applyStatus(ids, status);
+  }
+
+  private applyStatus(ids: string[], status: TicketStatus): void {
+    this.changingStatus.set(true);
+    this.statusError.set(null);
+    this.ticketService.updateStatusMany(ids, status).subscribe({
+      next: (updated) => {
+        // Se refrescan las filas en el lugar: recargar perdería la selección y el scroll.
+        const byId = new Map(updated.map((ticket) => [ticket._id, ticket]));
+        // Con un filtro de estado activo, lo que dejó de coincidir sale de la tabla.
+        const dropped = this.statusFilter !== '' && this.statusFilter !== status;
+        this.tickets.update((list) =>
+          dropped
+            ? list.filter((ticket) => !byId.has(ticket._id))
+            : list.map((ticket) =>
+                byId.has(ticket._id)
+                  ? { ...ticket, status, updatedAt: byId.get(ticket._id)!.updatedAt }
+                  : ticket,
+              ),
+        );
+        if (dropped) {
+          this.selectedIds.update((current) => {
+            const next = new Set(current);
+            for (const id of byId.keys()) next.delete(id);
+            return next;
+          });
+        }
+        this.changingStatus.set(false);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.statusError.set(
+          (err.error as { message?: string | string[] })?.message?.toString() ??
+            'No se pudo cambiar el estado.',
+        );
+        this.changingStatus.set(false);
+      },
+    });
+  }
+
   // --- row actions --------------------------------------------------------
 
   open(ticket: Ticket): void {

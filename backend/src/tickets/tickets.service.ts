@@ -301,6 +301,29 @@ export class TicketsService {
     return ticket;
   }
 
+  /**
+   * Cambia el estado de varios tickets desde la tabla. Pasa uno por uno por `update()`
+   * —y no por un `updateMany`— para que cada ticket dispare la misma notificación de
+   * cambio de estado que si se hubiera editado a mano. Los ids que ya no existen se
+   * saltean: la selección de la tabla puede incluir algo que otro borró mientras tanto.
+   */
+  async updateStatusMany(
+    ids: string[],
+    status: TicketStatus,
+    requester: AuthenticatedUser,
+  ): Promise<TicketDocument[]> {
+    const updated: TicketDocument[] = [];
+    for (const id of ids) {
+      try {
+        updated.push(await this.update(id, { status }, requester));
+      } catch (error) {
+        if (error instanceof NotFoundException) continue;
+        throw error;
+      }
+    }
+    return updated;
+  }
+
   async addComment(id: string, message: string, requester: AuthenticatedUser) {
     const ticket = await this.ticketModel.findById(id).exec();
     if (!ticket) {

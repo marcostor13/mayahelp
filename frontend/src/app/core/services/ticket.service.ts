@@ -34,6 +34,11 @@ export class TicketService {
     return this.http.patch<Ticket>(`${this.baseUrl}/${id}`, { status });
   }
 
+  /** Cambio de estado en lote; devuelve los tickets que efectivamente cambiaron. */
+  updateStatusMany(ids: string[], status: string) {
+    return this.http.patch<Ticket[]>(`${this.baseUrl}/status`, { ids, status });
+  }
+
   updatePriority(id: string, priority: string) {
     return this.http.patch<Ticket>(`${this.baseUrl}/${id}`, { priority });
   }

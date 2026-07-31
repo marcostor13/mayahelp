@@ -228,6 +228,48 @@
       <span class="text-label-md text-on-primary-fixed flex-1 min-w-0 truncate">
         {{ selectedIds().size }} seleccionado(s)
       </span>
+      @if (canManage) {
+        <div class="relative">
+          <button
+            type="button"
+            (click)="openStatusMenu('bulk', $event)"
+            [disabled]="changingStatus()"
+            class="ticket-icon-btn"
+            title="Cambiar estado de los seleccionados"
+            aria-label="Cambiar estado de los seleccionados"
+            [attr.aria-expanded]="statusMenuFor() === 'bulk'"
+          >
+            <span
+              class="material-symbols-outlined text-[22px]"
+              [class.animate-spin]="changingStatus()"
+            >
+              {{ changingStatus() ? 'progress_activity' : 'published_with_changes' }}
+            </span>
+          </button>
+          @if (statusMenuFor() === 'bulk') {
+            <div class="fixed inset-0 z-40" (click)="closeStatusMenu()"></div>
+            <div
+              class="absolute right-0 top-full mt-1 z-50 w-52 bg-surface-container-lowest border border-surface-container-highest rounded-xl ambient-shadow-md p-1 flex flex-col"
+              role="menu"
+            >
+              <p class="px-2 py-1 text-label-xs text-on-surface-variant">
+                Marcar los {{ selectedIds().size }} como…
+              </p>
+              @for (meta of statusMeta; track meta.value) {
+                <button
+                  type="button"
+                  role="menuitem"
+                  (click)="changeStatusForSelected(meta.value)"
+                  class="flex items-center gap-2 px-2 py-2 rounded-lg text-label-md text-on-surface hover:bg-surface-container-low transition-colors text-left"
+                >
+                  <span class="material-symbols-outlined text-[18px]">{{ meta.icon }}</span>
+                  {{ meta.label }}
+                </button>
+              }
+            </div>
+          }
+        </div>
+      }
       <button
         type="button"
         (click)="exportMarkdown()"
@@ -267,6 +309,10 @@
         <span class="material-symbols-outlined text-[22px]">close</span>
       </button>
     </div>
+  }
+
+  @if (statusError()) {
+    <p class="text-body-sm text-error px-1" role="alert">{{ statusError() }}</p>
   }
 
   @if (loading()) {
@@ -385,17 +431,65 @@
                     {{ priorityFor(ticket.priority).label }}
                   </span>
                 </td>
-                <td class="py-3 px-2">
-                  <span
-                    class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-label-xs {{
-                      statusFor(ticket.status).badge
-                    }}"
-                  >
-                    <span class="material-symbols-outlined text-[14px]">{{
-                      statusFor(ticket.status).icon
-                    }}</span>
-                    {{ statusFor(ticket.status).label }}
-                  </span>
+                <td class="py-3 px-2" (click)="$event.stopPropagation()">
+                  @if (canManage) {
+                    <div class="relative">
+                      <button
+                        type="button"
+                        (click)="openStatusMenu(ticket._id, $event)"
+                        [disabled]="changingStatus()"
+                        class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-label-xs hover:ring-1 hover:ring-outline-variant disabled:opacity-60 {{
+                          statusFor(ticket.status).badge
+                        }}"
+                        [attr.aria-label]="'Cambiar el estado de ' + ticket.code"
+                        [attr.aria-expanded]="statusMenuFor() === ticket._id"
+                      >
+                        <span class="material-symbols-outlined text-[14px]">{{
+                          statusFor(ticket.status).icon
+                        }}</span>
+                        {{ statusFor(ticket.status).label }}
+                        <span class="material-symbols-outlined text-[14px]">expand_more</span>
+                      </button>
+                      @if (statusMenuFor() === ticket._id) {
+                        <div class="fixed inset-0 z-40" (click)="closeStatusMenu()"></div>
+                        <div
+                          class="absolute left-0 top-full mt-1 z-50 w-44 bg-surface-container-lowest border border-surface-container-highest rounded-xl ambient-shadow-md p-1 flex flex-col"
+                          role="menu"
+                        >
+                          @for (meta of statusMeta; track meta.value) {
+                            <button
+                              type="button"
+                              role="menuitem"
+                              (click)="changeStatus(ticket, meta.value)"
+                              class="flex items-center gap-2 px-2 py-2 rounded-lg text-label-md text-on-surface hover:bg-surface-container-low transition-colors text-left"
+                              [class.bg-surface-container-low]="ticket.status === meta.value"
+                            >
+                              <span class="material-symbols-outlined text-[18px]">{{
+                                meta.icon
+                              }}</span>
+                              {{ meta.label }}
+                              @if (ticket.status === meta.value) {
+                                <span class="material-symbols-outlined text-[16px] ml-auto"
+                                  >check</span
+                                >
+                              }
+                            </button>
+                          }
+                        </div>
+                      }
+                    </div>
+                  } @else {
+                    <span
+                      class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-label-xs {{
+                        statusFor(ticket.status).badge
+                      }}"
+                    >
+                      <span class="material-symbols-outlined text-[14px]">{{
+                        statusFor(ticket.status).icon
+                      }}</span>
+                      {{ statusFor(ticket.status).label }}
+                    </span>
+                  }
                 </td>
                 <td class="py-3 px-2 text-label-xs text-on-surface-variant whitespace-nowrap">
                   {{ ticket.createdAt | date: 'dd/MM/yy' }}
@@ -611,6 +705,46 @@
               </span>
             </div>
             <div class="flex items-center gap-1">
+              @if (canManage) {
+                <div class="relative">
+                  <button
+                    type="button"
+                    (click)="openStatusMenu('card-' + ticket._id, $event)"
+                    [disabled]="changingStatus()"
+                    class="ticket-row-action"
+                    title="Cambiar estado"
+                    [attr.aria-label]="'Cambiar el estado de ' + ticket.code"
+                    [attr.aria-expanded]="statusMenuFor() === 'card-' + ticket._id"
+                  >
+                    <span class="material-symbols-outlined text-[20px]"
+                      >published_with_changes</span
+                    >
+                  </button>
+                  @if (statusMenuFor() === 'card-' + ticket._id) {
+                    <div class="fixed inset-0 z-40" (click)="closeStatusMenu()"></div>
+                    <div
+                      class="absolute right-0 bottom-full mb-1 z-50 w-44 bg-surface-container-lowest border border-surface-container-highest rounded-xl ambient-shadow-md p-1 flex flex-col"
+                      role="menu"
+                    >
+                      @for (meta of statusMeta; track meta.value) {
+                        <button
+                          type="button"
+                          role="menuitem"
+                          (click)="changeStatus(ticket, meta.value)"
+                          class="flex items-center gap-2 px-2 py-2 rounded-lg text-label-md text-on-surface hover:bg-surface-container-low transition-colors text-left"
+                          [class.bg-surface-container-low]="ticket.status === meta.value"
+                        >
+                          <span class="material-symbols-outlined text-[18px]">{{ meta.icon }}</span>
+                          {{ meta.label }}
+                          @if (ticket.status === meta.value) {
+                            <span class="material-symbols-outlined text-[16px] ml-auto">check</span>
+                          }
+                        </button>
+                      }
+                    </div>
+                  }
+                </div>
+              }
               <a
                 [routerLink]="['/tickets', ticket._id]"
                 class="ticket-row-action"
