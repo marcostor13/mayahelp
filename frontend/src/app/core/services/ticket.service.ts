@@ -38,6 +38,10 @@ export class TicketService {
     return this.http.patch<Ticket>(`${this.baseUrl}/${id}`, { priority });
   }
 
+  updateStatusBulk(ids: string[], status: string) {
+    return this.http.patch<Ticket[]>(`${this.baseUrl}/bulk/status`, { ids, status });
+  }
+
   addComment(id: string, message: string) {
     return this.http.post<Ticket>(`${this.baseUrl}/${id}/comments`, { message });
   }
