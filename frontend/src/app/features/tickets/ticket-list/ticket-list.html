@@ -228,6 +228,23 @@
       <span class="text-label-md text-on-primary-fixed flex-1 min-w-0 truncate">
         {{ selectedIds().size }} seleccionado(s)
       </span>
+      @if (canManage) {
+        <div class="relative shrink-0">
+          <select
+            #bulkStatusSelect
+            (change)="applyBulkStatus(bulkStatusSelect.value); bulkStatusSelect.value = ''"
+            [disabled]="bulkStatusUpdating()"
+            aria-label="Cambiar estado de los seleccionados"
+            title="Cambiar estado de los seleccionados"
+            class="h-10 bg-surface border border-outline-variant rounded-xl pl-2 pr-6 text-label-xs text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none disabled:opacity-50"
+          >
+            <option value="" selected disabled>Cambiar estado</option>
+            @for (meta of statusMeta; track meta.value) {
+              <option [value]="meta.value">{{ meta.label }}</option>
+            }
+          </select>
+        </div>
+      }
       <button
         type="button"
         (click)="exportMarkdown()"

@@ -114,6 +114,7 @@ export class TicketList implements OnInit {
   protected readonly exporting = signal(false);
   protected readonly filtersOpen = signal(false);
   protected readonly selectedIds = signal<Set<string>>(new Set());
+  protected readonly bulkStatusUpdating = signal(false);
 
   // --- implementación con Claude Code ---
   protected readonly implementOpen = signal(false);
@@ -272,6 +273,21 @@ export class TicketList implements OnInit {
     this.selectedIds.set(
       this.allSelected ? new Set() : new Set(this.tickets().map((ticket) => ticket._id)),
     );
+  }
+
+  // --- bulk status update ---------------------------------------------------
+
+  applyBulkStatus(status: string): void {
+    const ids = [...this.selectedIds()];
+    if (ids.length === 0 || this.bulkStatusUpdating()) return;
+    this.bulkStatusUpdating.set(true);
+    this.ticketService.updateStatusBulk(ids, status).subscribe({
+      next: () => {
+        this.bulkStatusUpdating.set(false);
+        this.load();
+      },
+      error: () => this.bulkStatusUpdating.set(false),
+    });
   }
 
   // --- exports ------------------------------------------------------------

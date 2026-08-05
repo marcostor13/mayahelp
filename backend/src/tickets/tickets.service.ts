@@ -301,6 +301,19 @@ export class TicketsService {
     return ticket;
   }
 
+  /** Applies the same status to several tickets, reusing `update` so notifications and resolvedAt stay consistent. */
+  async updateManyStatus(
+    ids: string[],
+    status: TicketStatus,
+    requester: AuthenticatedUser,
+  ) {
+    const tickets: TicketDocument[] = [];
+    for (const id of ids) {
+      tickets.push(await this.update(id, { status }, requester));
+    }
+    return tickets;
+  }
+
   async addComment(id: string, message: string, requester: AuthenticatedUser) {
     const ticket = await this.ticketModel.findById(id).exec();
     if (!ticket) {
