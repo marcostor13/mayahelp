@@ -52,9 +52,37 @@ jobs:
       COOLIFY_BACKEND_UUID: pry79jef5nh089mluu36l41m
       COOLIFY_FRONTEND_UUID: v8fkhe77hmvjsii970qgschv
     steps:
-      - name: Trigger backend deploy
+      # Un solo paso para los dos recursos: con un paso por app, si el primero falla el
+      # segundo queda "skipped" y el frontend no se despliega por un problema del backend.
+      - name: Trigger Coolify deploys
+        env:
+          # Por env y no interpolado en el `run`: el token no queda escrito en el comando.
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
         run: |
-          curl -sf -X GET "$COOLIFY_URL/api/v1/deploy?uuid=$COOLIFY_BACKEND_UUID" -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}"
-      - name: Trigger frontend deploy
-        run: |
-          curl -sf -X GET "$COOLIFY_URL/api/v1/deploy?uuid=$COOLIFY_FRONTEND_UUID" -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN }}"
+          set -u
+          failed=0
+          for app in "backend:$COOLIFY_BACKEND_UUID" "frontend:$COOLIFY_FRONTEND_UUID"; do
+            name=${app%%:*}
+            uuid=${app#*:}
+            body=$(mktemp)
+            # `curl -sf` descartaba estado y cuerpo, y dejaba "exit code 22" como único
+            # dato. El cuerpo de Coolify es lo que distingue un token inválido de un uuid
+            # inexistente o de la instancia caída. `--retry` solo reintenta lo transitorio
+            # (timeouts y 5xx), no un 401.
+            status=$(curl -sS -o "$body" -w '%{http_code}' \
+              --max-time 30 --retry 2 \
+              -H "Authorization: Bearer $COOLIFY_TOKEN" \
+              "$COOLIFY_URL/api/v1/deploy?uuid=$uuid") || status=000
+            if [ "$status" -ge 200 ] && [ "$status" -lt 300 ]; then
+              echo "OK  $name: Coolify aceptó el despliegue (HTTP $status)"
+            else
+              echo "ERR $name: Coolify respondió HTTP $status"
+              head -c 500 "$body"
+              echo
+              failed=1
+            fi
+          done
+          if [ "$failed" -ne 0 ]; then
+            echo "::error::Coolify rechazó al menos un despliegue. Revisá COOLIFY_TOKEN, los UUID y que la instancia responda."
+            exit 1
+          fi
