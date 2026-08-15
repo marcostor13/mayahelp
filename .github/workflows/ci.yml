@@ -69,8 +69,10 @@ jobs:
             # dato. El cuerpo de Coolify es lo que distingue un token inválido de un uuid
             # inexistente o de la instancia caída. `--retry` solo reintenta lo transitorio
             # (timeouts y 5xx), no un 401.
+            # POST y no GET: Coolify cambió el verbo de este endpoint y responde 405
+            # ("This endpoint has changed to a POST request") a la forma vieja.
             status=$(curl -sS -o "$body" -w '%{http_code}' \
-              --max-time 30 --retry 2 \
+              --max-time 30 --retry 2 -X POST \
               -H "Authorization: Bearer $COOLIFY_TOKEN" \
               "$COOLIFY_URL/api/v1/deploy?uuid=$uuid") || status=000
             if [ "$status" -ge 200 ] && [ "$status" -lt 300 ]; then
