@@ -18,6 +18,12 @@ RUN npm run build && npm prune --omit=dev
 FROM node:24-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
+# mongodump/mongorestore para los backups programados de base de datos. Si el paquete no
+# está en la rama estable de Alpine, se cae a la community de edge (es un binario Go
+# estático, no arrastra el resto de edge). Sin esto, el backend arranca igual pero cada
+# backup falla con "No se encontró el binario mongodump".
+RUN apk add --no-cache mongodb-tools \
+  || apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/edge/community mongodb-tools
 RUN addgroup -S mayahelp && adduser -S mayahelp -G mayahelp
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist

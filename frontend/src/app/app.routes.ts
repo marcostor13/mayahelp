@@ -79,6 +79,11 @@ export const routes: Routes = [
           import('./features/monitoring/monitoring-project').then((m) => m.MonitoringProject),
       },
       {
+        path: 'backups',
+        canActivate: [roleGuard(['admin'])],
+        loadComponent: () => import('./features/backups/backups').then((m) => m.Backups),
+      },
+      {
         path: 'implementations',
         canActivate: [roleGuard(['admin', 'agent'])],
         loadComponent: () =>

@@ -61,6 +61,8 @@ Ver `backend/.env.example`:
 | `JWT_ACCESS_EXPIRES_IN` / `JWT_REFRESH_EXPIRES_IN` | Expiración de tokens (ej. `15m`, `7d`) |
 | `CORS_ORIGIN` | Origen permitido (URL del frontend) |
 | `PORT` | Puerto HTTP (default `3000`) |
+| `R2_BACKUPS_BUCKET` | Bucket de R2 para los dumps de base (opcional; default `R2_BUCKET`) |
+| `MONGODUMP_PATH` | Ruta a `mongodump` (opcional; la imagen ya trae `mongodb-tools`) |
 
 El frontend recibe la URL de la API en **tiempo de build** vía el build-arg `API_URL` (ver Dockerfile), ya que Angular compila los `environment.ts` de forma estática.
 

@@ -22,6 +22,12 @@ export default () => ({
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
     bucket: process.env.R2_BUCKET ?? 'mayahelp-attachments',
     publicUrl: process.env.R2_PUBLIC_URL,
+    /** Bucket separado para los dumps de base; si falta, se usa el de adjuntos. */
+    backupsBucket: process.env.R2_BACKUPS_BUCKET,
+  },
+  backups: {
+    /** Ruta al binario de mongodump; por defecto el del PATH de la imagen. */
+    mongodumpPath: process.env.MONGODUMP_PATH,
   },
   nvidia: {
     apiKey: process.env.NVIDIA_API_KEY,

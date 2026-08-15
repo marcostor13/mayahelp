@@ -37,6 +37,7 @@ const NAV_ITEMS: NavItem[] = [
     path: '/implementations',
     roles: ['admin', 'agent'],
   },
+  { label: 'Backups', icon: 'backup', path: '/backups', roles: ['admin'] },
   { label: 'Usuarios', icon: 'group', path: '/users', roles: ['admin'] },
   { label: 'Categorías', icon: 'sell', path: '/categories', roles: ['admin'] },
   { label: 'Templates WhatsApp', icon: 'forum', path: '/whatsapp-templates', roles: ['admin'] },

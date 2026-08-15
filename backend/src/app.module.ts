@@ -23,6 +23,7 @@ import { WhatsAppTemplatesModule } from './whatsapp-templates/whatsapp-templates
 import { AppSettingsModule } from './app-settings/app-settings.module';
 import { MonitoringModule } from './monitoring/monitoring.module';
 import { ImplementationsModule } from './implementations/implementations.module';
+import { BackupsModule } from './backups/backups.module';
 import { EncryptionModule } from './common/encryption/encryption.module';
 
 @Module({
@@ -52,6 +53,7 @@ import { EncryptionModule } from './common/encryption/encryption.module';
     AppSettingsModule,
     MonitoringModule,
     ImplementationsModule,
+    BackupsModule,
     EncryptionModule,
   ],
   controllers: [AppController],

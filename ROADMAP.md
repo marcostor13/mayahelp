@@ -486,6 +486,71 @@ podía quedar sin ningún link que sirviera. Ahora la API sirve los adjuntos ell
 - `GET /tickets/:id/attachments` devuelve la `url` recalculada en vez de la guardada, así que las filas viejas
   con links rotos vuelven a mostrarse sin migración.
 
+## Backups programados de MongoDB
+
+Pedido: registrar conexiones a bases de datos (MongoDB Atlas y MongoDB alcanzable solo por SSH), programar
+backups con `mongodump --gzip` que se guarden en R2, y conservar únicamente los 3 últimos por base.
+
+Módulo `backend/src/backups/`, sección `/backups` del frontend (solo admin).
+
+### Tipos de conexión
+
+- **`atlas`**: se guarda la cadena de conexión completa (cifrada). La base a respaldar sale del formulario o del
+  final de la propia URI.
+- **`ssh`**: para un MongoDB que solo escucha en `127.0.0.1` dentro de un servidor. `ssh-tunnel.ts` levanta un
+  listener en un puerto efímero de **127.0.0.1** —no en `0.0.0.0`, para no exponer la base al resto de la red del
+  contenedor— y empalma cada conexión con un canal `direct-tcpip` del SSH. La URI que recibe `mongodump` lleva
+  `directConnection=true`: sin eso el driver descubre el replica set y salta a hostnames que desde el contenedor
+  no resuelven, así que el túnel se abre bien y el dump falla igual por timeout.
+
+Los secretos (URI, contraseña SSH, clave privada, passphrase, contraseña de Mongo) se cifran con el
+`EncryptionService` que ya usaba monitoreo, viven con `select: false` y la API solo devuelve *si están cargados*.
+
+### El dump
+
+`mongodump --gzip --archive=<file>`: un archivo único, no el directorio por colecciones, porque es lo que se sube
+a R2 tal cual y se restaura con el simétrico `mongorestore --gzip --archive=<file>`.
+
+La URI **no viaja en el `argv`** —cualquiera que mire `/proc` lo lee— sino en un YAML temporal con permisos 0600
+que se pasa por `--config`, y el directorio se borra en el `finally`. Los mensajes de error y la salida que se
+guardan en el historial pasan por `redactUri()`, porque tanto `mongodump` como el driver repiten la cadena de
+conexión completa al fallar.
+
+La imagen de Docker del backend instala `mongodb-tools` (con fallback a la community de edge). Sin eso el
+backend arranca igual pero cada backup falla con un mensaje que dice exactamente qué instalar.
+
+### Programación en hora de Lima
+
+La hora que elige el usuario es hora de Lima; `lima-schedule.ts` la traduce al instante UTC que se guarda en
+`nextRunAt`. La conversión se hace con `Intl` en lugar de restar 5 horas fijas — Perú no tiene horario de verano,
+pero así cambiar de zona es cambiar una constante. El scheduler mira cada minuto y solo compara contra "ahora",
+sin saber nada de zonas horarias. Frecuencias: cada hora, diaria, semanal (día de la semana) y mensual (día 1-28,
+tope para que exista en febrero).
+
+Los dumps corren **de a uno**: uno solo se come CPU, red y disco del contenedor. La próxima corrida se reprograma
+tanto si salió bien como si falló, así que una falla no desprograma la conexión.
+
+### Retención
+
+Cada conexión tiene un tope (3 por defecto, configurable). Después de cada backup exitoso se listan los buenos
+de más nuevo a más viejo y **todo lo que pasa del tope se borra de R2 y de la base**. Las corridas fallidas no
+ocupan cupo —no tienen archivo— pero también se podan para que el historial no crezca sin fin.
+
+### Endpoints (`/api/backups`, `@Roles(ADMIN)`)
+
+| Método | Ruta | Qué hace |
+|---|---|---|
+| `GET` | `/connections` | Conexiones con su historial reciente |
+| `POST` | `/connections` | Registrar |
+| `PATCH` | `/connections/:id` | Editar (secreto vacío = "no lo cambies") |
+| `DELETE` | `/connections/:id` | Borrar conexión, historial y objetos de R2 |
+| `POST` | `/connections/:id/test` | Abre la conexión real (túnel incluido) y hace `ping` |
+| `POST` | `/connections/:id/run` | Backup ahora |
+| `GET` | `/connections/:id/history` | Últimas 20 corridas |
+| `GET` | `/:id/download` | Link firmado de R2 (6 h) del `.archive.gz` |
+
+Variables nuevas, ambas opcionales: `R2_BACKUPS_BUCKET` (default: `R2_BUCKET`) y `MONGODUMP_PATH`.
+
 ## Gaps detectados (backend listo, sin UI todavía)
 
 - [x] **Gestión de categorías** — resuelto: sección `/categories` (solo admin) con tabs Tickets/Artículos, CRUD

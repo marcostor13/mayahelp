@@ -1,0 +1,700 @@
+<div class="flex flex-col gap-stack-md">
+  <!-- Encabezado -->
+  <div class="flex items-start justify-between gap-3">
+    <div class="min-w-0">
+      <h2 class="text-headline-lg-mobile md:text-headline-xl text-on-surface">Backups</h2>
+      <p class="text-body-sm md:text-body-md text-on-surface-variant mt-0.5">
+        Copias de seguridad automáticas de tus bases MongoDB, guardadas en Cloudflare R2
+      </p>
+    </div>
+    <div class="flex items-center gap-1 shrink-0">
+      <button
+        type="button"
+        (click)="load()"
+        class="ticket-icon-btn"
+        title="Actualizar"
+        aria-label="Actualizar"
+      >
+        <span class="material-symbols-outlined text-[22px]">refresh</span>
+      </button>
+      <button
+        type="button"
+        (click)="openCreate()"
+        class="ticket-icon-btn ticket-icon-btn--primary"
+        title="Registrar base de datos"
+        aria-label="Registrar base de datos"
+      >
+        <span class="material-symbols-outlined icon-fill text-[22px]">add</span>
+      </button>
+    </div>
+  </div>
+
+  @if (error()) {
+    <p class="text-body-sm text-error">{{ error() }}</p>
+  }
+
+  <!-- Formulario de alta / edición -->
+  @if (formOpen()) {
+    <form
+      (ngSubmit)="submit()"
+      class="bg-surface-container-lowest border border-primary rounded-2xl p-4 md:p-6 ambient-shadow-sm flex flex-col gap-4"
+    >
+      <div class="flex items-center justify-between gap-2">
+        <h3 class="text-headline-lg-mobile text-on-surface">
+          {{ editingId() ? 'Editar conexión' : 'Registrar base de datos' }}
+        </h3>
+        <button
+          type="button"
+          (click)="closeForm()"
+          class="ticket-icon-btn"
+          title="Cerrar"
+          aria-label="Cerrar"
+        >
+          <span class="material-symbols-outlined text-[22px]">close</span>
+        </button>
+      </div>
+
+      <!-- Tipo: fijo al editar, porque cambia todos los campos y los secretos guardados -->
+      <div class="flex flex-col gap-2">
+        <p class="text-label-xs text-on-surface-variant uppercase">¿Dónde está la base?</p>
+        <div class="flex flex-wrap gap-2">
+          @for (option of types; track option) {
+            <button
+              type="button"
+              (click)="type = option"
+              [disabled]="!!editingId()"
+              class="ticket-chip inline-flex items-center gap-1.5 disabled:opacity-40"
+              [class.ticket-chip--on]="type === option"
+            >
+              <span class="material-symbols-outlined text-[16px]">{{ typeIcon(option) }}</span>
+              {{ typeLabels[option] }}
+            </button>
+          }
+        </div>
+        <p class="text-body-sm text-on-surface-variant">{{ typeHints[type] }}</p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-label-xs text-on-surface-variant uppercase mb-1" for="bk-name"
+            >Nombre</label
+          >
+          <input
+            id="bk-name"
+            name="name"
+            [(ngModel)]="name"
+            type="text"
+            required
+            placeholder="Producción"
+            class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+          />
+        </div>
+        <div>
+          <label class="block text-label-xs text-on-surface-variant uppercase mb-1" for="bk-db">
+            Base de datos {{ type === 'atlas' ? '(opcional si va en la URI)' : '' }}
+          </label>
+          <input
+            id="bk-db"
+            name="database"
+            [(ngModel)]="database"
+            type="text"
+            placeholder="mayahelp"
+            class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+          />
+        </div>
+
+        @if (type === 'atlas') {
+          <div class="sm:col-span-2">
+            <label class="block text-label-xs text-on-surface-variant uppercase mb-1" for="bk-uri"
+              >Cadena de conexión</label
+            >
+            <textarea
+              id="bk-uri"
+              name="uri"
+              [(ngModel)]="uri"
+              rows="2"
+              autocomplete="off"
+              [placeholder]="
+                editingId()
+                  ? 'Guardada — pegá una nueva para reemplazarla'
+                  : 'mongodb+srv://usuario:contraseña@cluster.mongodb.net/mibase'
+              "
+              class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface font-mono focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+            ></textarea>
+            <p class="text-label-xs text-on-surface-variant mt-1">
+              Se guarda cifrada y no vuelve a mostrarse.
+            </p>
+          </div>
+        }
+
+        @if (type === 'ssh') {
+          <div>
+            <label class="block text-label-xs text-on-surface-variant uppercase mb-1" for="bk-host"
+              >Host o IP del servidor</label
+            >
+            <input
+              id="bk-host"
+              name="sshHost"
+              [(ngModel)]="sshHost"
+              type="text"
+              placeholder="ec2-1-2-3-4.compute.amazonaws.com"
+              class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+            />
+          </div>
+          <div>
+            <label
+              class="block text-label-xs text-on-surface-variant uppercase mb-1"
+              for="bk-sshport"
+              >Puerto SSH</label
+            >
+            <input
+              id="bk-sshport"
+              name="sshPort"
+              [(ngModel)]="sshPort"
+              type="number"
+              min="1"
+              max="65535"
+              class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+            />
+          </div>
+          <div>
+            <label class="block text-label-xs text-on-surface-variant uppercase mb-1" for="bk-user"
+              >Usuario SSH</label
+            >
+            <input
+              id="bk-user"
+              name="sshUsername"
+              [(ngModel)]="sshUsername"
+              type="text"
+              placeholder="ubuntu"
+              autocomplete="off"
+              class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+            />
+          </div>
+          <div>
+            <label class="block text-label-xs text-on-surface-variant uppercase mb-1" for="bk-pass"
+              >Contraseña SSH (o usá la clave)</label
+            >
+            <input
+              id="bk-pass"
+              name="sshPassword"
+              [(ngModel)]="sshPassword"
+              type="password"
+              autocomplete="new-password"
+              [placeholder]="editingId() ? 'Guardada — escribí para reemplazar' : ''"
+              class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+            />
+          </div>
+          <div class="sm:col-span-2">
+            <label class="block text-label-xs text-on-surface-variant uppercase mb-1" for="bk-key"
+              >Clave privada SSH (PEM)</label
+            >
+            <textarea
+              id="bk-key"
+              name="sshPrivateKey"
+              [(ngModel)]="sshPrivateKey"
+              rows="4"
+              [placeholder]="
+                editingId()
+                  ? 'Guardada — pegá una nueva para reemplazarla'
+                  : '-----BEGIN OPENSSH PRIVATE KEY-----'
+              "
+              class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface font-mono focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+            ></textarea>
+          </div>
+          <div>
+            <label
+              class="block text-label-xs text-on-surface-variant uppercase mb-1"
+              for="bk-passphrase"
+              >Passphrase de la clave (opcional)</label
+            >
+            <input
+              id="bk-passphrase"
+              name="sshPassphrase"
+              [(ngModel)]="sshPassphrase"
+              type="password"
+              autocomplete="new-password"
+              class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+            />
+          </div>
+
+          <div class="sm:col-span-2 border-t border-surface-container-highest pt-3">
+            <p class="text-label-xs text-on-surface-variant uppercase mb-2">
+              MongoDB dentro del servidor
+            </p>
+          </div>
+          <div>
+            <label
+              class="block text-label-xs text-on-surface-variant uppercase mb-1"
+              for="bk-mongohost"
+              >Host de Mongo</label
+            >
+            <input
+              id="bk-mongohost"
+              name="mongoHost"
+              [(ngModel)]="mongoHost"
+              type="text"
+              placeholder="127.0.0.1"
+              class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+            />
+          </div>
+          <div>
+            <label
+              class="block text-label-xs text-on-surface-variant uppercase mb-1"
+              for="bk-mongoport"
+              >Puerto de Mongo</label
+            >
+            <input
+              id="bk-mongoport"
+              name="mongoPort"
+              [(ngModel)]="mongoPort"
+              type="number"
+              min="1"
+              max="65535"
+              class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+            />
+          </div>
+          <div>
+            <label
+              class="block text-label-xs text-on-surface-variant uppercase mb-1"
+              for="bk-mongouser"
+              >Usuario de Mongo (opcional)</label
+            >
+            <input
+              id="bk-mongouser"
+              name="mongoUsername"
+              [(ngModel)]="mongoUsername"
+              type="text"
+              autocomplete="off"
+              class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+            />
+          </div>
+          <div>
+            <label
+              class="block text-label-xs text-on-surface-variant uppercase mb-1"
+              for="bk-mongopass"
+              >Contraseña de Mongo</label
+            >
+            <input
+              id="bk-mongopass"
+              name="mongoPassword"
+              [(ngModel)]="mongoPassword"
+              type="password"
+              autocomplete="new-password"
+              [placeholder]="editingId() ? 'Guardada — escribí para reemplazar' : ''"
+              class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+            />
+          </div>
+          <div>
+            <label
+              class="block text-label-xs text-on-surface-variant uppercase mb-1"
+              for="bk-authdb"
+              >Base de autenticación</label
+            >
+            <input
+              id="bk-authdb"
+              name="authDatabase"
+              [(ngModel)]="authDatabase"
+              type="text"
+              placeholder="admin"
+              class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+            />
+          </div>
+        }
+      </div>
+
+      <!-- Programación -->
+      <div class="border-t border-surface-container-highest pt-4 flex flex-col gap-3">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-[20px] text-on-surface-variant"
+            >schedule</span
+          >
+          <p class="text-label-md text-on-surface">Programación</p>
+          <span class="text-label-xs text-on-surface-variant">(hora de Lima)</span>
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+          @for (option of frequencies; track option) {
+            <button
+              type="button"
+              (click)="frequency = option"
+              class="ticket-chip"
+              [class.ticket-chip--on]="frequency === option"
+            >
+              {{ frequencyLabels[option] }}
+            </button>
+          }
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          @if (frequency === 'weekly') {
+            <div>
+              <label class="block text-label-xs text-on-surface-variant uppercase mb-1" for="bk-dow"
+                >Día</label
+              >
+              <select
+                id="bk-dow"
+                name="dayOfWeek"
+                [(ngModel)]="dayOfWeek"
+                class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+              >
+                @for (day of weekdays; track day.value) {
+                  <option [value]="day.value">{{ day.label }}</option>
+                }
+              </select>
+            </div>
+          }
+          @if (frequency === 'monthly') {
+            <div>
+              <label class="block text-label-xs text-on-surface-variant uppercase mb-1" for="bk-dom"
+                >Día del mes</label
+              >
+              <select
+                id="bk-dom"
+                name="dayOfMonth"
+                [(ngModel)]="dayOfMonth"
+                class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+              >
+                @for (day of monthDays; track day) {
+                  <option [value]="day">{{ day }}</option>
+                }
+              </select>
+            </div>
+          }
+          @if (frequency !== 'hourly') {
+            <div>
+              <label
+                class="block text-label-xs text-on-surface-variant uppercase mb-1"
+                for="bk-hour"
+                >Hora</label
+              >
+              <select
+                id="bk-hour"
+                name="hour"
+                [(ngModel)]="hour"
+                class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+              >
+                @for (option of hours; track option) {
+                  <option [value]="option">{{ pad(option) }}</option>
+                }
+              </select>
+            </div>
+          }
+          <div>
+            <label
+              class="block text-label-xs text-on-surface-variant uppercase mb-1"
+              for="bk-minute"
+              >Minuto</label
+            >
+            <select
+              id="bk-minute"
+              name="minute"
+              [(ngModel)]="minute"
+              class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+            >
+              @for (option of minutes; track option) {
+                <option [value]="option">{{ pad(option) }}</option>
+              }
+            </select>
+          </div>
+          <div>
+            <label
+              class="block text-label-xs text-on-surface-variant uppercase mb-1"
+              for="bk-retention"
+              >Backups a conservar</label
+            >
+            <input
+              id="bk-retention"
+              name="retentionCount"
+              [(ngModel)]="retentionCount"
+              type="number"
+              min="1"
+              max="30"
+              class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+            />
+          </div>
+        </div>
+
+        <p class="text-body-sm text-on-surface-variant">
+          Al superar los {{ retentionCount }} backups guardados, el más antiguo se elimina de R2
+          automáticamente.
+        </p>
+
+        <label class="flex items-center gap-2 text-body-sm text-on-surface cursor-pointer">
+          <input
+            type="checkbox"
+            name="isActive"
+            [(ngModel)]="isActive"
+            class="w-4 h-4 accent-primary"
+          />
+          Ejecutar según la programación
+        </label>
+      </div>
+
+      @if (formError()) {
+        <p
+          class="text-body-sm text-on-error-container bg-error-container rounded-xl px-3 py-2 break-words"
+        >
+          {{ formError() }}
+        </p>
+      }
+
+      <div class="flex flex-wrap items-center gap-2">
+        <button
+          type="submit"
+          [disabled]="saving() || !canSubmit"
+          class="inline-flex items-center gap-2 bg-primary-container text-on-primary text-label-md py-2.5 px-5 rounded-xl hover:bg-primary transition-colors disabled:opacity-50"
+        >
+          <span class="material-symbols-outlined text-[18px]">{{
+            saving() ? 'progress_activity' : 'save'
+          }}</span>
+          {{ editingId() ? 'Guardar cambios' : 'Registrar base de datos' }}
+        </button>
+        <button
+          type="button"
+          (click)="closeForm()"
+          class="inline-flex items-center gap-2 border border-outline-variant text-on-surface-variant text-label-md py-2.5 px-5 rounded-xl hover:bg-surface-container-low transition-colors"
+        >
+          Cancelar
+        </button>
+      </div>
+    </form>
+  }
+
+  <!-- Listado -->
+  @if (loading()) {
+    <div class="py-16 flex flex-col items-center gap-3 text-center">
+      <span class="material-symbols-outlined text-primary text-4xl animate-spin"
+        >progress_activity</span
+      >
+      <p class="text-body-sm text-on-surface-variant">Cargando conexiones...</p>
+    </div>
+  } @else if (connections().length === 0) {
+    <div class="py-16 flex flex-col items-center gap-3 text-center">
+      <span class="material-symbols-outlined text-on-surface-variant text-5xl">database</span>
+      <p class="text-body-md text-on-surface">Todavía no registraste ninguna base de datos.</p>
+      <p class="text-body-sm text-on-surface-variant max-w-md">
+        Registrá una conexión a MongoDB Atlas o a un MongoDB detrás de SSH, elegí la frecuencia y la
+        hora, y los backups se generan solos con <code>mongodump --gzip</code> y se guardan en
+        Cloudflare R2.
+      </p>
+      <button
+        type="button"
+        (click)="openCreate()"
+        class="inline-flex items-center gap-2 bg-primary-container text-on-primary text-label-md py-2.5 px-5 rounded-xl hover:bg-primary transition-colors"
+      >
+        <span class="material-symbols-outlined text-[18px]">add</span>
+        Registrar base de datos
+      </button>
+    </div>
+  } @else {
+    <div class="flex flex-col gap-3">
+      @for (connection of connections(); track connection._id) {
+        <article
+          class="bg-surface-container-lowest border border-surface-container-highest rounded-2xl p-3 md:p-4 ambient-shadow-sm"
+        >
+          <div class="flex items-start gap-3">
+            <div
+              class="w-10 h-10 shrink-0 rounded-full bg-primary-fixed text-primary flex items-center justify-center"
+            >
+              <span class="material-symbols-outlined text-[20px]">{{
+                typeIcon(connection.type)
+              }}</span>
+            </div>
+
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <p class="text-body-md font-medium text-on-surface min-w-0 truncate">
+                  {{ connection.name }}
+                </p>
+                <span
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-label-xs shrink-0 {{
+                    statusClass(connection.lastStatus)
+                  }}"
+                >
+                  <span class="material-symbols-outlined text-[14px]">{{
+                    statusIcon(connection.lastStatus)
+                  }}</span>
+                  {{ statusLabel(connection.lastStatus) }}
+                </span>
+                @if (!connection.isActive) {
+                  <span
+                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-label-xs bg-surface-container-high text-on-surface-variant shrink-0"
+                  >
+                    <span class="material-symbols-outlined text-[14px]">pause</span>
+                    Pausada
+                  </span>
+                }
+              </div>
+              <p class="text-label-xs text-on-surface-variant mt-0.5">
+                {{ typeLabels[connection.type] }}
+                @if (connection.database) {
+                  · {{ connection.database }}
+                }
+                · {{ connection.scheduleLabel }}
+              </p>
+            </div>
+
+            <div class="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                (click)="test(connection)"
+                [disabled]="busyId() === connection._id"
+                class="ticket-row-action"
+                title="Probar conexión"
+                aria-label="Probar conexión"
+              >
+                <span class="material-symbols-outlined text-[20px]">cable</span>
+              </button>
+              <button
+                type="button"
+                (click)="run(connection)"
+                [disabled]="busyId() === connection._id"
+                class="ticket-row-action"
+                title="Generar backup ahora"
+                aria-label="Generar backup ahora"
+              >
+                <span
+                  class="material-symbols-outlined text-[20px]"
+                  [class.animate-spin]="busyId() === connection._id"
+                >
+                  {{ busyId() === connection._id ? 'progress_activity' : 'backup' }}
+                </span>
+              </button>
+              <button
+                type="button"
+                (click)="openEdit(connection)"
+                class="ticket-row-action"
+                title="Editar"
+                aria-label="Editar conexión"
+              >
+                <span class="material-symbols-outlined text-[20px]">edit</span>
+              </button>
+              <button
+                type="button"
+                (click)="remove(connection)"
+                [disabled]="busyId() === connection._id"
+                class="ticket-row-action ticket-row-action--danger"
+                title="Eliminar"
+                aria-label="Eliminar conexión"
+              >
+                <span class="material-symbols-outlined text-[20px]">delete</span>
+              </button>
+            </div>
+          </div>
+
+          @if (testFor(connection); as result) {
+            <p
+              class="mt-3 text-body-sm rounded-xl px-3 py-2 break-words"
+              [class]="
+                result.ok
+                  ? 'bg-emerald-50 text-emerald-800'
+                  : 'bg-error-container text-on-error-container'
+              "
+            >
+              @if (result.ok) {
+                Conexión correcta a <strong>{{ result.database }}</strong> —
+                {{ result.collections }} colección(es), {{ result.latencyMs }} ms.
+              } @else {
+                {{ result.error }}
+              }
+            </p>
+          }
+
+          @if (connection.lastStatus === 'failed' && connection.lastError) {
+            <p
+              class="mt-3 text-body-sm text-on-error-container bg-error-container rounded-xl px-3 py-2 break-words"
+            >
+              Último intento: {{ connection.lastError }}
+            </p>
+          }
+
+          <div
+            class="mt-3 pt-3 border-t border-surface-container-highest flex flex-wrap items-center gap-x-4 gap-y-2"
+          >
+            <span class="text-label-xs text-on-surface-variant inline-flex items-center gap-1">
+              <span class="material-symbols-outlined text-[16px]">inventory_2</span>
+              {{ storedCount(connection) }} de {{ connection.retentionCount }} guardados
+            </span>
+            @if (connection.lastSuccessAt) {
+              <span class="text-label-xs text-on-surface-variant inline-flex items-center gap-1">
+                <span class="material-symbols-outlined text-[16px]">check_circle</span>
+                Último: {{ connection.lastSuccessAt | date: 'dd/MM/yy HH:mm' }}
+              </span>
+            }
+            @if (connection.nextRunAt) {
+              <span class="text-label-xs text-on-surface-variant inline-flex items-center gap-1">
+                <span class="material-symbols-outlined text-[16px]">event_upcoming</span>
+                Próximo: {{ connection.nextRunAt | date: 'dd/MM/yy HH:mm' }}
+              </span>
+            }
+            <button
+              type="button"
+              (click)="toggleHistory(connection)"
+              class="link-action ml-auto"
+              [attr.aria-expanded]="isExpanded(connection)"
+            >
+              <span class="material-symbols-outlined text-[18px]">
+                {{ isExpanded(connection) ? 'expand_less' : 'expand_more' }}
+              </span>
+              Historial ({{ connection.backups.length }})
+            </button>
+          </div>
+
+          @if (isExpanded(connection)) {
+            @if (connection.backups.length === 0) {
+              <p class="mt-3 text-body-sm text-on-surface-variant">
+                Todavía no hay corridas registradas.
+              </p>
+            } @else {
+              <ul class="mt-3 flex flex-col gap-2">
+                @for (backup of connection.backups; track backup._id) {
+                  <li
+                    class="bg-surface-container-low rounded-xl px-3 py-2 flex flex-wrap items-center gap-x-3 gap-y-1"
+                  >
+                    <span
+                      class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-label-xs shrink-0 {{
+                        statusClass(backup.status)
+                      }}"
+                    >
+                      <span class="material-symbols-outlined text-[14px]">{{
+                        statusIcon(backup.status)
+                      }}</span>
+                      {{ statusLabel(backup.status) }}
+                    </span>
+                    <span class="text-body-sm text-on-surface">
+                      {{ backup.startedAt | date: 'dd/MM/yy HH:mm' }}
+                    </span>
+                    <span class="text-label-xs text-on-surface-variant">
+                      {{ backup.trigger === 'manual' ? 'Manual' : 'Programado' }}
+                    </span>
+                    @if (backup.status === 'success') {
+                      <span class="text-label-xs text-on-surface-variant">
+                        {{ formatBytes(backup.sizeBytes) }} ·
+                        {{ formatDuration(backup.durationMs) }}
+                      </span>
+                      <button
+                        type="button"
+                        (click)="download(backup)"
+                        class="link-action ml-auto"
+                        [title]="backup.filename ?? 'Descargar backup'"
+                      >
+                        <span class="material-symbols-outlined text-[18px]">download</span>
+                        Descargar
+                      </button>
+                    }
+                    @if (backup.error) {
+                      <span class="text-label-xs text-error w-full break-words">
+                        {{ backup.error }}
+                      </span>
+                    }
+                  </li>
+                }
+              </ul>
+            }
+          }
+        </article>
+      }
+    </div>
+  }
+</div>
