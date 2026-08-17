@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Types } from 'mongoose';
+import { HydratedDocument, Schema as MongooseSchema, Types } from 'mongoose';
 import { BackupRunStatus } from './database-connection.schema';
 
 export type DatabaseBackupDocument = HydratedDocument<DatabaseBackup>;
@@ -16,8 +16,14 @@ export enum BackupTrigger {
  */
 @Schema({ timestamps: true })
 export class DatabaseBackup {
+  /**
+   * El tipo va como `MongooseSchema.Types.ObjectId` y no como `Types.ObjectId`: con el
+   * segundo, `@Prop` arma el campo como `Mixed`, y un campo `Mixed` no castea. La fila se
+   * guarda con el `_id` de la conexión (un ObjectId) pero el historial se pide por id de
+   * texto, así que la comparación quedaba ObjectId contra string y no devolvía nada nunca.
+   */
   @Prop({
-    type: Types.ObjectId,
+    type: MongooseSchema.Types.ObjectId,
     ref: 'DatabaseConnection',
     required: true,
     index: true,
@@ -63,7 +69,7 @@ export class DatabaseBackup {
   @Prop({ trim: true })
   log?: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', default: null })
   triggeredBy: Types.ObjectId | null;
 
   declare createdAt: Date;

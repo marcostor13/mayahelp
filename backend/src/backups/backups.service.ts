@@ -244,7 +244,7 @@ export class BackupsService {
         collections: 0,
         latencyMs: Date.now() - startedAt,
         // El driver incluye la URI completa al fallar la selección de servidor.
-        error: redactUri((error as Error).message),
+        error: failureMessage(error),
       };
     } finally {
       await target?.close();
@@ -269,9 +269,12 @@ export class BackupsService {
   }
 
   /**
-   * Vuelca la base, sube el `.archive.gz` a R2 y aplica la retención. La fila del historial
-   * se crea antes de arrancar para que una corrida que se corta a la mitad —o un reinicio
-   * del contenedor— quede registrada igual, en vez de desaparecer.
+   * Vuelca la base, sube el `.archive.gz` a R2 y aplica la retención.
+   *
+   * El candado se toma y se suelta acá afuera, envolviendo *todo* el trabajo: si algo falla
+   * antes de que exista la fila del historial —abrir esa misma fila, por ejemplo— la
+   * conexión igual queda libre. Si no, un error temprano la dejaba trabada para siempre y
+   * cada intento posterior moría con "ya hay un backup en curso".
    */
   async runBackup(
     connection: DatabaseConnectionDocument,
@@ -287,7 +290,24 @@ export class BackupsService {
     // `nextRunAt` recién se mueve al terminar, así que este candado es lo único que evita
     // que un "ejecutar ahora" se monte sobre el dump que el cron ya tiene en curso.
     this.running.add(connectionId);
+    try {
+      return await this.dumpAndRecord(connection, trigger, userId);
+    } finally {
+      this.running.delete(connectionId);
+    }
+  }
 
+  /**
+   * La corrida en sí. La fila del historial se crea antes de arrancar para que un dump que
+   * se corta a la mitad —o un reinicio del contenedor— quede registrado igual, en vez de
+   * desaparecer.
+   */
+  private async dumpAndRecord(
+    connection: DatabaseConnectionDocument,
+    trigger: BackupTrigger,
+    userId: string | null,
+  ) {
+    const connectionId = connection._id.toString();
     const startedAt = new Date();
     const backup = await this.backupModel.create({
       connection: connection._id,
@@ -335,7 +355,7 @@ export class BackupsService {
         `Backup de "${connection.name}" (${target.database}): ${formatBytes(dump.sizeBytes)} en ${Math.round(backup.durationMs / 1000)}s`,
       );
     } catch (error) {
-      const message = redactUri((error as Error).message);
+      const message = failureMessage(error);
       backup.status = BackupRunStatus.FAILED;
       backup.error = message;
       backup.finishedAt = new Date();
@@ -347,7 +367,6 @@ export class BackupsService {
     } finally {
       await cleanupDump?.().catch(() => undefined);
       await target?.close().catch(() => undefined);
-      this.running.delete(connectionId);
     }
 
     return backup.toObject();
@@ -581,6 +600,22 @@ export class BackupsService {
     }
     return encrypted;
   }
+}
+
+/**
+ * Mensaje presentable de lo que sea que haya fallado. No todo lo que se lanza es un
+ * `Error`: si viene un string —o un objeto sin `message`— el viejo `(error as Error).message`
+ * quedaba `undefined` y `redactUri` reventaba dentro del propio `catch`, dejando la corrida
+ * clavada en "en curso" y sin explicación.
+ */
+function failureMessage(error: unknown): string {
+  const raw =
+    error instanceof Error
+      ? error.message
+      : typeof error === 'string'
+        ? error
+        : '';
+  return redactUri(raw) || 'Error desconocido';
 }
 
 /**
