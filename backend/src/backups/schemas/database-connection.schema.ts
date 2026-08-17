@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Types } from 'mongoose';
+import { HydratedDocument, Schema as MongooseSchema, Types } from 'mongoose';
 import { BackupFrequency } from '../lima-schedule';
 
 export type DatabaseConnectionDocument = HydratedDocument<DatabaseConnection>;
@@ -128,7 +128,8 @@ export class DatabaseConnection {
   @Prop({ type: Date, default: null })
   lastSuccessAt: Date | null;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  /** `MongooseSchema.Types.ObjectId` a propósito: con `Types.ObjectId` el campo sale `Mixed`. */
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
   createdBy: Types.ObjectId;
 
   declare createdAt: Date;

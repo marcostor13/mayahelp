@@ -387,5 +387,48 @@ describe('BackupsService', () => {
         expect.objectContaining({ lastStatus: 'failed' }),
       );
     });
+
+    it('registra el error aunque lo que se lance no sea un Error', async () => {
+      const backupRow = {
+        _id: 'new',
+        save: jest.fn(),
+        toObject: () => ({ _id: 'new' }),
+      } as Record<string, unknown>;
+      backupModel.create.mockResolvedValue(backupRow);
+      storage.assertConfigured.mockImplementation(() => {
+        // eslint-disable-next-line @typescript-eslint/only-throw-error
+        throw 'el túnel se cayó';
+      });
+
+      await expect(
+        service.runBackup(connectionDoc() as never, 'manual' as never, null),
+      ).resolves.toBeDefined();
+
+      expect(backupRow.status).toBe('failed');
+      expect(backupRow.error).toBe('el túnel se cayó');
+    });
+
+    it('libera la conexión si ni siquiera se pudo abrir la fila del historial', async () => {
+      backupModel.create.mockRejectedValue(new Error('mongo caído'));
+
+      await expect(
+        service.runBackup(connectionDoc() as never, 'manual' as never, null),
+      ).rejects.toThrow('mongo caído');
+
+      // Sin liberar el candado, el reintento moriría con "ya hay un backup en curso" para
+      // siempre y la conexión no volvería a generar un backup hasta reiniciar el proceso.
+      backupModel.create.mockResolvedValue({
+        _id: 'new',
+        save: jest.fn(),
+        toObject: () => ({ _id: 'new' }),
+      });
+      storage.assertConfigured.mockImplementation(() => {
+        throw new Error('R2 no está configurada');
+      });
+
+      await expect(
+        service.runBackup(connectionDoc() as never, 'manual' as never, null),
+      ).resolves.toBeDefined();
+    });
   });
 });
