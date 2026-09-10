@@ -47,7 +47,19 @@
     @if (opening()) {
       <span class="material-symbols-outlined text-primary text-[22px] animate-spin">progress_activity</span>
     }
+
+    <span class="paste-hint text-body-sm text-on-surface-variant flex items-center gap-1.5">
+      <span class="material-symbols-outlined text-[18px]">content_paste</span>
+      o pega una captura con {{ pasteShortcut }}
+    </span>
   </div>
+
+  @if (pasteNotice()) {
+    <p class="text-body-sm text-primary flex items-center gap-1.5">
+      <span class="material-symbols-outlined text-[18px]">check_circle</span>
+      {{ pasteNotice() }}
+    </p>
+  }
 
   @if (error()) {
     <p class="text-body-sm text-error">{{ error() }}</p>

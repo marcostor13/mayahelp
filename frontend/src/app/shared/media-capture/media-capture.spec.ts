@@ -96,6 +96,99 @@ describe('MediaCapture', () => {
     }
   });
 
+  function pasteEvent(files: File[]): ClipboardEvent {
+    const event = new Event('paste', { bubbles: true, cancelable: true }) as ClipboardEvent;
+    Object.defineProperty(event, 'clipboardData', {
+      value: {
+        items: files.map((file) => ({ kind: 'file', getAsFile: () => file })),
+        files,
+      },
+    });
+    return event;
+  }
+
+  function screenshot(name = 'image.png', type = 'image/png', size = 1024): File {
+    const file = new File([new Uint8Array(1)], name, { type });
+    Object.defineProperty(file, 'size', { value: size });
+    return file;
+  }
+
+  it('emits a screenshot pasted from the clipboard as an attachment', () => {
+    const emitted: File[][] = [];
+    fixture.componentInstance.filesAdded.subscribe((files) => emitted.push(files));
+
+    const event = pasteEvent([screenshot()]);
+    document.dispatchEvent(event);
+
+    expect(emitted.length).toBe(1);
+    expect(emitted[0].length).toBe(1);
+    expect(emitted[0][0].type).toBe('image/png');
+    // The generic clipboard name is replaced so several screenshots stay distinguishable.
+    expect(emitted[0][0].name).toMatch(/^captura-\d+-1\.png$/);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('gives each pasted screenshot its own name', () => {
+    const emitted: File[][] = [];
+    fixture.componentInstance.filesAdded.subscribe((files) => emitted.push(files));
+
+    document.dispatchEvent(pasteEvent([screenshot()]));
+    document.dispatchEvent(pasteEvent([screenshot()]));
+
+    expect(emitted[0][0].name).not.toBe(emitted[1][0].name);
+  });
+
+  it('keeps the real filename when the clipboard carries a named image', () => {
+    const emitted: File[][] = [];
+    fixture.componentInstance.filesAdded.subscribe((files) => emitted.push(files));
+
+    document.dispatchEvent(pasteEvent([screenshot('diagrama-red.png')]));
+
+    expect(emitted[0][0].name).toBe('diagrama-red.png');
+  });
+
+  it('ignores a paste that carries no image, so pasting text still works', () => {
+    const emitted: File[][] = [];
+    fixture.componentInstance.filesAdded.subscribe((files) => emitted.push(files));
+
+    const event = pasteEvent([screenshot('notas.txt', 'text/plain')]);
+    document.dispatchEvent(event);
+
+    expect(emitted.length).toBe(0);
+    expect(event.defaultPrevented).toBe(false);
+  });
+
+  it('rejects a pasted image over the 25MB attachment limit', async () => {
+    const emitted: File[][] = [];
+    fixture.componentInstance.filesAdded.subscribe((files) => emitted.push(files));
+
+    document.dispatchEvent(pasteEvent([screenshot('image.png', 'image/png', 26 * 1024 * 1024)]));
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(emitted.length).toBe(0);
+    expect(fixture.nativeElement.textContent).toContain('25 MB');
+  });
+
+  it('rejects a pasted image in a format the backend does not accept', async () => {
+    const emitted: File[][] = [];
+    fixture.componentInstance.filesAdded.subscribe((files) => emitted.push(files));
+
+    document.dispatchEvent(pasteEvent([screenshot('image.tiff', 'image/tiff')]));
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(emitted.length).toBe(0);
+    expect(fixture.nativeElement.textContent).toContain('PNG, JPG, WEBP o GIF');
+  });
+
+  it('tells the user where to paste a screenshot', () => {
+    const hint = fixture.nativeElement.querySelector('.paste-hint') as HTMLElement;
+
+    expect(hint).toBeTruthy();
+    expect(hint.textContent).toContain('pega una captura');
+  });
+
   it('keeps the shutter disabled until the preview reports its dimensions', async () => {
     await fixture.componentInstance.openPhoto();
     await fixture.whenStable();

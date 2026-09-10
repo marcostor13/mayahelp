@@ -97,13 +97,29 @@
 
       <div>
         <label class="block text-label-md text-on-background mb-stack-sm">Adjuntos (opcional, máx. 25MB c/u)</label>
+        <p class="text-body-sm text-on-surface-variant mb-stack-sm">
+          Sube archivos, usa la cámara o pega directamente una captura de pantalla desde el portapapeles.
+        </p>
         <app-media-capture (filesAdded)="onFilesAdded($event)" />
 
         @if (selectedFiles().length > 0) {
           <ul class="mt-3 flex flex-col gap-2">
-            @for (file of selectedFiles(); track file.name; let i = $index) {
-              <li class="flex items-center justify-between gap-2 bg-surface border border-outline-variant rounded-xl px-3 py-2">
-                <span class="text-body-sm text-on-surface truncate">{{ file.name }}</span>
+            @for (pending of selectedFiles(); track $index; let i = $index) {
+              <li class="flex items-center gap-3 bg-surface border border-outline-variant rounded-xl px-3 py-2">
+                @if (pending.previewUrl) {
+                  <img
+                    [src]="pending.previewUrl"
+                    [alt]="pending.file.name"
+                    class="h-12 w-12 shrink-0 rounded-lg object-cover bg-surface-container-low"
+                  />
+                } @else {
+                  <span
+                    class="material-symbols-outlined text-primary text-[24px] h-12 w-12 shrink-0 flex items-center justify-center rounded-lg bg-surface-container-low"
+                  >
+                    attach_file
+                  </span>
+                }
+                <span class="text-body-sm text-on-surface truncate flex-1 min-w-0">{{ pending.file.name }}</span>
                 <button
                   type="button"
                   (click)="removeFile(i)"

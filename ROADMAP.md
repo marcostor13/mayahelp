@@ -551,6 +551,32 @@ ocupan cupo —no tienen archivo— pero también se podan para que el historial
 
 Variables nuevas, ambas opcionales: `R2_BACKUPS_BUCKET` (default: `R2_BUCKET`) y `MONGODUMP_PATH`.
 
+## Pegar capturas de pantalla desde el portapapeles
+
+Pedido: que al crear un ticket se puedan **copiar y pegar imágenes del portapapeles** (típicamente una captura
+de pantalla) en vez de tener que guardarla como archivo y después subirla.
+
+- La lógica vive en el componente compartido `media-capture`, así que el pegado funciona en los cuatro lugares
+  que ya lo usan: creación de ticket, detalle del ticket (sube al instante), compositor de "Mi cuenta" y el
+  enlace público de observaciones.
+- `@HostListener('document:paste')` y no un listener sobre el `<textarea>`: la captura se pega con el foco en
+  cualquier parte del formulario. Sólo se hace `preventDefault()` cuando el portapapeles trae una imagen, así
+  que pegar texto en la descripción sigue funcionando igual.
+- Las imágenes se leen de `clipboardData.items` (la vía que usan todos los navegadores para las capturas) con
+  `clipboardData.files` como respaldo.
+- El portapapeles entrega las capturas con un nombre genérico (`image.png`) o sin nombre; se renombran a
+  `captura-<timestamp>-<n>.<ext>` para que varias capturas del mismo formulario sean distinguibles. Si el
+  archivo pegado ya trae un nombre real (copiado desde el explorador de archivos), se respeta.
+- Se valida contra la whitelist del backend antes de adjuntar: PNG/JPG/WEBP/GIF y 25 MB
+  (`attachment-types.ts`). Un formato o tamaño no soportado muestra el error en vez de fallar recién al subir.
+- La barra de acciones muestra la pista "o pega una captura con Ctrl + V" (`⌘ + V` en Mac) y, al pegar, una
+  confirmación temporal — sin eso la función es invisible.
+- En `ticket-create` la lista de adjuntos pendientes ahora muestra **miniatura** de cada imagen (`objectURL`
+  revocado al quitar el archivo y al destruir el componente): con nombres autogenerados, la miniatura es la
+  única forma de saber qué captura se pegó.
+- `track file.name` en las listas de adjuntos pendientes pasó a `track $index` — dos archivos con el mismo
+  nombre rompían el `@for` de Angular.
+
 ## Gaps detectados (backend listo, sin UI todavía)
 
 - [x] **Gestión de categorías** — resuelto: sección `/categories` (solo admin) con tabs Tickets/Artículos, CRUD
