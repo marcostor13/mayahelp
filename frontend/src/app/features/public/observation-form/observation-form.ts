@@ -5,12 +5,13 @@ import { ActivatedRoute } from '@angular/router';
 import { PublicObservationService } from '../../../core/services/public-observation.service';
 import { PublicProjectInfo } from '../../../core/models/public-observation.model';
 import { MediaCapture } from '../../../shared/media-capture/media-capture';
+import { AttachmentPreviews } from '../../../shared/attachment-previews/attachment-previews';
 
 const MAX_FILES = 5;
 
 @Component({
   selector: 'app-observation-form',
-  imports: [FormsModule, MediaCapture],
+  imports: [FormsModule, MediaCapture, AttachmentPreviews],
   templateUrl: './observation-form.html',
 })
 export class ObservationForm implements OnInit {

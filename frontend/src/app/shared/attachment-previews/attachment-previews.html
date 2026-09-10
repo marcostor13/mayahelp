@@ -1,0 +1,68 @@
+@if (items().length > 0) {
+  <ul class="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-3">
+    @for (item of items(); track $index; let i = $index) {
+      <li
+        class="attachment-preview group relative bg-surface border border-outline-variant rounded-xl overflow-hidden"
+      >
+        @if (item.url) {
+          <button
+            type="button"
+            (click)="openZoom(item)"
+            class="block w-full aspect-square bg-surface-container-low"
+            [attr.aria-label]="'Ver ' + item.file.name"
+          >
+            <img [src]="item.url" [alt]="item.file.name" class="h-full w-full object-cover" />
+          </button>
+        } @else {
+          <div
+            class="w-full aspect-square bg-surface-container-low flex flex-col items-center justify-center gap-1 p-2"
+          >
+            <span class="material-symbols-outlined text-primary text-[32px]">attach_file</span>
+            <span class="text-label-xs text-on-surface-variant text-center break-all line-clamp-2">
+              {{ item.file.name }}
+            </span>
+          </div>
+        }
+
+        <div class="flex items-center gap-1 px-2 py-1.5">
+          <span class="text-label-xs text-on-surface-variant truncate flex-1 min-w-0">
+            {{ sizeLabel(item.file) }}
+          </span>
+          <button
+            type="button"
+            (click)="removeAt(i)"
+            class="attachment-preview-remove inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-on-surface-variant transition-colors hover:bg-error-container hover:text-error"
+            title="Quitar archivo"
+            aria-label="Quitar archivo"
+          >
+            <span class="material-symbols-outlined text-[18px]">close</span>
+          </button>
+        </div>
+      </li>
+    }
+  </ul>
+}
+
+@if (zoomed(); as item) {
+  <div
+    class="fixed inset-0 z-[80] bg-black/90 flex items-center justify-center p-4"
+    role="dialog"
+    aria-modal="true"
+    (click)="closeZoom()"
+  >
+    <img
+      [src]="item.url"
+      [alt]="item.file.name"
+      class="max-h-full max-w-full object-contain rounded-lg"
+    />
+    <button
+      type="button"
+      (click)="closeZoom()"
+      class="absolute top-[max(1rem,env(safe-area-inset-top))] right-4 inline-flex h-11 w-11 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm"
+      title="Cerrar"
+      aria-label="Cerrar"
+    >
+      <span class="material-symbols-outlined text-[24px]">close</span>
+    </button>
+  </div>
+}

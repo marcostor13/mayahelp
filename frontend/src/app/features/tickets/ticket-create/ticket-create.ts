@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, OnInit, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
@@ -10,23 +10,18 @@ import { AiService } from '../../../core/services/ai.service';
 import { Category } from '../../../core/models/category.model';
 import { TicketPriority } from '../../../core/models/ticket.model';
 import { MediaCapture } from '../../../shared/media-capture/media-capture';
-
-/** Archivo pendiente de subir, con su miniatura cuando es una imagen. */
-interface PendingAttachment {
-  file: File;
-  previewUrl: string | null;
-}
+import { AttachmentPreviews } from '../../../shared/attachment-previews/attachment-previews';
 
 @Component({
   selector: 'app-ticket-create',
-  imports: [FormsModule, MediaCapture],
+  imports: [FormsModule, MediaCapture, AttachmentPreviews],
   templateUrl: './ticket-create.html',
 })
-export class TicketCreate implements OnInit, OnDestroy {
+export class TicketCreate implements OnInit {
   protected readonly categories = signal<Category[]>([]);
   protected readonly submitting = signal(false);
   protected readonly error = signal<string | null>(null);
-  protected readonly selectedFiles = signal<PendingAttachment[]>([]);
+  protected readonly selectedFiles = signal<File[]>([]);
   protected readonly generating = signal(false);
   protected readonly aiError = signal<string | null>(null);
 
@@ -71,30 +66,12 @@ export class TicketCreate implements OnInit, OnDestroy {
     this.categoryService.list('ticket').subscribe((categories) => this.categories.set(categories));
   }
 
-  ngOnDestroy(): void {
-    for (const pending of this.selectedFiles()) {
-      this.revokePreview(pending);
-    }
-  }
-
   onFilesAdded(files: File[]): void {
-    const pending = files.map((file) => ({
-      file,
-      previewUrl: file.type.startsWith('image/') ? URL.createObjectURL(file) : null,
-    }));
-    this.selectedFiles.update((current) => [...current, ...pending]);
+    this.selectedFiles.update((current) => [...current, ...files]);
   }
 
   removeFile(index: number): void {
-    this.selectedFiles.update((files) => {
-      const removed = files[index];
-      if (removed) this.revokePreview(removed);
-      return files.filter((_, i) => i !== index);
-    });
-  }
-
-  private revokePreview(pending: PendingAttachment): void {
-    if (pending.previewUrl) URL.revokeObjectURL(pending.previewUrl);
+    this.selectedFiles.update((files) => files.filter((_, i) => i !== index));
   }
 
   submit(): void {
@@ -126,7 +103,7 @@ export class TicketCreate implements OnInit, OnDestroy {
       this.router.navigate(['/tickets', ticketId]);
       return;
     }
-    const uploads = files.map(({ file }) =>
+    const uploads = files.map((file) =>
       this.attachmentService.upload(ticketId, file).pipe(catchError(() => of(null))),
     );
     forkJoin(uploads).subscribe(() => this.router.navigate(['/tickets', ticketId]));

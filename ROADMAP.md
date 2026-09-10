@@ -571,9 +571,14 @@ de pantalla) en vez de tener que guardarla como archivo y después subirla.
   (`attachment-types.ts`). Un formato o tamaño no soportado muestra el error en vez de fallar recién al subir.
 - La barra de acciones muestra la pista "o pega una captura con Ctrl + V" (`⌘ + V` en Mac) y, al pegar, una
   confirmación temporal — sin eso la función es invisible.
-- En `ticket-create` la lista de adjuntos pendientes ahora muestra **miniatura** de cada imagen (`objectURL`
-  revocado al quitar el archivo y al destruir el componente): con nombres autogenerados, la miniatura es la
-  única forma de saber qué captura se pegó.
+- Componente compartido `frontend/src/app/shared/attachment-previews/` (`<app-attachment-previews [files]
+  (remove)>`): grilla de **miniaturas** de los adjuntos todavía no subidos, con la imagen en tamaño completo al
+  tocarla (overlay que cierra con clic o `Escape`). Con nombres autogenerados, ver la captura es la única forma
+  de saber qué se adjuntó antes de enviar. Lo usan `ticket-create`, `account` y `observation-form`; el detalle
+  del ticket ya tenía su propia grilla porque ahí los adjuntos se suben al instante.
+- El componente maneja el ciclo de vida de las `objectURL`: una por archivo (recrearla en cada render haría
+  parpadear la miniatura), revocada al quitar el archivo y al destruir el componente. Los formularios siguen
+  guardando `File[]` pelado, sin saber de previews.
 - `track file.name` en las listas de adjuntos pendientes pasó a `track $index` — dos archivos con el mismo
   nombre rompían el `@for` de Angular.
 

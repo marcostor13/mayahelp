@@ -9,6 +9,7 @@ import { CategoryService } from '../../core/services/category.service';
 import { TicketService } from '../../core/services/ticket.service';
 import { AttachmentService } from '../../core/services/attachment.service';
 import { MediaCapture } from '../../shared/media-capture/media-capture';
+import { AttachmentPreviews } from '../../shared/attachment-previews/attachment-previews';
 import { AccountSummary } from '../../core/models/account.model';
 import { Category } from '../../core/models/category.model';
 import { TicketPriority, TicketStatus } from '../../core/models/ticket.model';
@@ -38,7 +39,7 @@ const MAX_FILES = 5;
 
 @Component({
   selector: 'app-account',
-  imports: [FormsModule, RouterLink, DatePipe, MediaCapture],
+  imports: [FormsModule, RouterLink, DatePipe, MediaCapture, AttachmentPreviews],
   templateUrl: './account.html',
 })
 export class Account implements OnInit {
