@@ -61,6 +61,11 @@ cambios van por comentarios.
 El estado y el agente asignado nunca son del cliente: son del flujo de trabajo del
 equipo. La API rechaza esos campos aunque lleguen junto a uno permitido.
 
+Si el ticket ya tiene un agente asignado, la edición le llega por correo con el detalle
+de qué cambió (`antes → ahora`, y la descripción nueva citada aparte), para que no siga
+trabajando sobre el pedido anterior. Usa el switch `ticketUpdated` de los ajustes de
+notificaciones, el mismo que los cambios de estado.
+
 **Admin y agente** editan cualquier ticket en cualquier estado, como hasta ahora.
 
 ## Cuentas y contraseñas

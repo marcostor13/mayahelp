@@ -15,6 +15,7 @@ import {
   renderNotificationEmail,
   renderNotificationText,
 } from './email-template';
+import type { TicketEdit } from '../tickets/ticket-changes';
 
 export interface NotifyRecipient {
   name: string;
@@ -192,6 +193,62 @@ export class NotificationsService {
           action: { label: 'Abrir el ticket', url: link },
         },
       },
+    });
+  }
+
+  /**
+   * El cliente corrigió su propio ticket. Va al agente asignado, que puede estar
+   * trabajando sobre una versión vieja del pedido; el cliente no la recibe porque el
+   * cambio es suyo. Reusa el evento `ticketUpdated` para no sumar un switch más a los
+   * ajustes: para el admin sigue siendo "el ticket se actualizó".
+   */
+  async notifyTicketEdited(
+    recipient: NotifyRecipient,
+    ticket: NotifyTicket,
+    editorName: string,
+    changes: TicketEdit[],
+  ): Promise<void> {
+    if (changes.length === 0) {
+      return;
+    }
+    const link = this.ticketLink(ticket);
+    const summary = changes.map((change) => change.label).join(', ');
+    // La descripción entera no entra en una fila: va aparte, como cita.
+    const rewritten = changes.find((change) => change.field === 'description');
+    const rows: EmailRow[] = [
+      ...this.ticketRows(ticket, recipient),
+      ...changes
+        .filter((change) => change.field !== 'description')
+        .map((change) => ({
+          label: change.label,
+          value: `${change.from} → ${change.to}`,
+        })),
+    ];
+
+    const body: EmailBody = {
+      subject: `${ticket.code}: ${editorName} editó el ticket`,
+      content: {
+        preheader: `${editorName} cambió ${summary} en ${ticket.code}.`,
+        badge: 'Ticket editado',
+        title: ticket.subject,
+        intro: `${editorName} editó su ticket ${ticket.code} mientras seguía abierto. Cambió: ${summary}.`,
+        accent: 'warning',
+        rows,
+        ...(rewritten
+          ? { quote: { author: 'Nueva descripción', text: rewritten.to } }
+          : {}),
+        action: { label: 'Abrir el ticket', url: link },
+      },
+    };
+
+    await this.dispatch('ticketUpdated', {
+      recipient,
+      ticket,
+      event: `Ticket editado por ${editorName}`,
+      author: editorName,
+      message: summary,
+      clientEmail: body,
+      internalEmail: body,
     });
   }
 

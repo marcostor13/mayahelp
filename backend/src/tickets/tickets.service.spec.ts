@@ -45,9 +45,29 @@ function scenario(overrides: Partial<Record<string, unknown>> = {}) {
   return { ticket, save, service: serviceFor(ticket) };
 }
 
-function serviceFor(ticket: TicketDocument | null): TicketsService {
+function serviceFor(
+  ticket: TicketDocument | null,
+  deps: { users?: UsersService; notifications?: NotificationsService } = {},
+): TicketsService {
+  // `findById` sirve a dos usos: el documento crudo del update, y la cadena
+  // .select().populate().lean().exec() con la que buildNotifyTicket arma el aviso.
   const ticketModel = {
-    findById: () => ({ exec: () => Promise.resolve(ticket) }),
+    findById: () => ({
+      exec: () => Promise.resolve(ticket),
+      select: () => ({
+        populate: () => ({
+          populate: () => ({
+            lean: () => ({
+              exec: () =>
+                Promise.resolve({
+                  category: { name: 'Soporte' },
+                  project: null,
+                }),
+            }),
+          }),
+        }),
+      }),
+    }),
   } as unknown as Model<TicketDocument>;
 
   return new TicketsService(
@@ -55,8 +75,8 @@ function serviceFor(ticket: TicketDocument | null): TicketsService {
     {} as unknown as Model<AttachmentDocument>,
     {} as unknown as CountersService,
     {} as unknown as TicketAutoReplyService,
-    {} as unknown as UsersService,
-    {} as unknown as NotificationsService,
+    deps.users ?? ({} as unknown as UsersService),
+    deps.notifications ?? ({} as unknown as NotificationsService),
   );
 }
 
@@ -172,5 +192,115 @@ describe('TicketsService.update — permisos del cliente', () => {
 
     expect(ticket.subject).toBe('Corregido por el agente');
     expect(save).toHaveBeenCalled();
+  });
+});
+
+describe('TicketsService.update — aviso al agente asignado', () => {
+  const AGENT_ID = new Types.ObjectId().toString();
+
+  function withAgent(overrides: Record<string, unknown> = {}) {
+    const save = jest.fn();
+    const ticket = {
+      id: 't1',
+      code: 'TCK-8001',
+      subject: 'Asunto original',
+      description: 'Descripción original del problema',
+      client: new Types.ObjectId(CLIENT_ID),
+      assignedAgent: new Types.ObjectId(AGENT_ID),
+      status: TicketStatus.ABIERTO,
+      priority: TicketPriority.MEDIA,
+      resolvedAt: null,
+      save,
+      ...overrides,
+    } as unknown as TicketDocument;
+
+    const notifyTicketEdited = jest.fn().mockResolvedValue(undefined);
+    const users = {
+      findById: (id: string) =>
+        Promise.resolve({
+          id,
+          name: id === AGENT_ID ? 'Agente Ana' : 'Cliente Beto',
+          email: `${id}@acme.com`,
+          notifications: { email: true, whatsapp: true },
+        }),
+    } as unknown as UsersService;
+
+    return {
+      ticket,
+      notifyTicketEdited,
+      service: serviceFor(ticket, {
+        users,
+        notifications: {
+          notifyTicketEdited,
+        } as unknown as NotificationsService,
+      }),
+    };
+  }
+
+  it('le avisa al agente qué cambió el cliente', async () => {
+    const { service, notifyTicketEdited } = withAgent();
+
+    await service.update(
+      't1',
+      { subject: 'Asunto corregido' },
+      requester(Role.CLIENT),
+    );
+
+    expect(notifyTicketEdited).toHaveBeenCalledTimes(1);
+    const [recipient, , editorName, changes] = notifyTicketEdited.mock
+      .calls[0] as [
+      { name: string },
+      unknown,
+      string,
+      Array<{ field: string; from: string; to: string }>,
+    ];
+    expect(recipient.name).toBe('Agente Ana');
+    expect(editorName).toBe('Cliente Beto');
+    expect(changes).toEqual([
+      {
+        field: 'subject',
+        label: 'Asunto',
+        from: 'Asunto original',
+        to: 'Asunto corregido',
+      },
+    ]);
+  });
+
+  /** Guardar sin tocar nada no tiene por qué molestar a nadie. */
+  it('no avisa cuando el cliente guarda los mismos valores', async () => {
+    const { service, notifyTicketEdited } = withAgent();
+
+    await service.update(
+      't1',
+      { subject: 'Asunto original', priority: TicketPriority.MEDIA },
+      requester(Role.CLIENT),
+    );
+
+    expect(notifyTicketEdited).not.toHaveBeenCalled();
+  });
+
+  it('no avisa si el ticket todavía no tiene agente', async () => {
+    const { service, notifyTicketEdited } = withAgent({ assignedAgent: null });
+
+    await service.update(
+      't1',
+      { subject: 'Asunto corregido' },
+      requester(Role.CLIENT),
+    );
+
+    expect(notifyTicketEdited).not.toHaveBeenCalled();
+  });
+
+  /** El equipo ya ve sus propios cambios; el aviso es para cuando edita el cliente. */
+  it('no avisa cuando el que edita es un agente', async () => {
+    const { service, notifyTicketEdited } = withAgent();
+
+    await service.update(
+      't1',
+      { subject: 'Asunto corregido' },
+      requester(Role.AGENT, AGENT_ID),
+    );
+
+    expect(notifyTicketEdited).not.toHaveBeenCalled();
   });
 });

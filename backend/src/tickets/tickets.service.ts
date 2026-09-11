@@ -29,6 +29,7 @@ import { UserDocument } from '../users/schemas/user.schema';
 import { AuthenticatedUser } from '../auth/types/authenticated-user.interface';
 import { Role } from '../common/enums/role.enum';
 import { TicketPriority, TicketStatus } from '../common/enums/ticket.enum';
+import { describeTicketChanges } from './ticket-changes';
 
 const TICKET_COUNTER_KEY = 'ticket';
 const TICKET_CODE_BASE = 8000;
@@ -288,6 +289,11 @@ export class TicketsService {
     }
 
     const statusChanged = Boolean(dto.status) && dto.status !== ticket.status;
+    // Foto previa solo cuando hay a quién avisarle: es una consulta extra.
+    const before =
+      requester.role === Role.CLIENT && ticket.assignedAgent
+        ? await this.buildNotifyTicket(ticket)
+        : null;
 
     Object.assign(ticket, dto);
     if (
@@ -307,7 +313,36 @@ export class TicketsService {
         ticket.status,
       );
     }
+    if (before) {
+      await this.notifyAgentOfClientEdit(ticket, before, requester);
+    }
     return ticket;
+  }
+
+  /**
+   * El agente asignado puede estar trabajando sobre el pedido anterior, así que se le
+   * avisa qué cambió. Al cliente no: el cambio es suyo.
+   */
+  private async notifyAgentOfClientEdit(
+    ticket: TicketDocument,
+    before: NotifyTicket,
+    requester: AuthenticatedUser,
+  ) {
+    const after = await this.buildNotifyTicket(ticket);
+    const changes = describeTicketChanges(before, after);
+    if (changes.length === 0) {
+      return;
+    }
+    const [agent, client] = await Promise.all([
+      this.usersService.findById(ticket.assignedAgent!.toString()),
+      this.usersService.findById(requester.userId),
+    ]);
+    await this.notificationsService.notifyTicketEdited(
+      this.recipientFrom(agent),
+      after,
+      client.name,
+      changes,
+    );
   }
 
   /** Applies the same status to several tickets, reusing `update` so notifications and resolvedAt stay consistent. */
