@@ -352,7 +352,13 @@ export class UsersService {
     if (notifyByEmail !== undefined || notifyByWhatsApp !== undefined) {
       user.markModified('notifications');
     }
-    return user.save();
+    const saved = await user.save();
+
+    // Desactivar tiene que cortar lo que ya está abierto, no solo los logins nuevos.
+    if (dto.isActive === false) {
+      await this.setRefreshTokenHash(saved.id, null);
+    }
+    return saved;
   }
 
   async updateProfile(

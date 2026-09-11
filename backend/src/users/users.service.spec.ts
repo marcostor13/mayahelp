@@ -161,3 +161,55 @@ describe('UsersService.changePassword', () => {
     expect(save).not.toHaveBeenCalled();
   });
 });
+
+describe('UsersService.update — baja de cuenta', () => {
+  function updateHarness(user: UserDocument) {
+    const setRefreshToken = jest.fn().mockReturnValue({
+      exec: () => Promise.resolve(null),
+    });
+    const userModel = {
+      findById: () => ({ exec: () => Promise.resolve(user) }),
+      findByIdAndUpdate: setRefreshToken,
+    } as unknown as Model<UserDocument>;
+
+    const service = new UsersService(
+      userModel,
+      {} as unknown as Model<TicketDocument>,
+      {} as unknown as Model<ProjectShareLinkDocument>,
+      {} as unknown as NotificationsService,
+    );
+    return { service, setRefreshToken };
+  }
+
+  function activeUser() {
+    const save = jest.fn().mockImplementation(function (this: UserDocument) {
+      return Promise.resolve(this);
+    });
+    const user = userDoc({
+      isActive: true,
+      notifications: { email: true, whatsapp: true },
+      save,
+    });
+    return user;
+  }
+
+  /** Desactivar tiene que cortar lo que ya está abierto, no solo los logins nuevos. */
+  it('borra el refresh token al desactivar la cuenta', async () => {
+    const { service, setRefreshToken } = updateHarness(activeUser());
+
+    await service.update('user-1', { isActive: false });
+
+    expect(setRefreshToken).toHaveBeenCalledWith('user-1', {
+      refreshTokenHash: null,
+    });
+  });
+
+  it('no toca la sesión al reactivar ni en una edición cualquiera', async () => {
+    const { service, setRefreshToken } = updateHarness(activeUser());
+
+    await service.update('user-1', { isActive: true });
+    await service.update('user-1', { name: 'Ana María' });
+
+    expect(setRefreshToken).not.toHaveBeenCalled();
+  });
+});

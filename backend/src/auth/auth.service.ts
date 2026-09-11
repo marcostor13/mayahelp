@@ -39,6 +39,8 @@ export class AuthService {
     if (!passwordMatches) {
       throw new UnauthorizedException('Credenciales inválidas');
     }
+    // Después de validar la contraseña: a quien no la sabe no le decimos si la cuenta existe.
+    this.assertActive(user);
     const tokens = await this.issueTokens(user);
     return { user: this.sanitizeUser(user), ...tokens };
   }
@@ -52,6 +54,8 @@ export class AuthService {
     if (!matches) {
       throw new UnauthorizedException('Sesión inválida');
     }
+    // Sin esto, una sesión abierta antes de la baja se renovaría para siempre.
+    this.assertActive(user);
     const tokens = await this.issueTokens(user);
     return { user: this.sanitizeUser(user), ...tokens };
   }
@@ -69,6 +73,19 @@ export class AuthService {
     );
     const tokens = await this.issueTokens(user);
     return { user: this.sanitizeUser(user), ...tokens };
+  }
+
+  /**
+   * Una cuenta desactivada no vuelve a entrar ni renueva su sesión. El access token
+   * que ya tenga sigue valiendo hasta expirar (`JWT_ACCESS_EXPIRES_IN`, 15 min por
+   * defecto); la baja le borra el refresh token, así que esa sesión muere ahí.
+   */
+  private assertActive(user: UserDocument) {
+    if (!user.isActive) {
+      throw new UnauthorizedException(
+        'Tu cuenta está desactivada. Contactá al administrador.',
+      );
+    }
   }
 
   private async issueTokens(user: UserDocument): Promise<TokenPair> {

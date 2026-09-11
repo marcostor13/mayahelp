@@ -80,6 +80,10 @@ Desde la misma pantalla, el botón 🔒 de cada fila **resetea la cuenta**:
 
 Cualquiera puede cambiar su contraseña cuando quiera desde **Ajustes → Contraseña**.
 
+Desactivar una cuenta (el switch de la pantalla de Usuarios) le cierra la puerta de
+verdad: no puede volver a entrar, no puede renovar su sesión, y la baja le borra el
+refresh token para cortar las que ya tenía abiertas.
+
 > El flag viaja dentro del access token, así que un reseteo sobre una sesión ya abierta
 > tarda en cerrarse lo que dure ese token (`JWT_ACCESS_EXPIRES_IN`, 15 min por defecto);
 > como el refresh token se borra, esa sesión no se puede renovar y muere ahí.

@@ -1,4 +1,5 @@
 import { Component, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
@@ -27,10 +28,24 @@ export class Login {
       await this.router.navigateByUrl(
         user.mustChangePassword ? '/cambiar-contrasena' : '/dashboard',
       );
-    } catch {
-      this.error.set('Correo o contraseña incorrectos.');
+    } catch (err) {
+      this.error.set(this.messageFor(err));
     } finally {
       this.loading.set(false);
     }
+  }
+
+  /**
+   * La API manda un motivo cuando lo hay (cuenta desactivada, por ejemplo). Para el
+   * rechazo genérico de credenciales preferimos un texto más claro que el de la API.
+   */
+  private messageFor(err: unknown): string {
+    const message = (err as HttpErrorResponse)?.error as
+      | { message?: string | string[] }
+      | undefined;
+    const text = message?.message?.toString();
+    return !text || text === 'Credenciales inválidas'
+      ? 'Correo o contraseña incorrectos.'
+      : text;
   }
 }
