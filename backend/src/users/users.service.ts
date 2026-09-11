@@ -1,7 +1,10 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
+  Logger,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, QueryFilter, Types } from 'mongoose';
@@ -17,11 +20,19 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { Role } from '../common/enums/role.enum';
+import { NotificationsService } from '../notifications/notifications.service';
 
 export interface PendingReporter {
   name: string;
   email: string;
   projects: string[];
+}
+
+export interface ResetPasswordResult {
+  user: UserDocument;
+  /** Shown once to the admin, as a fallback for when the email does not go out. */
+  temporaryPassword: string;
+  emailSent: boolean;
 }
 
 export interface CreatedAccount {
@@ -42,12 +53,15 @@ function escapeRegex(value: string): string {
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Ticket.name) private ticketModel: Model<TicketDocument>,
     // Registered here (instead of importing ProjectsModule) to keep the module graph acyclic.
     @InjectModel(ProjectShareLink.name)
     private shareLinkModel: Model<ProjectShareLinkDocument>,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async create(dto: CreateUserDto): Promise<UserDocument> {
@@ -243,6 +257,76 @@ export class UsersService {
       });
     }
     return created;
+  }
+
+  /**
+   * Genera una contraseña temporal, cierra las sesiones abiertas de esa persona y
+   * se la manda por correo. La devuelve además al admin porque el envío es
+   * best-effort (si Resend falla, el correo se pierde y hay que dictarla a mano).
+   */
+  async resetPassword(id: string): Promise<ResetPasswordResult> {
+    const target = await this.findById(id);
+    if (target.isAiAgent) {
+      throw new BadRequestException(
+        'La cuenta del agente IA no tiene acceso por contraseña',
+      );
+    }
+
+    const temporaryPassword = generatePassword();
+    const passwordHash = await bcrypt.hash(temporaryPassword, 10);
+    // $unset del refresh token: las sesiones abiertas no se pueden renovar.
+    const user = await this.userModel
+      .findByIdAndUpdate(
+        id,
+        {
+          $set: { passwordHash, mustChangePassword: true },
+          $unset: { refreshTokenHash: 1 },
+        },
+        { new: true },
+      )
+      .exec();
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+
+    const emailSent = await this.notificationsService.notifyPasswordReset(
+      { name: user.name, email: user.email },
+      temporaryPassword,
+    );
+    if (!emailSent) {
+      this.logger.warn(
+        `No se pudo enviar la contraseña temporal a ${user.email}; el admin la ve en pantalla.`,
+      );
+    }
+
+    return { user, temporaryPassword, emailSent };
+  }
+
+  /** Cambio de contraseña por la propia persona; limpia el flag del reseteo. */
+  async changePassword(
+    id: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<UserDocument> {
+    const user = await this.userModel
+      .findById(id)
+      .select('+passwordHash')
+      .exec();
+    if (!user) {
+      throw new NotFoundException('Usuario no encontrado');
+    }
+    const matches = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!matches) {
+      throw new UnauthorizedException('La contraseña actual no es correcta');
+    }
+    if (currentPassword === newPassword) {
+      throw new BadRequestException(
+        'La contraseña nueva tiene que ser distinta de la actual',
+      );
+    }
+    user.passwordHash = await bcrypt.hash(newPassword, 10);
+    user.mustChangePassword = false;
+    return user.save();
   }
 
   async update(id: string, dto: UpdateUserDto): Promise<UserDocument> {

@@ -48,6 +48,13 @@ export class User {
   @Prop({ default: false })
   isAiAgent: boolean;
 
+  /**
+   * Lo marca el reseteo de cuenta: la persona entra con la contraseña temporal
+   * y no puede usar el resto de la API hasta elegir una propia.
+   */
+  @Prop({ default: false })
+  mustChangePassword: boolean;
+
   @Prop({ select: false })
   refreshTokenHash?: string;
 

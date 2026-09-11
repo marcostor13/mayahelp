@@ -12,6 +12,8 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
+import { AllowPendingPassword } from '../common/decorators/allow-pending-password.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -43,6 +45,18 @@ export class AuthController {
     return this.authService.refresh(user.userId, dto.refreshToken);
   }
 
+  /** Alcanzable con el cambio pendiente: es justamente la salida de ese estado. */
+  @AllowPendingPassword()
+  @HttpCode(HttpStatus.OK)
+  @Post('change-password')
+  changePassword(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: ChangePasswordDto,
+  ) {
+    return this.authService.changePassword(user.userId, dto);
+  }
+
+  @AllowPendingPassword()
   @HttpCode(HttpStatus.OK)
   @Post('logout')
   logout(@CurrentUser() user: AuthenticatedUser) {

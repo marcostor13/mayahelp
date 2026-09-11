@@ -17,7 +17,7 @@
       <div class="flex items-start justify-between gap-2">
         <p class="text-label-md text-on-primary-fixed flex items-center gap-2">
           <span class="material-symbols-outlined text-[20px]">key</span>
-          Contraseñas temporales
+          {{ credentialsMode() === 'reset' ? 'Cuenta reseteada' : 'Contraseñas temporales' }}
         </p>
         <div class="flex items-center gap-1 shrink-0">
           <button type="button" (click)="copyCredentials()" class="ticket-row-action" title="Copiar" aria-label="Copiar credenciales">
@@ -29,7 +29,17 @@
         </div>
       </div>
       <p class="text-body-sm text-on-surface-variant">
-        Se muestran una sola vez: copialas y compartilas con cada persona para que entre y las cambie.
+        @if (credentialsMode() === 'reset') {
+          @if (someEmailFailed) {
+            No se pudo enviar el correo. Pasale esta contraseña por otra vía: al entrar, la
+            plataforma le va a pedir que elija una propia.
+          } @else {
+            Se la enviamos por correo. Te la dejamos acá por si necesitás dictarla; al entrar,
+            la plataforma le va a pedir que elija una propia.
+          }
+        } @else {
+          Se muestran una sola vez: copialas y compartilas con cada persona para que entre y las cambie.
+        }
       </p>
       <ul class="flex flex-col gap-1">
         @for (account of createdAccounts(); track account.id) {
@@ -297,6 +307,20 @@
               <button type="button" (click)="openEdit(user)" class="ticket-row-action" title="Editar" aria-label="Editar usuario">
                 <span class="material-symbols-outlined text-[20px]">edit</span>
               </button>
+              @if (!user.isAiAgent) {
+                <button
+                  type="button"
+                  (click)="resetPassword(user)"
+                  [disabled]="resettingId() === user._id"
+                  class="ticket-row-action disabled:opacity-60"
+                  title="Resetear contraseña"
+                  aria-label="Resetear contraseña"
+                >
+                  <span class="material-symbols-outlined text-[20px]">
+                    {{ resettingId() === user._id ? 'hourglass_top' : 'lock_reset' }}
+                  </span>
+                </button>
+              }
               <button
                 type="button"
                 (click)="remove(user)"

@@ -9,6 +9,8 @@ export interface User {
   phone?: string;
   isActive?: boolean;
   notifications?: { email: boolean; whatsapp: boolean };
+  /** Marcado por un reseteo de cuenta: hay que elegir una contraseña propia para seguir. */
+  mustChangePassword?: boolean;
 }
 
 export interface AuthResponse {

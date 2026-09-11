@@ -41,8 +41,11 @@ export class Users implements OnInit {
   protected readonly error = signal<string | null>(null);
   protected readonly formOpen = signal(false);
   protected readonly editingId = signal<string | null>(null);
-  /** Temporary passwords are shown once, right after creating the accounts. */
+  /** Temporary passwords are shown once, right after creating or resetting the accounts. */
   protected readonly createdAccounts = signal<CreatedAccount[]>([]);
+  /** El banner de credenciales cambia de texto según venga de un alta o de un reseteo. */
+  protected readonly credentialsMode = signal<'created' | 'reset'>('created');
+  protected readonly resettingId = signal<string | null>(null);
   protected readonly selectedReporters = signal<Set<string>>(new Set());
 
   protected search = '';
@@ -169,6 +172,7 @@ export class Users implements OnInit {
     this.userAdminService.create(payload).subscribe({
       next: (result) => {
         if (result.temporaryPassword) {
+          this.credentialsMode.set('created');
           this.createdAccounts.set([
             {
               id: result.user._id,
@@ -215,6 +219,43 @@ export class Users implements OnInit {
       error: () => {
         this.patchLocal(user._id, { isActive: !next });
         this.error.set('No se pudo actualizar el estado de la cuenta.');
+      },
+    });
+  }
+
+  /**
+   * Resetea la cuenta: la API manda la contraseña temporal por correo y la devuelve acá
+   * por si el envío falló — el banner avisa cuál de los dos casos fue.
+   */
+  resetPassword(user: ManagedUser): void {
+    const confirmed = confirm(
+      `¿Resetear la cuenta de ${user.name}? Se le envía una contraseña temporal a ${user.email}, ` +
+        'se cierran sus sesiones abiertas y tendrá que elegir una contraseña nueva al entrar.',
+    );
+    if (!confirmed) return;
+
+    this.error.set(null);
+    this.resettingId.set(user._id);
+    this.userAdminService.resetPassword(user._id).subscribe({
+      next: (result) => {
+        this.credentialsMode.set('reset');
+        this.createdAccounts.set([
+          {
+            id: result.user.id,
+            name: result.user.name,
+            email: result.user.email,
+            temporaryPassword: result.temporaryPassword,
+            emailSent: result.emailSent,
+          },
+        ]);
+        this.resettingId.set(null);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.error.set(
+          (err.error as { message?: string | string[] })?.message?.toString() ??
+            'No se pudo resetear la cuenta.',
+        );
+        this.resettingId.set(null);
       },
     });
   }
@@ -272,6 +313,7 @@ export class Users implements OnInit {
     this.saving.set(true);
     this.userAdminService.createFromReporters(emails).subscribe({
       next: (accounts) => {
+        this.credentialsMode.set('created');
         this.createdAccounts.set(accounts);
         this.selectedReporters.set(new Set());
         this.saving.set(false);
@@ -283,6 +325,11 @@ export class Users implements OnInit {
         this.saving.set(false);
       },
     });
+  }
+
+  /** True si alguna contraseña del banner no llegó a salir por correo. */
+  get someEmailFailed(): boolean {
+    return this.createdAccounts().some((account) => account.emailSent === false);
   }
 
   async copyCredentials(): Promise<void> {

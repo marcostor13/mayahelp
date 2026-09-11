@@ -15,6 +15,10 @@ export class AuthService {
   private readonly currentUserSignal = signal<User | null>(null);
   readonly currentUser = this.currentUserSignal.asReadonly();
   readonly isAuthenticated = computed(() => this.currentUserSignal() !== null);
+  /** Tras un reseteo, la sesión queda en espera hasta que la persona elija su contraseña. */
+  readonly mustChangePassword = computed(
+    () => this.currentUserSignal()?.mustChangePassword === true,
+  );
 
   constructor(private readonly http: HttpClient) {}
 
@@ -73,6 +77,17 @@ export class AuthService {
     const user = await firstValueFrom(this.http.patch<User>(`${this.usersUrl}/me`, payload));
     this.currentUserSignal.set(user);
     return user;
+  }
+
+  /** Devuelve tokens nuevos ya sin el flag pendiente, así la sesión sigue sin re-login. */
+  async changePassword(currentPassword: string, newPassword: string): Promise<User> {
+    const response = await firstValueFrom(
+      this.http.post<AuthResponse>(`${this.baseUrl}/change-password`, {
+        currentPassword,
+        newPassword,
+      }),
+    );
+    return this.applySession(response);
   }
 
   async logout(): Promise<void> {

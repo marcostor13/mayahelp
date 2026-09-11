@@ -13,20 +13,21 @@ export class EmailService {
   }
 
   /**
-   * Best-effort: logs and returns instead of throwing, so email issues never break the caller.
-   * `text` is the plain-text alternative — it helps deliverability and text-only clients.
+   * Best-effort: logs and returns `false` instead of throwing, so email issues never
+   * break the caller. `text` is the plain-text alternative — it helps deliverability
+   * and text-only clients.
    */
   async send(
     to: string,
     subject: string,
     html: string,
     text?: string,
-  ): Promise<void> {
+  ): Promise<boolean> {
     if (!this.apiKey) {
       this.logger.warn(
         `RESEND_API_KEY no configurada; se omite el correo "${subject}" a ${to}.`,
       );
-      return;
+      return false;
     }
 
     try {
@@ -50,11 +51,14 @@ export class EmailService {
         this.logger.warn(
           `Resend respondió ${response.status} al enviar a ${to}: ${body}`,
         );
+        return false;
       }
+      return true;
     } catch (error) {
       this.logger.warn(
         `Error enviando correo a ${to}: ${(error as Error).message}`,
       );
+      return false;
     }
   }
 }

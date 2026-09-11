@@ -57,6 +57,24 @@
           Guardado.
         </p>
       }
+
+      <hr class="border-surface-variant my-stack-md" />
+
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div class="min-w-0">
+          <p class="text-label-md text-on-background">Contraseña</p>
+          <p class="text-body-sm text-on-surface-variant">
+            Cambiala cuando quieras; te vamos a pedir la actual.
+          </p>
+        </div>
+        <a
+          routerLink="/cambiar-contrasena"
+          class="inline-flex items-center justify-center gap-2 border border-outline-variant text-label-md text-on-surface py-2.5 px-5 rounded-xl hover:bg-surface-container-high transition-colors shrink-0"
+        >
+          <span class="material-symbols-outlined text-[18px]">lock_reset</span>
+          Cambiar contraseña
+        </a>
+      </div>
     </section>
   }
 

@@ -7,6 +7,7 @@ import {
   CreatedUserResponse,
   ManagedUser,
   PendingReporter,
+  ResetPasswordResponse,
   UpdateUserPayload,
 } from '../models/managed-user.model';
 import { Role } from '../models/user.model';
@@ -34,6 +35,11 @@ export class UserAdminService {
 
   remove(id: string) {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
+  }
+
+  /** Genera una contraseña temporal, la manda por correo y cierra las sesiones abiertas. */
+  resetPassword(id: string) {
+    return this.http.post<ResetPasswordResponse>(`${this.baseUrl}/${id}/reset-password`, {});
   }
 
   /** People pre-authorized on the public links that do not have an account yet. */

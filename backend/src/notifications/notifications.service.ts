@@ -457,8 +457,41 @@ export class NotificationsService {
     };
   }
 
-  private async sendEmail(to: string, body: EmailBody): Promise<void> {
-    await this.emailService.send(
+  /**
+   * Correo del reseteo de cuenta. A diferencia de los avisos de tickets, no mira el
+   * opt-out de la persona ni las plantillas configurables: es transaccional, sin él
+   * no puede volver a entrar. Devuelve si salió, para que el admin sepa si tiene que
+   * pasar la contraseña por otra vía.
+   */
+  async notifyPasswordReset(
+    recipient: { name: string; email: string },
+    temporaryPassword: string,
+  ): Promise<boolean> {
+    const content: EmailContent = {
+      preheader: 'Tu contraseña temporal para entrar a MayaHelp.',
+      badge: 'Cuenta reseteada',
+      title: `Hola ${recipient.name}, restablecimos tu contraseña`,
+      intro:
+        'Un administrador reseteó tu cuenta. Entrá con la contraseña temporal de abajo: apenas ingreses te vamos a pedir que elijas una propia.',
+      accent: 'warning',
+      rows: [
+        { label: 'Correo', value: recipient.email },
+        { label: 'Contraseña temporal', value: temporaryPassword },
+      ],
+      action: { label: 'Entrar a MayaHelp', url: `${this.appUrl}/login` },
+      footerNote:
+        'Si no pediste este cambio, avisale al equipo de soporte: tu contraseña anterior ya no funciona.',
+    };
+
+    return this.sendEmail(recipient.email, {
+      subject: 'Restablecimos tu contraseña de MayaHelp',
+      content,
+    });
+  }
+
+  /** Reports whether the mail actually went out; EmailService never throws. */
+  private async sendEmail(to: string, body: EmailBody): Promise<boolean> {
+    return this.emailService.send(
       to,
       body.subject,
       renderNotificationEmail(body.content, { appUrl: this.appUrl }),

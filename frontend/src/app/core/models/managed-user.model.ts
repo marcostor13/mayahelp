@@ -49,6 +49,13 @@ export interface CreatedUserResponse {
   temporaryPassword?: string;
 }
 
+export interface ResetPasswordResponse {
+  user: { id: string; name: string; email: string };
+  temporaryPassword: string;
+  /** False si Resend falló o no está configurado: hay que pasarla a mano. */
+  emailSent: boolean;
+}
+
 /** Someone authorized on a public link who still has no account. */
 export interface PendingReporter {
   name: string;
@@ -61,4 +68,6 @@ export interface CreatedAccount {
   name: string;
   email: string;
   temporaryPassword?: string;
+  /** Solo en el reseteo: si la contraseña salió por correo o hay que dictarla. */
+  emailSent?: boolean;
 }

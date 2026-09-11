@@ -7,6 +7,7 @@ import configuration from './config/configuration';
 import { validate } from './config/env.validation';
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
+import { PasswordChangeGuard } from './common/guards/password-change.guard';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { CategoriesModule } from './categories/categories.module';
@@ -60,6 +61,8 @@ import { EncryptionModule } from './common/encryption/encryption.module';
   providers: [
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    // Después de los anteriores: necesita el req.user que arma JwtAuthGuard.
+    { provide: APP_GUARD, useClass: PasswordChangeGuard },
   ],
 })
 export class AppModule {}

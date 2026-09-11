@@ -50,6 +50,27 @@ MONGODB_URI="mongodb+srv://..." JWT_ACCESS_SECRET="..." JWT_REFRESH_SECRET="..."
 - Backend: http://localhost:3000/api
 - Frontend: http://localhost:4200
 
+## Cuentas y contraseñas
+
+Las cuentas las crea un administrador desde **Usuarios**; no hay auto-registro con
+contraseña elegida por el cliente. Al crear una cuenta la API genera una contraseña
+temporal y la muestra una sola vez en pantalla.
+
+Desde la misma pantalla, el botón 🔒 de cada fila **resetea la cuenta**:
+
+1. Genera una contraseña temporal nueva.
+2. La envía por correo a esa persona (Resend). Si el envío falla — o si `RESEND_API_KEY`
+   no está configurada — la pantalla lo avisa y muestra la contraseña para pasarla a mano.
+3. Cierra sus sesiones abiertas (borra el refresh token).
+4. Marca la cuenta con `mustChangePassword`: al entrar, la plataforma la lleva a
+   `/cambiar-contrasena` y el resto de la API le responde 403 hasta que elija una propia.
+
+Cualquiera puede cambiar su contraseña cuando quiera desde **Ajustes → Contraseña**.
+
+> El flag viaja dentro del access token, así que un reseteo sobre una sesión ya abierta
+> tarda en cerrarse lo que dure ese token (`JWT_ACCESS_EXPIRES_IN`, 15 min por defecto);
+> como el refresh token se borra, esa sesión no se puede renovar y muere ahí.
+
 ## Variables de entorno (backend)
 
 Ver `backend/.env.example`:

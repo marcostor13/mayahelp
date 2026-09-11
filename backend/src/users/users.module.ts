@@ -8,6 +8,7 @@ import {
   ProjectShareLink,
   ProjectShareLinkSchema,
 } from '../projects/schemas/project-share-link.schema';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -19,6 +20,9 @@ import {
       { name: Ticket.name, schema: TicketSchema },
       { name: ProjectShareLink.name, schema: ProjectShareLinkSchema },
     ]),
+    // Para el correo con la contraseña temporal del reseteo. No es circular:
+    // NotificationsModule no depende de UsersModule.
+    NotificationsModule,
   ],
   controllers: [UsersController],
   providers: [UsersService],

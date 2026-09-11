@@ -23,8 +23,10 @@ export class Login {
     this.error.set(null);
     this.loading.set(true);
     try {
-      await this.auth.login(this.email, this.password);
-      await this.router.navigateByUrl('/dashboard');
+      const user = await this.auth.login(this.email, this.password);
+      await this.router.navigateByUrl(
+        user.mustChangePassword ? '/cambiar-contrasena' : '/dashboard',
+      );
     } catch {
       this.error.set('Correo o contraseña incorrectos.');
     } finally {

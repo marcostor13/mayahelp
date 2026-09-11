@@ -5,6 +5,7 @@ import * as bcrypt from 'bcryptjs';
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { UserDocument } from '../users/schemas/user.schema';
 
 export interface TokenPair {
@@ -59,8 +60,24 @@ export class AuthService {
     await this.usersService.setRefreshTokenHash(userId, null);
   }
 
+  /** Cambio de contraseña propio; devuelve tokens nuevos ya sin el flag pendiente. */
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    const user = await this.usersService.changePassword(
+      userId,
+      dto.currentPassword,
+      dto.newPassword,
+    );
+    const tokens = await this.issueTokens(user);
+    return { user: this.sanitizeUser(user), ...tokens };
+  }
+
   private async issueTokens(user: UserDocument): Promise<TokenPair> {
-    const payload = { sub: user.id, email: user.email, role: user.role };
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role: user.role,
+      mustChangePassword: user.mustChangePassword,
+    };
 
     const accessToken = await this.jwtService.signAsync(payload, {
       secret: this.configService.get<string>('jwt.accessSecret'),
@@ -84,6 +101,7 @@ export class AuthService {
       email: user.email,
       role: user.role,
       company: user.company,
+      mustChangePassword: user.mustChangePassword,
     };
   }
 }

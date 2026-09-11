@@ -9,6 +9,8 @@ interface JwtPayload {
   sub: string;
   email: string;
   role: Role;
+  /** Absent on tokens issued before the reset flow existed. */
+  mustChangePassword?: boolean;
 }
 
 @Injectable()
@@ -26,6 +28,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       userId: payload.sub,
       email: payload.email,
       role: payload.role,
+      mustChangePassword: payload.mustChangePassword ?? false,
     };
   }
 }

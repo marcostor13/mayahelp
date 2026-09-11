@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Patch,
   Post,
@@ -16,12 +18,15 @@ import { CreateUsersFromReportersDto } from './dto/create-users-from-reporters.d
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/role.enum';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { AllowPendingPassword } from '../common/decorators/allow-pending-password.decorator';
 import type { AuthenticatedUser } from '../auth/types/authenticated-user.interface';
 
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
+  /** Alcanzable con el cambio pendiente: el frontend lo necesita para saber en qué estado está. */
+  @AllowPendingPassword()
   @Get('me')
   getMe(@CurrentUser() user: AuthenticatedUser) {
     return this.usersService.findById(user.userId);
@@ -73,6 +78,24 @@ export class UsersController {
   @Roles(Role.ADMIN)
   update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
     return this.usersService.update(id, dto);
+  }
+
+  /**
+   * Resetea la cuenta: contraseña temporal por correo, sesiones abiertas cerradas y
+   * cambio obligatorio al entrar. La temporal vuelve en la respuesta porque el envío
+   * es best-effort y el admin puede necesitar pasarla por otra vía.
+   */
+  @Post(':id/reset-password')
+  @Roles(Role.ADMIN)
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Param('id') id: string) {
+    const { user, temporaryPassword, emailSent } =
+      await this.usersService.resetPassword(id);
+    return {
+      user: { id: user.id, name: user.name, email: user.email },
+      temporaryPassword,
+      emailSent,
+    };
   }
 
   @Delete(':id')
