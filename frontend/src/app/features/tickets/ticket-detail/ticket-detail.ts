@@ -1,9 +1,11 @@
 import { Component, HostListener, OnInit, computed, signal } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { TicketService } from '../../../core/services/ticket.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { CategoryService } from '../../../core/services/category.service';
 import { AttachmentService } from '../../../core/services/attachment.service';
 import { ExportService } from '../../../core/services/export.service';
 import { MediaCapture } from '../../../shared/media-capture/media-capture';
@@ -14,6 +16,7 @@ import {
   TicketStatus,
 } from '../../../core/models/ticket.model';
 import { Attachment } from '../../../core/models/attachment.model';
+import { Category } from '../../../core/models/category.model';
 
 const STATUS_LABELS: Record<TicketStatus, string> = {
   abierto: 'Abierto',
@@ -55,9 +58,19 @@ export class TicketDetail implements OnInit {
   protected readonly uploading = signal(false);
   protected readonly uploadError = signal<string | null>(null);
   protected readonly linkCopied = signal(false);
+  protected readonly editing = signal(false);
+  protected readonly savingEdit = signal(false);
+  protected readonly editError = signal<string | null>(null);
+  /** Se cargan recién al abrir la edición: la vista normal no necesita la lista. */
+  protected readonly categories = signal<Category[]>([]);
   /** Index into `imageAttachments` of the picture open in the viewer, or null when closed. */
   protected readonly viewerIndex = signal<number | null>(null);
   protected newComment = '';
+
+  protected editSubject = '';
+  protected editDescription = '';
+  protected editCategory = '';
+  protected editPriority: TicketPriority = 'media';
 
   protected readonly statuses: TicketStatus[] = ['abierto', 'en_proceso', 'resuelto', 'cerrado'];
   protected readonly priorities: TicketPriority[] = ['baja', 'media', 'alta'];
@@ -78,6 +91,7 @@ export class TicketDetail implements OnInit {
     private readonly route: ActivatedRoute,
     private readonly router: Router,
     private readonly ticketService: TicketService,
+    private readonly categoryService: CategoryService,
     private readonly attachmentService: AttachmentService,
     private readonly exportService: ExportService,
     protected readonly auth: AuthService,
@@ -132,6 +146,67 @@ export class TicketDetail implements OnInit {
     if (!current) return;
     if (!confirm(`¿Eliminar el ticket ${current.code}? Esta acción no se puede deshacer.`)) return;
     this.ticketService.remove(current._id).subscribe(() => this.router.navigate(['/tickets']));
+  }
+
+  // --- edición del contenido ----------------------------------------------
+
+  startEdit(): void {
+    const current = this.ticket();
+    if (!current || !this.canEdit) return;
+    this.editSubject = current.subject;
+    this.editDescription = current.description;
+    this.editCategory = current.category._id;
+    this.editPriority = current.priority;
+    this.editError.set(null);
+    this.editing.set(true);
+    if (this.categories().length === 0) {
+      this.categoryService
+        .list('ticket')
+        .subscribe((categories) => this.categories.set(categories));
+    }
+  }
+
+  cancelEdit(): void {
+    this.editing.set(false);
+    this.editError.set(null);
+  }
+
+  /** Mismos mínimos que valida la API, para no ir al servidor a que rebote. */
+  get canSaveEdit(): boolean {
+    return (
+      this.editSubject.trim().length >= 5 &&
+      this.editDescription.trim().length >= 10 &&
+      this.editCategory.length > 0
+    );
+  }
+
+  saveEdit(): void {
+    const current = this.ticket();
+    if (!current || !this.canSaveEdit) return;
+    this.savingEdit.set(true);
+    this.editError.set(null);
+    this.ticketService
+      .update(current._id, {
+        subject: this.editSubject.trim(),
+        description: this.editDescription.trim(),
+        category: this.editCategory,
+        priority: this.editPriority,
+      })
+      .subscribe({
+        next: () => {
+          // La respuesta del PATCH no viene poblada (categoría, cliente...): se relee.
+          this.load(current._id);
+          this.editing.set(false);
+          this.savingEdit.set(false);
+        },
+        error: (err: HttpErrorResponse) => {
+          this.editError.set(
+            (err.error as { message?: string | string[] })?.message?.toString() ??
+              'No se pudo guardar el ticket.',
+          );
+          this.savingEdit.set(false);
+        },
+      });
   }
 
   // --- edits --------------------------------------------------------------
@@ -272,5 +347,17 @@ export class TicketDetail implements OnInit {
 
   get canDelete(): boolean {
     return this.auth.currentUser()?.role === 'admin';
+  }
+
+  /**
+   * El equipo edita siempre; el cliente, solo su propio ticket y mientras siga abierto.
+   * Es la misma regla que aplica la API — acá solo evita ofrecer algo que va a rebotar.
+   */
+  get canEdit(): boolean {
+    const current = this.ticket();
+    const user = this.auth.currentUser();
+    if (!current || !user) return false;
+    if (this.canManage) return true;
+    return current.client._id === user.id && current.status === 'abierto';
   }
 }

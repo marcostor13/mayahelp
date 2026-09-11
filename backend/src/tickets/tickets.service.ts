@@ -33,6 +33,17 @@ import { TicketPriority, TicketStatus } from '../common/enums/ticket.enum';
 const TICKET_COUNTER_KEY = 'ticket';
 const TICKET_CODE_BASE = 8000;
 
+/**
+ * Lo único que un cliente puede tocar de su propio ticket. Queda fuera todo lo que
+ * define el flujo de trabajo del equipo: el estado y el agente asignado.
+ */
+const CLIENT_EDITABLE_FIELDS: ReadonlySet<keyof UpdateTicketDto> = new Set([
+  'subject',
+  'description',
+  'category',
+  'priority',
+]);
+
 /** First line of the description, trimmed to a sensible subject length. */
 function subjectFromDescription(description: string): string {
   const firstLine = description.split('\n')[0].trim();
@@ -273,9 +284,7 @@ export class TicketsService {
       throw new NotFoundException('Ticket no encontrado');
     }
     if (requester.role === Role.CLIENT) {
-      throw new ForbiddenException(
-        'No tienes permiso para modificar este ticket',
-      );
+      this.assertClientCanEdit(ticket, dto, requester);
     }
 
     const statusChanged = Boolean(dto.status) && dto.status !== ticket.status;
@@ -360,6 +369,35 @@ export class TicketsService {
     const result = await this.ticketModel.findByIdAndDelete(id).exec();
     if (!result) {
       throw new NotFoundException('Ticket no encontrado');
+    }
+  }
+
+  /**
+   * Un cliente edita su propio ticket mientras sigue abierto: una vez que el equipo
+   * lo tomó, el contenido queda congelado y los cambios van por comentarios.
+   */
+  private assertClientCanEdit(
+    ticket: TicketDocument,
+    dto: UpdateTicketDto,
+    requester: AuthenticatedUser,
+  ) {
+    if (ticket.client.toString() !== requester.userId) {
+      throw new ForbiddenException(
+        'No tienes permiso para modificar este ticket',
+      );
+    }
+    if (ticket.status !== TicketStatus.ABIERTO) {
+      throw new ForbiddenException(
+        'Solo puedes editar el ticket mientras está abierto',
+      );
+    }
+    const blocked = Object.keys(dto).filter(
+      (field) => !CLIENT_EDITABLE_FIELDS.has(field as keyof UpdateTicketDto),
+    );
+    if (blocked.length > 0) {
+      throw new ForbiddenException(
+        'No puedes cambiar el estado ni el agente asignado del ticket',
+      );
     }
   }
 

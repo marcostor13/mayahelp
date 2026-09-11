@@ -50,8 +50,11 @@ export class TicketsController {
     return this.ticketsService.updateManyStatus(dto.ids, dto.status, user);
   }
 
+  /**
+   * Sin `@Roles`: un cliente puede editar su propio ticket mientras está abierto.
+   * El alcance de cada rol lo resuelve el servicio.
+   */
   @Patch(':id')
-  @Roles(Role.ADMIN, Role.AGENT)
   update(
     @Param('id') id: string,
     @Body() dto: UpdateTicketDto,

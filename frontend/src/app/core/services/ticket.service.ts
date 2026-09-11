@@ -1,7 +1,12 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
-import { CreateTicketPayload, Ticket, TicketFilter } from '../models/ticket.model';
+import {
+  CreateTicketPayload,
+  Ticket,
+  TicketFilter,
+  UpdateTicketPayload,
+} from '../models/ticket.model';
 
 /** Serializes a ticket filter into query params, dropping empty values. */
 export function ticketFilterParams(filter: TicketFilter): Record<string, string> {
@@ -28,6 +33,11 @@ export class TicketService {
 
   create(payload: CreateTicketPayload) {
     return this.http.post<Ticket>(this.baseUrl, payload);
+  }
+
+  /** Edición del contenido del ticket. El alcance por rol lo decide la API. */
+  update(id: string, payload: UpdateTicketPayload) {
+    return this.http.patch<Ticket>(`${this.baseUrl}/${id}`, payload);
   }
 
   updateStatus(id: string, status: string) {

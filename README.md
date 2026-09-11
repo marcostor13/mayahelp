@@ -50,6 +50,19 @@ MONGODB_URI="mongodb+srv://..." JWT_ACCESS_SECRET="..." JWT_REFRESH_SECRET="..."
 - Backend: http://localhost:3000/api
 - Frontend: http://localhost:4200
 
+## Tickets: quién puede qué
+
+Un **cliente** ve solo sus propios tickets (la lista y el detalle se filtran por su
+usuario, y los comentarios internos del equipo no le llegan) y puede **editar el suyo
+mientras siga en estado `abierto`**: asunto, descripción, categoría y prioridad. Una vez
+que el equipo lo toma (`en_proceso` en adelante) el contenido queda congelado y los
+cambios van por comentarios.
+
+El estado y el agente asignado nunca son del cliente: son del flujo de trabajo del
+equipo. La API rechaza esos campos aunque lleguen junto a uno permitido.
+
+**Admin y agente** editan cualquier ticket en cualquier estado, como hasta ahora.
+
 ## Cuentas y contraseñas
 
 Las cuentas las crea un administrador desde **Usuarios**; no hay auto-registro con

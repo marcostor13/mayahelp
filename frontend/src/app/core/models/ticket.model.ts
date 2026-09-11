@@ -58,6 +58,14 @@ export interface CreateTicketPayload {
   priority?: TicketPriority;
 }
 
+/** Un cliente solo puede mandar estos campos, y solo mientras el ticket está abierto. */
+export interface UpdateTicketPayload {
+  subject?: string;
+  description?: string;
+  category?: string;
+  priority?: TicketPriority;
+}
+
 export interface TicketFilter {
   client?: string;
   status?: TicketStatus;

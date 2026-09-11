@@ -37,6 +37,11 @@
         <button type="button" (click)="exportMarkdown()" class="ticket-icon-btn" title="Exportar a Markdown" aria-label="Exportar a Markdown">
           <span class="material-symbols-outlined text-[22px]">download</span>
         </button>
+        @if (canEdit && !editing()) {
+          <button type="button" (click)="startEdit()" class="ticket-icon-btn" title="Editar ticket" aria-label="Editar ticket">
+            <span class="material-symbols-outlined text-[22px]">edit</span>
+          </button>
+        }
         @if (canDelete) {
           <button type="button" (click)="removeTicket()" class="ticket-icon-btn hover:border-error hover:bg-error-container hover:text-error" title="Eliminar ticket" aria-label="Eliminar ticket">
             <span class="material-symbols-outlined text-[22px]">delete</span>
@@ -47,14 +52,98 @@
 
     <div class="flex flex-col lg:flex-row gap-stack-md">
       <div class="flex-1 min-w-0 flex flex-col gap-stack-md">
-        <!-- Descripción -->
-        <section class="bg-surface-container-lowest rounded-2xl p-4 md:p-6 ambient-shadow-sm">
-          <h2 class="text-label-md text-on-surface-variant uppercase tracking-wider mb-3 flex items-center gap-2">
-            <span class="material-symbols-outlined text-[18px] text-primary">description</span>
-            Descripción
-          </h2>
-          <p class="text-body-md text-on-surface whitespace-pre-line break-words">{{ t.description }}</p>
-        </section>
+        <!-- Descripción / edición -->
+        @if (editing()) {
+          <section class="bg-surface-container-lowest border border-primary rounded-2xl p-4 md:p-6 ambient-shadow-sm flex flex-col gap-3">
+            <h2 class="text-label-md text-on-surface-variant uppercase tracking-wider flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px] text-primary">edit</span>
+              Editar ticket
+            </h2>
+
+            <div>
+              <label class="block text-label-xs text-on-surface-variant uppercase mb-1" for="edit-subject">Asunto</label>
+              <input
+                id="edit-subject"
+                name="edit-subject"
+                type="text"
+                [(ngModel)]="editSubject"
+                class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-md text-on-background focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+              />
+            </div>
+
+            <div>
+              <label class="block text-label-xs text-on-surface-variant uppercase mb-1" for="edit-description">Descripción</label>
+              <textarea
+                id="edit-description"
+                name="edit-description"
+                rows="6"
+                [(ngModel)]="editDescription"
+                class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-md text-on-background focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none"
+              ></textarea>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-label-xs text-on-surface-variant uppercase mb-1" for="edit-category">Categoría</label>
+                <select
+                  id="edit-category"
+                  name="edit-category"
+                  [(ngModel)]="editCategory"
+                  class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                >
+                  @for (category of categories(); track category._id) {
+                    <option [value]="category._id">{{ category.name }}</option>
+                  }
+                </select>
+              </div>
+              <div>
+                <label class="block text-label-xs text-on-surface-variant uppercase mb-1" for="edit-priority">Prioridad</label>
+                <select
+                  id="edit-priority"
+                  name="edit-priority"
+                  [(ngModel)]="editPriority"
+                  class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+                >
+                  @for (priority of priorities; track priority) {
+                    <option [value]="priority">{{ priorityLabels[priority] }}</option>
+                  }
+                </select>
+              </div>
+            </div>
+
+            @if (editError()) {
+              <p class="text-body-sm text-error">{{ editError() }}</p>
+            }
+
+            <div class="flex items-center gap-2">
+              <button
+                type="button"
+                (click)="saveEdit()"
+                [disabled]="savingEdit() || !canSaveEdit"
+                class="inline-flex items-center gap-2 bg-primary-container text-on-primary text-label-md py-2.5 px-5 rounded-xl hover:bg-primary transition-colors disabled:opacity-60"
+              >
+                <span class="material-symbols-outlined text-[18px]">{{ savingEdit() ? 'progress_activity' : 'check' }}</span>
+                {{ savingEdit() ? 'Guardando...' : 'Guardar cambios' }}
+              </button>
+              <button
+                type="button"
+                (click)="cancelEdit()"
+                [disabled]="savingEdit()"
+                class="text-label-md text-on-surface-variant py-2.5 px-4 rounded-xl hover:bg-surface-container-high transition-colors disabled:opacity-60"
+              >
+                Cancelar
+              </button>
+            </div>
+          </section>
+        } @else {
+          <section class="bg-surface-container-lowest rounded-2xl p-4 md:p-6 ambient-shadow-sm">
+            <h2 class="text-label-md text-on-surface-variant uppercase tracking-wider mb-3 flex items-center gap-2">
+              <span class="material-symbols-outlined text-[18px] text-primary">description</span>
+              Descripción
+            </h2>
+            <p class="text-body-md text-on-surface whitespace-pre-line break-words">{{ t.description }}</p>
+          </section>
+        }
 
         <!-- Adjuntos en miniaturas -->
         <section class="bg-surface-container-lowest rounded-2xl p-4 md:p-6 ambient-shadow-sm">
