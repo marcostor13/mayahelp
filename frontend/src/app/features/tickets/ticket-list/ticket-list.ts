@@ -41,6 +41,18 @@ interface SortableColumn {
   label: string;
 }
 
+/** Traduce el fallo a algo accionable: el problema casi nunca es "no hay tickets". */
+function describeLoadError(err: HttpErrorResponse): string {
+  const detail = (err.error as { message?: string | string[] })?.message?.toString();
+  if (err.status === 0) {
+    return 'No pudimos contactar al servidor. Revisá tu conexión o si la API está caída.';
+  }
+  if (err.status === 401 || err.status === 403) {
+    return detail ?? 'Tu sesión no tiene permiso para ver estos tickets.';
+  }
+  return detail ?? `No pudimos cargar los tickets (error ${err.status}).`;
+}
+
 const STATUS_META: StatusMeta[] = [
   {
     value: 'abierto',
@@ -111,6 +123,7 @@ export class TicketList implements OnInit {
   protected readonly categories = signal<Category[]>([]);
   protected readonly projects = signal<Project[]>([]);
   protected readonly loading = signal(true);
+  protected readonly loadError = signal<string | null>(null);
   protected readonly exporting = signal(false);
   protected readonly filtersOpen = signal(false);
   protected readonly selectedIds = signal<Set<string>>(new Set());
@@ -186,13 +199,20 @@ export class TicketList implements OnInit {
 
   load(): void {
     this.loading.set(true);
+    this.loadError.set(null);
     this.selectedIds.set(new Set());
     this.ticketService.list(this.currentFilter).subscribe({
       next: (tickets) => {
         this.tickets.set(tickets);
         this.loading.set(false);
       },
-      error: () => this.loading.set(false),
+      // Sin esto, un 400/403/500 se veía igual que "no tenés tickets": lista vacía y
+      // ninguna pista de que la consulta ni siquiera llegó a responder.
+      error: (err: HttpErrorResponse) => {
+        this.tickets.set([]);
+        this.loadError.set(describeLoadError(err));
+        this.loading.set(false);
+      },
     });
   }
 
