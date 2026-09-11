@@ -59,7 +59,8 @@ Ver `backend/.env.example`:
 | `MONGODB_URI` | Cadena de conexión a MongoDB Atlas |
 | `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` | Secretos para firmar tokens |
 | `JWT_ACCESS_EXPIRES_IN` / `JWT_REFRESH_EXPIRES_IN` | Expiración de tokens (ej. `15m`, `7d`) |
-| `CORS_ORIGIN` | Origen permitido (URL del frontend) |
+| `CORS_ORIGIN` | Orígenes permitidos (URL del frontend). Admite varios separados por coma: `https://app.mayahelp.com,https://www.mayahelp.com` |
+| `APP_URL` | URL del frontend usada en los enlaces de las notificaciones (opcional; default: el primer origen de `CORS_ORIGIN`) |
 | `PORT` | Puerto HTTP (default `3000`) |
 | `R2_BACKUPS_BUCKET` | Bucket de R2 para los dumps de base (opcional; default `R2_BUCKET`) |
 | `MONGODUMP_PATH` | Ruta a `mongodump` (opcional; la imagen ya trae `mongodb-tools`) |
@@ -74,7 +75,7 @@ Ambas apps viven en el mismo repo pero se despliegan como **dos recursos separad
    - Tipo de recurso: *Dockerfile*.
    - Base directory: `backend`.
    - Puerto expuesto: `3000`.
-   - Variables de entorno: `MONGODB_URI`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `JWT_ACCESS_EXPIRES_IN`, `JWT_REFRESH_EXPIRES_IN`, `CORS_ORIGIN` (URL pública del frontend), `NODE_ENV=production`.
+   - Variables de entorno: `MONGODB_URI`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `JWT_ACCESS_EXPIRES_IN`, `JWT_REFRESH_EXPIRES_IN`, `CORS_ORIGIN` (URL pública del frontend; varias separadas por coma), `NODE_ENV=production`.
    - Healthcheck: `GET /api/health`.
 
 2. **Frontend** (`Dockerfile` en `frontend/`)

@@ -72,7 +72,7 @@ export class NotificationsService {
     private readonly configService: ConfigService,
     private readonly appSettingsService: AppSettingsService,
   ) {
-    this.appUrl = this.configService.get<string>('corsOrigin')!;
+    this.appUrl = this.configService.get<string>('appUrl')!;
   }
 
   async notifyTicketCreated(
