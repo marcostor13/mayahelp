@@ -55,6 +55,25 @@ function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+/**
+ * Id de una referencia, venga poblada o no.
+ *
+ * `findById` popula `client`, así que ahí no hay un ObjectId sino un documento de
+ * usuario, y su `toString()` imprime el contenido ("{ name: 'Ana', _id: ... }") en vez
+ * del id. Comparar eso contra el id del token daba siempre distinto: el dueño recibía
+ * 403 sobre su propio ticket. Leer `_id` funciona en los dos casos — un ObjectId
+ * también lo expone, y devuelve su propio hex.
+ */
+function refId(reference: unknown): string {
+  if (!reference) return '';
+  if (typeof reference === 'string') return reference;
+  if (reference instanceof Types.ObjectId) return reference.toHexString();
+  const id = (reference as { _id?: unknown })._id;
+  // Ante una forma inesperada devuelve '', que no coincide con ningún id: el chequeo
+  // de acceso falla cerrado, negando en vez de dejar pasar.
+  return id instanceof Types.ObjectId ? id.toHexString() : '';
+}
+
 @Injectable()
 export class TicketsService {
   constructor(
@@ -306,7 +325,7 @@ export class TicketsService {
     await ticket.save();
 
     if (statusChanged) {
-      const client = await this.usersService.findById(ticket.client.toString());
+      const client = await this.usersService.findById(refId(ticket.client));
       await this.notificationsService.notifyStatusChanged(
         this.recipientFrom(client),
         await this.buildNotifyTicket(ticket),
@@ -334,7 +353,7 @@ export class TicketsService {
       return;
     }
     const [agent, client] = await Promise.all([
-      this.usersService.findById(ticket.assignedAgent!.toString()),
+      this.usersService.findById(refId(ticket.assignedAgent)),
       this.usersService.findById(requester.userId),
     ]);
     await this.notificationsService.notifyTicketEdited(
@@ -378,7 +397,7 @@ export class TicketsService {
     if (requester.role === Role.CLIENT) {
       if (ticket.assignedAgent) {
         const agent = await this.usersService.findById(
-          ticket.assignedAgent.toString(),
+          refId(ticket.assignedAgent),
         );
         await this.notificationsService.notifyNewComment(
           this.recipientFrom(agent),
@@ -389,7 +408,7 @@ export class TicketsService {
       }
       await this.autoReplyService.maybeReply(ticket);
     } else {
-      const client = await this.usersService.findById(ticket.client.toString());
+      const client = await this.usersService.findById(refId(ticket.client));
       await this.notificationsService.notifyNewComment(
         this.recipientFrom(client),
         await this.buildNotifyTicket(ticket),
@@ -416,7 +435,7 @@ export class TicketsService {
     dto: UpdateTicketDto,
     requester: AuthenticatedUser,
   ) {
-    if (ticket.client.toString() !== requester.userId) {
+    if (refId(ticket.client) !== requester.userId) {
       throw new ForbiddenException(
         'No tienes permiso para modificar este ticket',
       );
@@ -439,7 +458,7 @@ export class TicketsService {
   private assertAccess(ticket: TicketDocument, requester: AuthenticatedUser) {
     if (
       requester.role === Role.CLIENT &&
-      ticket.client.toString() !== requester.userId
+      refId(ticket.client) !== requester.userId
     ) {
       throw new ForbiddenException('No tienes permiso para ver este ticket');
     }

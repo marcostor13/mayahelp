@@ -52,6 +52,10 @@ MONGODB_URI="mongodb+srv://..." JWT_ACCESS_SECRET="..." JWT_REFRESH_SECRET="..."
 
 ## Tickets: quién puede qué
 
+> Ojo al comparar ids: `findById` popula `client`, así que ahí no hay un ObjectId sino
+> un documento, y su `toString()` imprime el contenido en vez del id. Para eso está
+> `refId()` en `tickets.service.ts` — usalo en cualquier comparación de referencias.
+
 Un **cliente** ve solo sus propios tickets (la lista y el detalle se filtran por su
 usuario, y los comentarios internos del equipo no le llegan) y puede **editar el suyo
 mientras siga en estado `abierto`**: asunto, descripción, categoría y prioridad. Una vez
