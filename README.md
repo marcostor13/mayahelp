@@ -157,7 +157,17 @@ Desde la misma pantalla, el botón 🔒 de cada fila **resetea la cuenta**:
 4. Marca la cuenta con `mustChangePassword`: al entrar, la plataforma la lleva a
    `/cambiar-contrasena` y el resto de la API le responde 403 hasta que elija una propia.
 
+La contraseña temporal se muestra una sola vez. El botón 🔑 de cada línea copia **solo
+la contraseña**, lista para pegar en el login; el botón de arriba copia la línea entera
+(nombre, correo y contraseña), que sirve para pasarla por chat pero pegada tal cual en el
+formulario da 401 y parece que la contraseña está mal.
+
 Cualquiera puede cambiar su contraseña cuando quiera desde **Ajustes → Contraseña**.
+
+> La pantalla de login solo culpa a las credenciales ante un **401**. Si la API no
+> responde, si devuelve 5xx, o si la sesión abre bien pero la pantalla siguiente no carga
+> — típico con un `index.html` cacheado después de un despliegue —, lo dice con esas
+> palabras en vez de mandarte a revisar la contraseña. En ese último caso recarga sola.
 
 Desactivar una cuenta (el switch de la pantalla de Usuarios) le cierra la puerta de
 verdad: no puede volver a entrar, no puede renovar su sesión, y la baja le borra el

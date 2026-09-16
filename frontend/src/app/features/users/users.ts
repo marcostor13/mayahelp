@@ -48,6 +48,8 @@ export class Users implements OnInit {
   protected readonly createdAccounts = signal<CreatedAccount[]>([]);
   /** El banner de credenciales cambia de texto según venga de un alta o de un reseteo. */
   protected readonly credentialsMode = signal<'created' | 'reset'>('created');
+  /** Cuál de las contraseñas se acaba de copiar, para confirmarlo en el botón. */
+  protected readonly copiedId = signal<string | null>(null);
   protected readonly resettingId = signal<string | null>(null);
   protected readonly selectedReporters = signal<Set<string>>(new Set());
 
@@ -428,6 +430,21 @@ export class Users implements OnInit {
     return this.createdAccounts().some((account) => account.emailSent === false);
   }
 
+  /**
+   * Copia solo la contraseña. El botón de arriba copia la línea entera con nombre y
+   * correo, que es cómoda para pasarla por chat pero inútil para pegar en el login:
+   * pegada tal cual, la API responde 401 y parece que la contraseña está mal.
+   */
+  async copyPassword(account: CreatedAccount): Promise<void> {
+    if (!account.temporaryPassword) return;
+    try {
+      await navigator.clipboard.writeText(account.temporaryPassword);
+      this.copiedId.set(account.id);
+    } catch {
+      // El portapapeles puede estar bloqueado; la contraseña se sigue viendo en pantalla.
+    }
+  }
+
   async copyCredentials(): Promise<void> {
     const text = this.createdAccounts()
       .map(
@@ -444,6 +461,7 @@ export class Users implements OnInit {
 
   dismissCredentials(): void {
     this.createdAccounts.set([]);
+    this.copiedId.set(null);
   }
 
   // --- helpers ------------------------------------------------------------

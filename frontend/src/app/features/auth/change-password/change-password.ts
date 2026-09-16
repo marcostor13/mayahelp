@@ -45,7 +45,6 @@ export class ChangePassword {
     this.loading.set(true);
     try {
       await this.auth.changePassword(this.currentPassword, this.newPassword);
-      await this.router.navigateByUrl('/dashboard');
     } catch (err) {
       const message = (err as HttpErrorResponse)?.error as
         | { message?: string | string[] }
@@ -53,6 +52,17 @@ export class ChangePassword {
       this.error.set(
         message?.message?.toString() ?? 'No se pudo cambiar la contraseña.',
       );
+      this.loading.set(false);
+      return;
+    }
+
+    // La contraseña ya cambió: si acá falla algo, decir que no cambió sería mentira
+    // y llevaría a intentarlo de nuevo con la contraseña vieja, que ya no sirve.
+    try {
+      await this.router.navigateByUrl('/dashboard');
+    } catch {
+      this.error.set('Se cambió la contraseña, pero hay que recargar. Un momento...');
+      location.assign('/dashboard');
     } finally {
       this.loading.set(false);
     }
