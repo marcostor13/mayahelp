@@ -1,6 +1,8 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Model, Types } from 'mongoose';
 import { TicketsService } from './tickets.service';
+import { ProjectAccessService } from '../common/project-access/project-access.service';
+import { UserDocument } from '../users/schemas/user.schema';
 import { TicketDocument } from './schemas/ticket.schema';
 import { AttachmentDocument } from '../attachments/schemas/attachment.schema';
 import { CountersService } from '../common/counters/counters.service';
@@ -19,6 +21,7 @@ function requester(role: Role, userId = CLIENT_ID): AuthenticatedUser {
     userId,
     email: 'quien@acme.com',
     role,
+    isSuperAdmin: false,
     mustChangePassword: false,
   };
 }
@@ -77,7 +80,17 @@ function serviceFor(
     {} as unknown as TicketAutoReplyService,
     deps.users ?? ({} as unknown as UsersService),
     deps.notifications ?? ({} as unknown as NotificationsService),
+    accessWith(),
   );
+}
+
+/** `ProjectAccessService` real (no un stub) sobre un usuario con estos proyectos. */
+function accessWith(projects: Types.ObjectId[] = []): ProjectAccessService {
+  return new ProjectAccessService({
+    findById: () => ({
+      lean: () => ({ exec: () => Promise.resolve({ projects }) }),
+    }),
+  } as unknown as Model<UserDocument>);
 }
 
 describe('TicketsService.update — permisos del cliente', () => {

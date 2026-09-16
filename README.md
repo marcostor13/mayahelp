@@ -99,8 +99,23 @@ consola del proyecto (enlaces públicos, repositorio, monitoreo) sigue siendo de
 > para que no pierdan acceso de golpe, y los clientes quedan sin asignaciones. Las cuentas
 > nuevas arrancan vacías.
 >
-> Los **tickets** siguen con sus propias reglas (un cliente ve los suyos, el equipo ve
-> todos); la asignación de proyectos todavía no los filtra.
+> Los **tickets** también se recortan; el detalle está justo abajo.
+
+### Los tickets también se recortan
+
+Un ticket **con proyecto** solo lo ve quien tenga ese proyecto asignado: no aparece en la
+lista, no se abre por URL, no se edita ni se comenta, y tampoco entra en las métricas del
+dashboard ni en el export. Filtrar la lista por un proyecto ajeno responde 403 en vez de
+devolver algo vacío.
+
+Un ticket **sin proyecto** es el buzón general y lo sigue viendo todo el equipo, como
+antes de que existieran las asignaciones. La mayoría de los tickets nace así (el proyecto
+se pone al reportar desde un enlace público o al etiquetarlo el equipo), de modo que el
+recorte no le saca de golpe el trabajo a nadie.
+
+Al **cliente** no se le aplica este recorte: ya está acotado a los tickets que abrió él,
+y filtrarlos además por proyecto le escondería tickets propios. Y el **súper usuario**,
+como siempre, los ve todos.
 
 ## Cuentas y contraseñas
 

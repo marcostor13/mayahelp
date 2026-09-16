@@ -74,7 +74,7 @@ export class TicketsController {
 
   @Delete(':id')
   @Roles(Role.ADMIN)
-  remove(@Param('id') id: string) {
-    return this.ticketsService.remove(id);
+  remove(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.ticketsService.remove(id, user);
   }
 }

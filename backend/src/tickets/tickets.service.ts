@@ -27,6 +27,7 @@ import {
 } from '../notifications/notifications.service';
 import { UserDocument } from '../users/schemas/user.schema';
 import { AuthenticatedUser } from '../auth/types/authenticated-user.interface';
+import { ProjectAccessService } from '../common/project-access/project-access.service';
 import { Role } from '../common/enums/role.enum';
 import { TicketPriority, TicketStatus } from '../common/enums/ticket.enum';
 import { describeTicketChanges } from './ticket-changes';
@@ -74,6 +75,18 @@ function refId(reference: unknown): string {
   return id instanceof Types.ObjectId ? id.toHexString() : '';
 }
 
+/**
+ * Proyecto del ticket para el chequeo de acceso. `null` es "sin proyecto" — el buzón
+ * general, que ve todo el equipo. Ojo: `findById` popula `project`, así que ahí hay un
+ * documento y no un ObjectId (ver `refId`). Una referencia presente que no se puede
+ * resolver devuelve un id imposible en vez de `null`, para que el chequeo falle cerrado
+ * en lugar de confundirse con un ticket sin proyecto.
+ */
+function ticketProjectId(ticket: TicketDocument): string | null {
+  if (!ticket.project) return null;
+  return refId(ticket.project) || 'referencia-de-proyecto-irresoluble';
+}
+
 @Injectable()
 export class TicketsService {
   constructor(
@@ -84,6 +97,7 @@ export class TicketsService {
     private readonly autoReplyService: TicketAutoReplyService,
     private readonly usersService: UsersService,
     private readonly notificationsService: NotificationsService,
+    private readonly access: ProjectAccessService,
   ) {}
 
   async create(dto: CreateTicketDto, requester: AuthenticatedUser) {
@@ -92,6 +106,7 @@ export class TicketsService {
     if (!clientId) {
       throw new ForbiddenException('Debes indicar el cliente del ticket');
     }
+    await this.access.assertTicketAccess(requester, dto.project);
     return this.persistTicket({
       subject: dto.subject?.trim() || subjectFromDescription(dto.description),
       description: dto.description,
@@ -189,7 +204,10 @@ export class TicketsService {
    * `attachmentsCount` so the table can show activity without a request per row.
    */
   async findAll(filter: FilterTicketDto, requester: AuthenticatedUser) {
-    const tickets = await this.queryTickets(filter, requester)
+    const { query, sort } = await this.ticketQuery(filter, requester);
+    const tickets = await this.ticketModel
+      .find(query)
+      .sort(sort)
       .populate('client', 'name email company phone')
       .populate('category', 'name icon')
       .populate('assignedAgent', 'name email')
@@ -214,7 +232,10 @@ export class TicketsService {
     filter: FilterTicketDto,
     requester: AuthenticatedUser,
   ) {
-    return this.queryTickets(filter, requester)
+    const { query, sort } = await this.ticketQuery(filter, requester);
+    return this.ticketModel
+      .find(query)
+      .sort(sort)
       .populate('client', 'name email company')
       .populate('category', 'name icon')
       .populate('assignedAgent', 'name email')
@@ -223,8 +244,23 @@ export class TicketsService {
       .exec();
   }
 
-  private queryTickets(filter: FilterTicketDto, requester: AuthenticatedUser) {
-    const query: QueryFilter<TicketDocument> = {};
+  /**
+   * Filtro y orden de la lista de tickets, que es donde se decide qué ve cada rol.
+   *
+   * Devuelve datos y no un `Query` a propósito: un `Query` de Mongoose es thenable, así
+   * que `await` sobre una función async que lo devolviera ejecutaría la consulta antes
+   * de que el caller pudiera encadenarle sus `populate`.
+   */
+  private async ticketQuery(
+    filter: FilterTicketDto,
+    requester: AuthenticatedUser,
+  ): Promise<{
+    query: QueryFilter<TicketDocument>;
+    sort: Record<string, 1 | -1>;
+  }> {
+    // Acota a los proyectos asignados; para el cliente y el súper usuario viene vacío.
+    const query: QueryFilter<TicketDocument> =
+      await this.access.ticketScopeFilter(requester);
 
     if (requester.role === Role.CLIENT) {
       query.client = requester.userId;
@@ -234,7 +270,10 @@ export class TicketsService {
     if (filter.status) query.status = filter.status;
     if (filter.priority) query.priority = filter.priority;
     if (filter.category) query.category = filter.category;
-    if (filter.project) query.project = filter.project;
+    if (filter.project) {
+      await this.access.assertTicketAccess(requester, filter.project);
+      query.project = filter.project;
+    }
     if (filter.unassigned === 'true') {
       query.assignedAgent = null;
     } else if (filter.assignedAgent) {
@@ -253,7 +292,7 @@ export class TicketsService {
     const sortField = filter.sort ?? TicketSortField.CREATED_AT;
     const direction = filter.order === SortOrder.ASC ? 1 : -1;
 
-    return this.ticketModel.find(query).sort({ [sortField]: direction });
+    return { query, sort: { [sortField]: direction } };
   }
 
   private async countAttachmentsByTicket(
@@ -288,7 +327,7 @@ export class TicketsService {
     if (!ticket) {
       throw new NotFoundException('Ticket no encontrado');
     }
-    this.assertAccess(ticket, requester);
+    await this.assertAccess(ticket, requester);
 
     if (requester.role === Role.CLIENT) {
       const plain = ticket.toObject();
@@ -306,6 +345,7 @@ export class TicketsService {
     if (requester.role === Role.CLIENT) {
       this.assertClientCanEdit(ticket, dto, requester);
     }
+    await this.assertAccess(ticket, requester);
 
     const statusChanged = Boolean(dto.status) && dto.status !== ticket.status;
     // Foto previa solo cuando hay a quién avisarle: es una consulta extra.
@@ -382,7 +422,7 @@ export class TicketsService {
     if (!ticket) {
       throw new NotFoundException('Ticket no encontrado');
     }
-    this.assertAccess(ticket, requester);
+    await this.assertAccess(ticket, requester);
 
     const author = await this.usersService.findById(requester.userId);
     ticket.comments.push({
@@ -419,11 +459,13 @@ export class TicketsService {
     return ticket;
   }
 
-  async remove(id: string) {
-    const result = await this.ticketModel.findByIdAndDelete(id).exec();
-    if (!result) {
+  async remove(id: string, requester: AuthenticatedUser) {
+    const ticket = await this.ticketModel.findById(id).exec();
+    if (!ticket) {
       throw new NotFoundException('Ticket no encontrado');
     }
+    await this.assertAccess(ticket, requester);
+    await this.ticketModel.findByIdAndDelete(id).exec();
   }
 
   /**
@@ -455,12 +497,16 @@ export class TicketsService {
     }
   }
 
-  private assertAccess(ticket: TicketDocument, requester: AuthenticatedUser) {
+  private async assertAccess(
+    ticket: TicketDocument,
+    requester: AuthenticatedUser,
+  ) {
     if (
       requester.role === Role.CLIENT &&
       refId(ticket.client) !== requester.userId
     ) {
       throw new ForbiddenException('No tienes permiso para ver este ticket');
     }
+    await this.access.assertTicketAccess(requester, ticketProjectId(ticket));
   }
 }

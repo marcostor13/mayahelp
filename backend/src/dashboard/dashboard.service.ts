@@ -27,7 +27,10 @@ export class DashboardService {
    */
   async getAccountSummary(requester: AuthenticatedUser) {
     const clientId = new Types.ObjectId(requester.userId);
-    const scope = requester.role === Role.CLIENT ? { client: clientId } : {};
+    const scope = {
+      ...(requester.role === Role.CLIENT ? { client: clientId } : {}),
+      ...(await this.access.ticketScopeFilter(requester)),
+    };
 
     const [byStatusRaw, byPriorityRaw, total, recentTickets, projectIds] =
       await Promise.all([
@@ -127,8 +130,10 @@ export class DashboardService {
   }
 
   async getStats(requester: AuthenticatedUser) {
-    const scope =
-      requester.role === Role.CLIENT ? { client: requester.userId } : {};
+    const scope = {
+      ...(requester.role === Role.CLIENT ? { client: requester.userId } : {}),
+      ...(await this.access.ticketScopeFilter(requester)),
+    };
 
     const [openTickets, recentTickets, allForCsat, allForResponse, weeklyRaw] =
       await Promise.all([

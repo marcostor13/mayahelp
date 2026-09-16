@@ -16,6 +16,7 @@ import { CategoriesModule } from '../categories/categories.module';
 import { ArticlesModule } from '../articles/articles.module';
 import { AiModule } from '../ai/ai.module';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { ProjectAccessModule } from '../common/project-access/project-access.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     ArticlesModule,
     AiModule,
     NotificationsModule,
+    ProjectAccessModule,
   ],
   controllers: [TicketsController, BulkImportController],
   providers: [TicketsService, BulkImportService, TicketAutoReplyService],

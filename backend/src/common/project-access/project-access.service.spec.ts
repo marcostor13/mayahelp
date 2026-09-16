@@ -101,3 +101,50 @@ describe('ProjectAccessService', () => {
     );
   });
 });
+
+describe('ProjectAccessService — recorte de tickets', () => {
+  it('deja pasar el buzón general junto a los proyectos asignados', async () => {
+    const service = serviceWith([PROJECT_A]);
+
+    expect(await service.ticketScopeFilter(requester(Role.AGENT))).toEqual({
+      $and: [{ $or: [{ project: null }, { project: { $in: [PROJECT_A] } }] }],
+    });
+  });
+
+  it('al súper usuario no le arma ningún recorte', async () => {
+    const service = serviceWith([]);
+
+    expect(
+      await service.ticketScopeFilter(requester(Role.ADMIN, true)),
+    ).toEqual({});
+  });
+
+  /** El cliente ya está acotado por dueño; sumarle el proyecto le escondería lo suyo. */
+  it('no recorta al cliente', async () => {
+    const service = serviceWith([]);
+
+    expect(await service.ticketScopeFilter(requester(Role.CLIENT))).toEqual({});
+  });
+
+  it('acepta un ticket sin proyecto y rechaza el de un proyecto ajeno', async () => {
+    const service = serviceWith([PROJECT_A]);
+
+    expect(
+      await service.canAccessTicketProject(requester(Role.AGENT), null),
+    ).toBe(true);
+    expect(
+      await service.canAccessTicketProject(requester(Role.AGENT), PROJECT_A),
+    ).toBe(true);
+    expect(
+      await service.canAccessTicketProject(requester(Role.AGENT), PROJECT_B),
+    ).toBe(false);
+  });
+
+  it('assertTicketAccess falla con 403 sobre un proyecto ajeno', async () => {
+    const service = serviceWith([PROJECT_A]);
+
+    await expect(
+      service.assertTicketAccess(requester(Role.AGENT), PROJECT_B),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+});

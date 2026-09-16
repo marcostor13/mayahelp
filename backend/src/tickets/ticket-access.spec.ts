@@ -1,6 +1,8 @@
 import { ForbiddenException } from '@nestjs/common';
 import { Model, Types } from 'mongoose';
 import { TicketsService } from './tickets.service';
+import { UserDocument } from '../users/schemas/user.schema';
+import { ProjectAccessService } from '../common/project-access/project-access.service';
 import { TicketDocument } from './schemas/ticket.schema';
 import { AttachmentDocument } from '../attachments/schemas/attachment.schema';
 import { CountersService } from '../common/counters/counters.service';
@@ -14,8 +16,18 @@ import { TicketStatus } from '../common/enums/ticket.enum';
 const CLIENT_ID = new Types.ObjectId();
 const OTHER_CLIENT_ID = new Types.ObjectId();
 
-function requester(role: Role, userId: string): AuthenticatedUser {
-  return { userId, email: 'quien@acme.com', role, mustChangePassword: false };
+function requester(
+  role: Role,
+  userId: string,
+  isSuperAdmin = false,
+): AuthenticatedUser {
+  return {
+    userId,
+    email: 'quien@acme.com',
+    role,
+    isSuperAdmin,
+    mustChangePassword: false,
+  };
 }
 
 /**
@@ -23,7 +35,7 @@ function requester(role: Role, userId: string): AuthenticatedUser {
  * un documento de usuario, no un ObjectId. Este doble reproduce esa forma: es justo la
  * diferencia que hacía que el chequeo comparara mal.
  */
-function populatedTicket(clientId: Types.ObjectId) {
+function populatedTicket(clientId: Types.ObjectId, project?: Types.ObjectId) {
   const client = {
     _id: clientId,
     name: 'Ana',
@@ -37,13 +49,18 @@ function populatedTicket(clientId: Types.ObjectId) {
     code: 'TCK-8001',
     subject: 'Asunto',
     client,
+    // `findById` también popula el proyecto: acá va el documento, no el id pelado.
+    project: project ? { _id: project, name: 'Proyecto' } : null,
     status: TicketStatus.ABIERTO,
     comments: [],
     toObject: () => ({ code: 'TCK-8001', comments: [] }),
   } as unknown as TicketDocument;
 }
 
-function serviceFor(ticket: TicketDocument): TicketsService {
+function serviceFor(
+  ticket: TicketDocument,
+  assignedProjects: Types.ObjectId[] = [],
+): TicketsService {
   const chain = {
     populate: () => chain,
     exec: () => Promise.resolve(ticket),
@@ -55,7 +72,17 @@ function serviceFor(ticket: TicketDocument): TicketsService {
     {} as unknown as TicketAutoReplyService,
     {} as unknown as UsersService,
     {} as unknown as NotificationsService,
+    accessWith(assignedProjects),
   );
+}
+
+/** `ProjectAccessService` real (no un stub) sobre un usuario con estos proyectos. */
+function accessWith(projects: Types.ObjectId[] = []): ProjectAccessService {
+  return new ProjectAccessService({
+    findById: () => ({
+      lean: () => ({ exec: () => Promise.resolve({ projects }) }),
+    }),
+  } as unknown as Model<UserDocument>);
 }
 
 describe('TicketsService.findById — acceso del cliente', () => {
@@ -111,6 +138,61 @@ describe('TicketsService.findById — acceso del cliente', () => {
         't1',
         requester(Role.CLIENT, CLIENT_ID.toString()),
       ),
+    ).resolves.toBeDefined();
+  });
+});
+
+/**
+ * El recorte por proyecto también vale de a un ticket: el equipo abre los de sus
+ * proyectos y los que no tienen ninguno, nada más.
+ */
+describe('TicketsService.findById — recorte por proyecto', () => {
+  const PROJECT_A = new Types.ObjectId();
+  const PROJECT_B = new Types.ObjectId();
+
+  it('le deja al equipo abrir un ticket de un proyecto asignado', async () => {
+    const service = serviceFor(populatedTicket(CLIENT_ID, PROJECT_A), [
+      PROJECT_A,
+    ]);
+
+    await expect(
+      service.findById('t1', requester(Role.AGENT, 'staff-1')),
+    ).resolves.toBeDefined();
+  });
+
+  it('le niega el ticket de un proyecto que no tiene asignado', async () => {
+    const service = serviceFor(populatedTicket(CLIENT_ID, PROJECT_B), [
+      PROJECT_A,
+    ]);
+
+    await expect(
+      service.findById('t1', requester(Role.AGENT, 'staff-1')),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  /** Un ticket sin proyecto es el buzón general: lo sigue viendo todo el equipo. */
+  it('deja pasar los tickets sin proyecto', async () => {
+    const service = serviceFor(populatedTicket(CLIENT_ID), []);
+
+    await expect(
+      service.findById('t1', requester(Role.AGENT, 'staff-1')),
+    ).resolves.toBeDefined();
+  });
+
+  it('al súper usuario no le niega ninguno', async () => {
+    const service = serviceFor(populatedTicket(CLIENT_ID, PROJECT_B), []);
+
+    await expect(
+      service.findById('t1', requester(Role.ADMIN, 'staff-1', true)),
+    ).resolves.toBeDefined();
+  });
+
+  /** El dueño entra a lo suyo sin importar a qué proyecto se cargó. */
+  it('no le recorta al cliente su propio ticket', async () => {
+    const service = serviceFor(populatedTicket(CLIENT_ID, PROJECT_B), []);
+
+    await expect(
+      service.findById('t1', requester(Role.CLIENT, CLIENT_ID.toString())),
     ).resolves.toBeDefined();
   });
 });
