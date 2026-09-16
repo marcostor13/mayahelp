@@ -14,6 +14,7 @@ import { ImplementationHooksController } from './implementation-hooks.controller
 import { ImplementationsScheduler } from './implementations.scheduler';
 import { GithubService } from './github.service';
 import { ExportModule } from '../export/export.module';
+import { ProjectAccessModule } from '../common/project-access/project-access.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { ExportModule } from '../export/export.module';
       { name: Ticket.name, schema: TicketSchema },
     ]),
     ExportModule,
+    ProjectAccessModule,
   ],
   controllers: [ImplementationsController, ImplementationHooksController],
   providers: [ImplementationsService, ImplementationsScheduler, GithubService],

@@ -8,6 +8,7 @@ import { Ticket } from './schemas/ticket.schema';
 import { Attachment } from '../attachments/schemas/attachment.schema';
 import { User } from '../users/schemas/user.schema';
 import { ProjectShareLink } from '../projects/schemas/project-share-link.schema';
+import { Project } from '../projects/schemas/project.schema';
 import { AppSettings } from '../app-settings/schemas/app-settings.schema';
 import { Counter } from '../common/counters/counter.schema';
 import { Category } from '../categories/schemas/category.schema';
@@ -19,6 +20,7 @@ const MODELS = [
   Attachment.name,
   User.name,
   ProjectShareLink.name,
+  Project.name,
   AppSettings.name,
   Counter.name,
   Category.name,

@@ -25,9 +25,13 @@ export class ProjectsService {
     return this.projectModel.create({ ...dto, createdBy });
   }
 
-  findAll() {
+  /**
+   * `filter` llega desde `ProjectAccessService`: `{}` para el súper usuario y un
+   * `_id: { $in: [...] }` con los proyectos asignados para todos los demás.
+   */
+  findAll(filter: Record<string, unknown> = {}) {
     return this.projectModel
-      .find()
+      .find(filter)
       .populate('client', 'name email company')
       .populate('defaultCategory', 'name icon')
       .sort({ createdAt: -1 })
@@ -109,6 +113,18 @@ export class ProjectsService {
       throw new NotFoundException('Enlace no encontrado');
     }
     return link;
+  }
+
+  /** El proyecto al que pertenece un enlace, para poder chequear el acceso por id de enlace. */
+  async findShareLinkProjectId(id: string): Promise<string> {
+    const link = await this.shareLinkModel
+      .findById(id, 'project')
+      .lean()
+      .exec();
+    if (!link) {
+      throw new NotFoundException('Enlace no encontrado');
+    }
+    return link.project.toString();
   }
 
   findShareLinksForProject(projectId: string) {

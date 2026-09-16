@@ -1,12 +1,22 @@
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
 import { UsersService } from './users.service';
 import { UserDocument } from './schemas/user.schema';
 import { TicketDocument } from '../tickets/schemas/ticket.schema';
 import { ProjectShareLinkDocument } from '../projects/schemas/project-share-link.schema';
+import { ProjectDocument } from '../projects/schemas/project.schema';
 import { NotificationsService } from '../notifications/notifications.service';
 import { Role } from '../common/enums/role.enum';
+
+/** Solo hace falta `superAdminEmail`; ninguno de estos casos toca la cuenta dueña. */
+function configService(superAdminEmail = 'duenio@mayahelp.com') {
+  return {
+    get: (key: string) =>
+      key === 'superAdminEmail' ? superAdminEmail : undefined,
+  } as unknown as ConfigService;
+}
 
 function userDoc(overrides: Partial<UserDocument> = {}): UserDocument {
   return {
@@ -52,7 +62,9 @@ function harness(params: {
     userModel,
     {} as unknown as Model<TicketDocument>,
     {} as unknown as Model<ProjectShareLinkDocument>,
+    {} as unknown as Model<ProjectDocument>,
     { notifyPasswordReset: notify } as unknown as NotificationsService,
+    configService(),
   );
   return { service, update, notify };
 }
@@ -176,7 +188,9 @@ describe('UsersService.update — baja de cuenta', () => {
       userModel,
       {} as unknown as Model<TicketDocument>,
       {} as unknown as Model<ProjectShareLinkDocument>,
+      {} as unknown as Model<ProjectDocument>,
       {} as unknown as NotificationsService,
+      configService(),
     );
     return { service, setRefreshToken };
   }

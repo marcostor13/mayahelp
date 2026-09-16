@@ -56,8 +56,9 @@ export const routes: Routes = [
           import('./features/tickets/ticket-detail/ticket-detail').then((m) => m.TicketDetail),
       },
       {
+        // Sin roleGuard a propósito: la lista llega ya acotada a los proyectos que
+        // la API le asignó a esa cuenta. El detalle sí es consola del equipo.
         path: 'projects',
-        canActivate: [roleGuard(['admin', 'agent'])],
         loadComponent: () =>
           import('./features/projects/project-list/project-list').then((m) => m.ProjectList),
       },

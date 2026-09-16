@@ -17,6 +17,9 @@ export interface ManagedUser {
   notifications?: UserNotificationPreferences;
   isActive: boolean;
   isAiAgent?: boolean;
+  /** Proyectos que esta cuenta puede ver. El súper usuario los ve todos igual. */
+  projects?: string[];
+  isSuperAdmin?: boolean;
   ticketsCount?: number;
   createdAt: string;
 }
@@ -29,6 +32,7 @@ export interface CreateUserPayload {
   role?: Role;
   company?: string;
   phone?: string;
+  projects?: string[];
   notifyByEmail?: boolean;
   notifyByWhatsApp?: boolean;
 }
@@ -40,6 +44,7 @@ export interface UpdateUserPayload {
   company?: string;
   phone?: string;
   isActive?: boolean;
+  projects?: string[];
   notifyByEmail?: boolean;
   notifyByWhatsApp?: boolean;
 }

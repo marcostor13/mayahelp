@@ -7,6 +7,7 @@ import { UsersService } from './users.service';
 import { User } from './schemas/user.schema';
 import { Ticket } from '../tickets/schemas/ticket.schema';
 import { ProjectShareLink } from '../projects/schemas/project-share-link.schema';
+import { Project } from '../projects/schemas/project.schema';
 import { AppSettings } from '../app-settings/schemas/app-settings.schema';
 import configuration from '../config/configuration';
 
@@ -14,6 +15,7 @@ const MODELS = [
   User.name,
   Ticket.name,
   ProjectShareLink.name,
+  Project.name,
   AppSettings.name,
 ];
 

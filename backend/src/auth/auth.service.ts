@@ -93,6 +93,7 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       role: user.role,
+      isSuperAdmin: user.isSuperAdmin,
       mustChangePassword: user.mustChangePassword,
     };
 
@@ -117,6 +118,7 @@ export class AuthService {
       name: user.name,
       email: user.email,
       role: user.role,
+      isSuperAdmin: user.isSuperAdmin,
       company: user.company,
       mustChangePassword: user.mustChangePassword,
     };

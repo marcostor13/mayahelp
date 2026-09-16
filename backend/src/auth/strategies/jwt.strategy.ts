@@ -9,6 +9,8 @@ interface JwtPayload {
   sub: string;
   email: string;
   role: Role;
+  /** Absent on tokens issued before the super admin flag existed. */
+  isSuperAdmin?: boolean;
   /** Absent on tokens issued before the reset flow existed. */
   mustChangePassword?: boolean;
 }
@@ -28,6 +30,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       userId: payload.sub,
       email: payload.email,
       role: payload.role,
+      isSuperAdmin: payload.isSuperAdmin ?? false,
       mustChangePassword: payload.mustChangePassword ?? false,
     };
   }

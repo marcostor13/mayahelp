@@ -389,8 +389,19 @@ export class ImplementationsService {
 
   // --- consulta y cancelación ------------------------------------------------
 
-  list(projectId?: string, limit = 50): Promise<ImplementationRunDocument[]> {
-    const filter = projectId ? { project: new Types.ObjectId(projectId) } : {};
+  /**
+   * `scope` acota a los proyectos que la persona tiene asignados (`undefined` = todos).
+   * Se combina con el filtro por proyecto de la pantalla, no lo reemplaza.
+   */
+  list(
+    projectId?: string,
+    limit = 50,
+    scope?: Record<string, unknown>,
+  ): Promise<ImplementationRunDocument[]> {
+    const filter = {
+      ...(scope ?? {}),
+      ...(projectId ? { project: new Types.ObjectId(projectId) } : {}),
+    };
     return this.runModel
       .find(filter)
       .populate('project', 'name')
@@ -406,6 +417,13 @@ export class ImplementationsService {
       .exec();
     if (!run) throw new NotFoundException('Corrida no encontrada');
     return run;
+  }
+
+  /** El proyecto de una corrida, para chequear el acceso cuando la ruta va por id de corrida. */
+  async findRunProjectId(id: string): Promise<string> {
+    const run = await this.runModel.findById(id, 'project').lean().exec();
+    if (!run) throw new NotFoundException('Corrida no encontrada');
+    return run.project.toString();
   }
 
   async cancel(id: string): Promise<ImplementationRunDocument> {

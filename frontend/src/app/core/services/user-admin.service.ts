@@ -33,6 +33,11 @@ export class UserAdminService {
     return this.http.patch<ManagedUser>(`${this.baseUrl}/${id}`, payload);
   }
 
+  /** Reemplaza la lista completa de proyectos que ve esa cuenta. */
+  setProjects(id: string, projects: string[]) {
+    return this.http.put<ManagedUser>(`${this.baseUrl}/${id}/projects`, { projects });
+  }
+
   remove(id: string) {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
   }

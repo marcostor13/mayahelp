@@ -1,7 +1,10 @@
 import {
+  ArrayUnique,
+  IsArray,
   IsBoolean,
   IsEmail,
   IsEnum,
+  IsMongoId,
   IsOptional,
   IsString,
   MinLength,
@@ -36,6 +39,13 @@ export class CreateUserDto {
   @IsString()
   @IsOptional()
   phone?: string;
+
+  /** Proyectos que la cuenta va a ver; vacío significa ninguno. */
+  @IsArray()
+  @ArrayUnique()
+  @IsMongoId({ each: true })
+  @IsOptional()
+  projects?: string[];
 
   @IsBoolean()
   @IsOptional()

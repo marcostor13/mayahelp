@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
@@ -15,6 +16,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { CreateUsersFromReportersDto } from './dto/create-users-from-reporters.dto';
+import { AssignProjectsDto } from './dto/assign-projects.dto';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/role.enum';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -78,6 +80,16 @@ export class UsersController {
   @Roles(Role.ADMIN)
   update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
     return this.usersService.update(id, dto);
+  }
+
+  /**
+   * Reemplaza los proyectos que ve esa cuenta. Es la única vía para asignarlos:
+   * a partir de acá la persona ve esos proyectos y ninguno más.
+   */
+  @Put(':id/projects')
+  @Roles(Role.ADMIN)
+  setProjects(@Param('id') id: string, @Body() dto: AssignProjectsDto) {
+    return this.usersService.setProjects(id, dto.projects);
   }
 
   /**

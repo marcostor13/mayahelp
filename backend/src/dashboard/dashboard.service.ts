@@ -3,6 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Ticket, TicketDocument } from '../tickets/schemas/ticket.schema';
 import { Project, ProjectDocument } from '../projects/schemas/project.schema';
+import { ProjectAccessService } from '../common/project-access/project-access.service';
 import { TicketStatus } from '../common/enums/ticket.enum';
 import { AuthenticatedUser } from '../auth/types/authenticated-user.interface';
 import { Role } from '../common/enums/role.enum';
@@ -17,6 +18,7 @@ export class DashboardService {
     // Project model registered in DashboardModule; ProjectsModule is not imported to
     // keep the dependency graph flat.
     @InjectModel(Project.name) private projectModel: Model<ProjectDocument>,
+    private readonly access: ProjectAccessService,
   ) {}
 
   /**
@@ -56,8 +58,11 @@ export class DashboardService {
       byPriorityRaw.map((row) => [row._id, row.total]),
     ) as Record<string, number>;
 
+    // Los proyectos de la pantalla de cuenta se acotan igual que el resto: aunque la
+    // persona tenga tickets de un proyecto, si no se lo asignaron no lo ve.
     const projects = await this.projectModel
       .find({
+        ...(await this.access.projectIdFilter(requester)),
         $or: [
           { client: clientId },
           { _id: { $in: projectIds.filter(Boolean) } },

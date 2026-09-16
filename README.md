@@ -72,6 +72,36 @@ notificaciones, el mismo que los cambios de estado.
 
 **Admin y agente** editan cualquier ticket en cualquier estado, como hasta ahora.
 
+## Proyectos: quién ve cuáles
+
+Los proyectos no se ven por rol, se ven por **asignación**. Desde **Usuarios**, el botón
+📁 de cada fila abre la lista de proyectos y lo que quede tildado es exactamente lo que
+esa persona ve; una cuenta sin asignaciones no ve ninguno. Vale para todos los roles: un
+administrador o un agente sin proyectos asignados tampoco ve nada.
+
+La única excepción es el **súper usuario** (`SUPER_ADMIN_EMAIL`, por defecto
+`marcostor13@gmail.com`): ve todos los proyectos existan o no asignaciones, y su cuenta no
+se puede desactivar, bajar de rol ni eliminar. Es una sola: al arrancar, la API le pone el
+flag a esa cuenta (y la deja como admin activo) y se lo saca a cualquier otra que lo tenga.
+Si todavía no existe, se promueve sola en cuanto se cree desde Usuarios.
+
+El filtro no es solo de pantalla: la API lo aplica en todo lo que cuelga de un proyecto
+—la lista y el detalle de proyectos, sus enlaces públicos, el monitoreo y las
+implementaciones—, y responde 403 si alguien pide un proyecto que no tiene asignado. La
+lista se lee de la base en cada request, así que un cambio de asignación tiene efecto al
+instante y no espera a que expire el access token.
+
+Los **clientes** ven `/projects` como una lista de solo lectura de sus proyectos; la
+consola del proyecto (enlaces públicos, repositorio, monitoreo) sigue siendo del equipo.
+
+> Al arrancar por primera vez con este cambio, las cuentas que ya existían reciben un
+> backfill: al equipo (admin y agente) se le asignan todos los proyectos de ese momento
+> para que no pierdan acceso de golpe, y los clientes quedan sin asignaciones. Las cuentas
+> nuevas arrancan vacías.
+>
+> Los **tickets** siguen con sus propias reglas (un cliente ve los suyos, el equipo ve
+> todos); la asignación de proyectos todavía no los filtra.
+
 ## Cuentas y contraseñas
 
 Las cuentas las crea un administrador desde **Usuarios**; no hay auto-registro con
@@ -106,6 +136,7 @@ Ver `backend/.env.example`:
 | `MONGODB_URI` | Cadena de conexión a MongoDB Atlas |
 | `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` | Secretos para firmar tokens |
 | `JWT_ACCESS_EXPIRES_IN` / `JWT_REFRESH_EXPIRES_IN` | Expiración de tokens (ej. `15m`, `7d`) |
+| `SUPER_ADMIN_EMAIL` | Cuenta dueña de la plataforma: ve todos los proyectos y no se puede desactivar ni borrar (default `marcostor13@gmail.com`) |
 | `CORS_ORIGIN` | Orígenes permitidos (URL del frontend). Admite varios separados por coma: `https://app.mayahelp.com,https://www.mayahelp.com` |
 | `APP_URL` | URL del frontend usada en los enlaces de las notificaciones (opcional; default: el primer origen de `CORS_ORIGIN`) |
 | `PORT` | Puerto HTTP (default `3000`) |

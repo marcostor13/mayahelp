@@ -4,6 +4,8 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { UserAdminService } from '../../core/services/user-admin.service';
+import { ProjectService } from '../../core/services/project.service';
+import { Project } from '../../core/models/project.model';
 import { AuthService } from '../../core/services/auth.service';
 import {
   CreatedAccount,
@@ -48,6 +50,13 @@ export class Users implements OnInit {
   protected readonly resettingId = signal<string | null>(null);
   protected readonly selectedReporters = signal<Set<string>>(new Set());
 
+  /** Proyectos que el admin puede repartir: los que él mismo ve. */
+  protected readonly allProjects = signal<Project[]>([]);
+  /** Cuenta cuyo panel de proyectos está abierto, con la selección todavía sin guardar. */
+  protected readonly projectsEditorFor = signal<ManagedUser | null>(null);
+  protected readonly projectDraft = signal<Set<string>>(new Set());
+  protected readonly savingProjects = signal(false);
+
   protected search = '';
   protected roleFilter: Role | '' = '';
 
@@ -61,12 +70,21 @@ export class Users implements OnInit {
 
   constructor(
     private readonly userAdminService: UserAdminService,
+    private readonly projectService: ProjectService,
     protected readonly auth: AuthService,
   ) {}
 
   ngOnInit(): void {
     this.load();
     this.loadPendingReporters();
+    this.loadProjects();
+  }
+
+  private loadProjects(): void {
+    this.projectService.list().subscribe({
+      next: (projects) => this.allProjects.set(projects),
+      error: () => this.allProjects.set([]),
+    });
   }
 
   load(): void {
@@ -212,6 +230,10 @@ export class Users implements OnInit {
   }
 
   toggleActive(user: ManagedUser): void {
+    if (user.isSuperAdmin) {
+      this.error.set('La cuenta del súper usuario no se puede desactivar.');
+      return;
+    }
     const next = !user.isActive;
     this.patchLocal(user._id, { isActive: next });
     this.userAdminService.update(user._id, { isActive: next }).subscribe({
@@ -261,6 +283,10 @@ export class Users implements OnInit {
   }
 
   remove(user: ManagedUser): void {
+    if (user.isSuperAdmin) {
+      this.error.set('La cuenta del súper usuario no se puede eliminar.');
+      return;
+    }
     if (!confirm(`¿Eliminar la cuenta de ${user.name}? Esta acción no se puede deshacer.`)) return;
     this.userAdminService.remove(user._id).subscribe({
       next: () => {
@@ -269,6 +295,73 @@ export class Users implements OnInit {
       },
       error: () => this.error.set('No se pudo eliminar la cuenta.'),
     });
+  }
+
+  // --- proyectos asignados ------------------------------------------------
+
+  openProjects(user: ManagedUser): void {
+    this.error.set(null);
+    this.projectsEditorFor.set(user);
+    this.projectDraft.set(new Set(user.projects ?? []));
+  }
+
+  closeProjects(): void {
+    this.projectsEditorFor.set(null);
+    this.projectDraft.set(new Set());
+  }
+
+  isProjectSelected(projectId: string): boolean {
+    return this.projectDraft().has(projectId);
+  }
+
+  toggleProject(projectId: string): void {
+    this.projectDraft.update((current) => {
+      const next = new Set(current);
+      if (next.has(projectId)) next.delete(projectId);
+      else next.add(projectId);
+      return next;
+    });
+  }
+
+  toggleAllProjects(): void {
+    const all = this.allProjects().map((project) => project._id);
+    this.projectDraft.update((current) =>
+      current.size === all.length ? new Set() : new Set(all),
+    );
+  }
+
+  saveProjects(): void {
+    const user = this.projectsEditorFor();
+    if (!user) return;
+    this.savingProjects.set(true);
+    this.userAdminService.setProjects(user._id, [...this.projectDraft()]).subscribe({
+      next: (updated) => {
+        this.patchLocal(user._id, { projects: updated.projects ?? [] });
+        this.savingProjects.set(false);
+        this.closeProjects();
+      },
+      error: (err: HttpErrorResponse) => {
+        this.error.set(
+          (err.error as { message?: string | string[] })?.message?.toString() ??
+            'No se pudieron guardar los proyectos.',
+        );
+        this.savingProjects.set(false);
+      },
+    });
+  }
+
+  /** Resumen para la fila: el súper usuario ve todos aunque no tenga asignaciones. */
+  projectsSummary(user: ManagedUser): string {
+    if (user.isSuperAdmin) return 'Todos los proyectos';
+    const assigned = user.projects ?? [];
+    if (assigned.length === 0) return 'Sin proyectos';
+    const byId = new Map(this.allProjects().map((project) => [project._id, project.name]));
+    const names = assigned.map((id) => byId.get(id)).filter((name): name is string => !!name);
+    // Puede faltar algún nombre si el admin que mira no tiene ese proyecto asignado.
+    if (names.length === 0) return `${assigned.length} proyecto(s)`;
+    return names.length <= 2
+      ? names.join(', ')
+      : `${names.slice(0, 2).join(', ')} +${names.length - 2}`;
   }
 
   /** Accounts created before per-user preferences existed default to both channels on. */

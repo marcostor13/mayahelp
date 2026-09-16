@@ -15,6 +15,7 @@ import { MonitoringController } from './monitoring.controller';
 import { MonitoringScheduler } from './monitoring.scheduler';
 import { MonitoringAlertsService } from './monitoring-alerts.service';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { ProjectAccessModule } from '../common/project-access/project-access.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
       { name: Project.name, schema: ProjectSchema },
     ]),
     NotificationsModule,
+    ProjectAccessModule,
   ],
   controllers: [MonitoringController],
   providers: [MonitoringService, MonitoringScheduler, MonitoringAlertsService],

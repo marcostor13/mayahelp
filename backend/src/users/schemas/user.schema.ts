@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument } from 'mongoose';
+import { HydratedDocument, Types } from 'mongoose';
 import { Role } from '../../common/enums/role.enum';
 
 export type UserDocument = HydratedDocument<User>;
@@ -41,6 +41,21 @@ export class User {
 
   @Prop({ type: UserNotificationPreferencesSchema, default: () => ({}) })
   notifications: UserNotificationPreferences;
+
+  /**
+   * Proyectos que esta persona puede ver. Fuera del súper usuario, todo lo que es
+   * por proyecto (la lista, el monitoreo y las implementaciones) se filtra por acá:
+   * una cuenta sin asignaciones no ve ningún proyecto.
+   */
+  @Prop({ type: [{ type: Types.ObjectId, ref: 'Project' }], default: [] })
+  projects: Types.ObjectId[];
+
+  /**
+   * Dueño de la plataforma: ve todos los proyectos sin asignación y no se puede
+   * desactivar, bajar de rol ni borrar. Lo fija `SUPER_ADMIN_EMAIL` al arrancar.
+   */
+  @Prop({ default: false })
+  isSuperAdmin: boolean;
 
   @Prop({ default: true })
   isActive: boolean;

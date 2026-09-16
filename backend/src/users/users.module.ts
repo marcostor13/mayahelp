@@ -8,24 +8,28 @@ import {
   ProjectShareLink,
   ProjectShareLinkSchema,
 } from '../projects/schemas/project-share-link.schema';
+import { Project, ProjectSchema } from '../projects/schemas/project.schema';
+import { SuperAdminBootstrap } from './super-admin.bootstrap';
 import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
     // Ticket and ProjectShareLink models (not their modules) are registered here: both
     // modules already depend on UsersModule, so importing them back would be circular.
-    // The users screen only needs to count tickets and read the links' reporters.
+    // The users screen only needs to count tickets, read the links' reporters and
+    // validate the projects assigned to each account.
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
       { name: Ticket.name, schema: TicketSchema },
       { name: ProjectShareLink.name, schema: ProjectShareLinkSchema },
+      { name: Project.name, schema: ProjectSchema },
     ]),
     // Para el correo con la contraseña temporal del reseteo. No es circular:
     // NotificationsModule no depende de UsersModule.
     NotificationsModule,
   ],
   controllers: [UsersController],
-  providers: [UsersService],
+  providers: [UsersService, SuperAdminBootstrap],
   exports: [UsersService],
 })
 export class UsersModule {}

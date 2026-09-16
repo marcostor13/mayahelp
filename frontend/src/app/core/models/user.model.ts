@@ -5,6 +5,8 @@ export interface User {
   name: string;
   email: string;
   role: Role;
+  /** Dueño de la plataforma: ve todos los proyectos sin necesidad de asignación. */
+  isSuperAdmin?: boolean;
   company?: string;
   phone?: string;
   isActive?: boolean;

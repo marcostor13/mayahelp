@@ -2,6 +2,7 @@ import { Component, OnInit, signal } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ProjectService } from '../../../core/services/project.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { Project, ProjectStatus } from '../../../core/models/project.model';
 
 const STATUS_LABELS: Record<ProjectStatus, string> = {
@@ -21,7 +22,19 @@ export class ProjectList implements OnInit {
   protected readonly loading = signal(true);
   protected readonly statusLabels = STATUS_LABELS;
 
-  constructor(private readonly projectService: ProjectService) {}
+  constructor(
+    private readonly projectService: ProjectService,
+    private readonly auth: AuthService,
+  ) {}
+
+  /**
+   * Un cliente solo mira: la consola del proyecto (enlaces públicos, repo, monitoreo)
+   * es del equipo. La lista ya viene acotada a sus proyectos desde la API.
+   */
+  protected get isStaff(): boolean {
+    const role = this.auth.currentUser()?.role;
+    return role === 'admin' || role === 'agent';
+  }
 
   ngOnInit(): void {
     this.projectService.list().subscribe((projects) => {

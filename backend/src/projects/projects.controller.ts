@@ -14,19 +14,30 @@ import { CreateShareLinkDto } from './dto/create-share-link.dto';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Role } from '../common/enums/role.enum';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { ProjectAccessService } from '../common/project-access/project-access.service';
 import type { AuthenticatedUser } from '../auth/types/authenticated-user.interface';
 
+/**
+ * Leer proyectos lo puede hacer cualquier cuenta con sesión, pero siempre acotado a
+ * los que tiene asignados (`ProjectAccessService`). Crear, editar y borrar sigue
+ * siendo del equipo.
+ */
 @Controller('projects')
-@Roles(Role.ADMIN, Role.AGENT)
 export class ProjectsController {
-  constructor(private readonly projectsService: ProjectsService) {}
+  constructor(
+    private readonly projectsService: ProjectsService,
+    private readonly access: ProjectAccessService,
+  ) {}
 
   @Get()
-  findAll() {
-    return this.projectsService.findAll();
+  async findAll(@CurrentUser() user: AuthenticatedUser) {
+    return this.projectsService.findAll(
+      await this.access.projectIdFilter(user),
+    );
   }
 
   @Post()
+  @Roles(Role.ADMIN, Role.AGENT)
   create(
     @Body() dto: CreateProjectDto,
     @CurrentUser() user: AuthenticatedUser,
@@ -35,32 +46,53 @@ export class ProjectsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  async findOne(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    await this.access.assertAccess(user, id);
     return this.projectsService.findById(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateProjectDto) {
+  @Roles(Role.ADMIN, Role.AGENT)
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateProjectDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    await this.access.assertAccess(user, id);
     return this.projectsService.update(id, dto);
   }
 
   @Delete(':id')
   @Roles(Role.ADMIN)
-  remove(@Param('id') id: string) {
+  async remove(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    await this.access.assertAccess(user, id);
     return this.projectsService.remove(id);
   }
 
   @Get(':id/share-links')
-  listShareLinks(@Param('id') id: string) {
+  @Roles(Role.ADMIN, Role.AGENT)
+  async listShareLinks(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    await this.access.assertAccess(user, id);
     return this.projectsService.findShareLinksForProject(id);
   }
 
   @Post(':id/share-links')
-  createShareLink(
+  @Roles(Role.ADMIN, Role.AGENT)
+  async createShareLink(
     @Param('id') id: string,
     @Body() dto: CreateShareLinkDto,
     @CurrentUser() user: AuthenticatedUser,
   ) {
+    await this.access.assertAccess(user, id);
     return this.projectsService.createShareLink(id, dto, user.userId);
   }
 }

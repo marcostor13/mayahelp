@@ -8,6 +8,7 @@ import {
 import { ProjectsService } from './projects.service';
 import { ProjectsController } from './projects.controller';
 import { ShareLinksController } from './share-links.controller';
+import { ProjectAccessModule } from '../common/project-access/project-access.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { ShareLinksController } from './share-links.controller';
       { name: Project.name, schema: ProjectSchema },
       { name: ProjectShareLink.name, schema: ProjectShareLinkSchema },
     ]),
+    ProjectAccessModule,
   ],
   controllers: [ProjectsController, ShareLinksController],
   providers: [ProjectsService],

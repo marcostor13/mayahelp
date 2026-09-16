@@ -22,13 +22,8 @@ const NAV_ITEMS: NavItem[] = [
     roles: ['client'],
     primary: true,
   },
-  {
-    label: 'Proyectos',
-    icon: 'folder_open',
-    path: '/projects',
-    roles: ['admin', 'agent'],
-    primary: true,
-  },
+  // Sin `roles`: cada cuenta ve los proyectos que tenga asignados (ninguno, si no tiene).
+  { label: 'Proyectos', icon: 'folder_open', path: '/projects', primary: true },
   { label: 'Centro de Ayuda', icon: 'help', path: '/help-center', primary: true },
   { label: 'Monitoreo', icon: 'monitor_heart', path: '/monitoring', roles: ['admin', 'agent'] },
   {

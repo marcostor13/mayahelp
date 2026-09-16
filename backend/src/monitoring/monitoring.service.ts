@@ -118,6 +118,16 @@ export class MonitoringService {
     await this.checkModel.deleteMany({ connection: id }).exec();
   }
 
+  /** El proyecto de una conexión, para chequear el acceso cuando la ruta va por id de conexión. */
+  async findConnectionProjectId(id: string): Promise<string> {
+    const connection = await this.connectionModel
+      .findById(id, 'project')
+      .lean()
+      .exec();
+    if (!connection) throw new NotFoundException('Conexión no encontrada');
+    return connection.project.toString();
+  }
+
   async findByProject(projectId: string) {
     const connections = await this.connectionModel
       .find({ project: projectId })
@@ -129,9 +139,10 @@ export class MonitoringService {
   // --- dashboard ------------------------------------------------------------
 
   /** One row per project with its aggregated health, for the monitoring index. */
-  async overview() {
+  /** `filter` acota a los proyectos asignados; `{}` los trae todos (súper usuario). */
+  async overview(filter: Record<string, unknown> = {}) {
     const connections = await this.connectionModel
-      .find({}, 'project name type status lastCheckedAt isActive')
+      .find(filter, 'project name type status lastCheckedAt isActive')
       .populate<{ project?: { _id: Types.ObjectId; name?: string } }>(
         'project',
         'name',

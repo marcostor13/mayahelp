@@ -6,6 +6,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, QueryFilter, Types } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
@@ -16,6 +17,7 @@ import {
   ProjectShareLink,
   ProjectShareLinkDocument,
 } from '../projects/schemas/project-share-link.schema';
+import { Project, ProjectDocument } from '../projects/schemas/project.schema';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -61,8 +63,23 @@ export class UsersService {
     // Registered here (instead of importing ProjectsModule) to keep the module graph acyclic.
     @InjectModel(ProjectShareLink.name)
     private shareLinkModel: Model<ProjectShareLinkDocument>,
+    @InjectModel(Project.name)
+    private projectModel: Model<ProjectDocument>,
     private readonly notificationsService: NotificationsService,
+    private readonly configService: ConfigService,
   ) {}
+
+  /** Correo de la cuenta dueña de la plataforma (`SUPER_ADMIN_EMAIL`). */
+  private get superAdminEmail(): string {
+    return (
+      this.configService.get<string>('superAdminEmail') ?? ''
+    ).toLowerCase();
+  }
+
+  private isSuperAdminEmail(email: string): boolean {
+    const configured = this.superAdminEmail;
+    return configured !== '' && email.toLowerCase().trim() === configured;
+  }
 
   async create(dto: CreateUserDto): Promise<UserDocument> {
     const { user } = await this.createWithPassword(dto);
@@ -86,11 +103,15 @@ export class UsersService {
       dto.password ?? temporaryPassword!,
       10,
     );
+    // La cuenta dueña nace admin y con acceso a todo, se cree por donde se cree.
+    const isSuperAdmin = this.isSuperAdminEmail(email);
     const user = await this.userModel.create({
       name: dto.name,
       email,
       passwordHash,
-      role: dto.role ?? Role.CLIENT,
+      role: isSuperAdmin ? Role.ADMIN : (dto.role ?? Role.CLIENT),
+      isSuperAdmin,
+      projects: await this.resolveProjectIds(dto.projects ?? []),
       company: dto.company,
       phone: dto.phone,
       notifications: {
@@ -331,7 +352,25 @@ export class UsersService {
 
   async update(id: string, dto: UpdateUserDto): Promise<UserDocument> {
     const user = await this.findById(id);
-    const { notifyByEmail, notifyByWhatsApp, email, ...rest } = dto;
+    const { notifyByEmail, notifyByWhatsApp, email, projects, ...rest } = dto;
+
+    // El dueño de la plataforma no se puede bajar de rol ni dar de baja desde acá.
+    if (user.isSuperAdmin) {
+      if (rest.role && rest.role !== Role.ADMIN) {
+        throw new BadRequestException(
+          'El súper usuario no puede dejar de ser administrador',
+        );
+      }
+      if (dto.isActive === false) {
+        throw new BadRequestException(
+          'La cuenta del súper usuario no se puede desactivar',
+        );
+      }
+    }
+
+    if (projects) {
+      user.projects = await this.resolveProjectIds(projects);
+    }
 
     if (email && email.toLowerCase() !== user.email) {
       const taken = await this.userModel.findOne({
@@ -342,6 +381,9 @@ export class UsersService {
         throw new ConflictException('Ya existe una cuenta con ese correo');
       }
       user.email = email.toLowerCase();
+      // El flag sigue al correo configurado, no al documento: si le cambian el correo
+      // al dueño deja de serlo, y el arranque promueve a quien tenga el correo bueno.
+      user.isSuperAdmin = this.isSuperAdminEmail(user.email);
     }
     Object.assign(user, rest);
 
@@ -371,10 +413,39 @@ export class UsersService {
   }
 
   async remove(id: string): Promise<void> {
-    const result = await this.userModel.findByIdAndDelete(id).exec();
-    if (!result) {
-      throw new NotFoundException('Usuario no encontrado');
+    const target = await this.findById(id);
+    if (target.isSuperAdmin) {
+      throw new BadRequestException(
+        'La cuenta del súper usuario no se puede eliminar',
+      );
     }
+    await this.userModel.findByIdAndDelete(id).exec();
+  }
+
+  /**
+   * Reemplaza los proyectos visibles de una cuenta. Al súper usuario no le hace falta
+   * (ve todos), pero se guarda igual para no perder la selección si algún día deja de serlo.
+   */
+  async setProjects(id: string, projectIds: string[]): Promise<UserDocument> {
+    const user = await this.findById(id);
+    user.projects = await this.resolveProjectIds(projectIds);
+    return user.save();
+  }
+
+  /** Valida que los ids existan: una asignación a un proyecto borrado sería invisible. */
+  private async resolveProjectIds(ids: string[]): Promise<Types.ObjectId[]> {
+    const unique = [...new Set(ids)];
+    if (unique.length === 0) return [];
+    const found = await this.projectModel
+      .find({ _id: { $in: unique } }, '_id')
+      .lean()
+      .exec();
+    if (found.length !== unique.length) {
+      throw new BadRequestException(
+        'Alguno de los proyectos seleccionados ya no existe',
+      );
+    }
+    return found.map((project) => project._id);
   }
 
   async setRefreshTokenHash(id: string, refreshTokenHash: string | null) {

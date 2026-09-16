@@ -23,6 +23,14 @@ export default () => {
       .trim()
       .replace(/\/+$/, ''),
     mongodbUri: process.env.MONGODB_URI ?? 'mongodb://localhost:27017/mayahelp',
+    /**
+     * Cuenta dueña de la plataforma: siempre admin, siempre activa y ve todos los
+     * proyectos, estén o no asignados. Es una sola: el arranque le quita el flag a
+     * cualquier otra cuenta que lo tenga.
+     */
+    superAdminEmail: (process.env.SUPER_ADMIN_EMAIL ?? 'marcostor13@gmail.com')
+      .trim()
+      .toLowerCase(),
     /** Key for the stored third-party credentials at rest; falls back to the JWT secret. */
     encryptionKey: process.env.ENCRYPTION_KEY,
     /**
