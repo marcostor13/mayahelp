@@ -35,25 +35,14 @@
 
   <!-- Formulario de alta / edición -->
   @if (formOpen()) {
-    <form
-      (ngSubmit)="submit()"
-      class="bg-surface-container-lowest border border-primary rounded-2xl p-4 md:p-6 ambient-shadow-sm flex flex-col gap-4"
+    <app-modal
+      [heading]="editingId() ? 'Editar conexión' : 'Registrar base de datos'"
+      description="Los secretos se guardan cifrados y no se vuelven a mostrar."
+      icon="database"
+      size="lg"
+      [busy]="saving()"
+      (closed)="closeForm()"
     >
-      <div class="flex items-center justify-between gap-2">
-        <h3 class="text-headline-lg-mobile text-on-surface">
-          {{ editingId() ? 'Editar conexión' : 'Registrar base de datos' }}
-        </h3>
-        <button
-          type="button"
-          (click)="closeForm()"
-          class="ticket-icon-btn"
-          title="Cerrar"
-          aria-label="Cerrar"
-        >
-          <span class="material-symbols-outlined text-[22px]">close</span>
-        </button>
-      </div>
-
       <!-- Tipo: fijo al editar, porque cambia todos los campos y los secretos guardados -->
       <div class="flex flex-col gap-2">
         <p class="text-label-xs text-on-surface-variant uppercase">¿Dónde está la base?</p>
@@ -439,26 +428,23 @@
         </p>
       }
 
-      <div class="flex flex-wrap items-center gap-2">
+      <div modalFooter>
+        <button type="button" (click)="closeForm()" [disabled]="saving()" class="btn-ghost">
+          Cancelar
+        </button>
         <button
-          type="submit"
+          type="button"
+          (click)="submit()"
           [disabled]="saving() || !canSubmit"
-          class="inline-flex items-center gap-2 bg-primary-container text-on-primary text-label-md py-2.5 px-5 rounded-xl hover:bg-primary transition-colors disabled:opacity-50"
+          class="btn-primary"
         >
           <span class="material-symbols-outlined text-[18px]">{{
             saving() ? 'progress_activity' : 'save'
           }}</span>
           {{ editingId() ? 'Guardar cambios' : 'Registrar base de datos' }}
         </button>
-        <button
-          type="button"
-          (click)="closeForm()"
-          class="inline-flex items-center gap-2 border border-outline-variant text-on-surface-variant text-label-md py-2.5 px-5 rounded-xl hover:bg-surface-container-low transition-colors"
-        >
-          Cancelar
-        </button>
       </div>
-    </form>
+    </app-modal>
   }
 
   <!-- Listado -->

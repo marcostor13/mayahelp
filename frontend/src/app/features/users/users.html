@@ -85,16 +85,13 @@
 
   <!-- Formulario de alta / edición -->
   @if (formOpen()) {
-    <div class="bg-surface-container-lowest border border-primary rounded-2xl p-4 md:p-6 ambient-shadow-sm flex flex-col gap-3">
-      <div class="flex items-center justify-between gap-2">
-        <h3 class="text-headline-lg-mobile text-on-surface">
-          {{ editingId() ? 'Editar cuenta' : 'Nueva cuenta' }}
-        </h3>
-        <button type="button" (click)="closeForm()" class="ticket-icon-btn" title="Cerrar" aria-label="Cerrar">
-          <span class="material-symbols-outlined text-[22px]">close</span>
-        </button>
-      </div>
-
+    <app-modal
+      [heading]="editingId() ? 'Editar cuenta' : 'Nueva cuenta'"
+      [description]="editingId() ? email : 'Se crea con una contraseña temporal'"
+      [icon]="editingId() ? 'manage_accounts' : 'person_add'"
+      [busy]="saving()"
+      (closed)="closeForm()"
+    >
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label class="block text-label-xs text-on-surface-variant uppercase mb-1" for="user-name">Nombre</label>
@@ -169,49 +166,38 @@
         </p>
       }
 
-      <button
-        type="button"
-        (click)="submit()"
-        [disabled]="saving() || !canSubmit"
-        class="self-start inline-flex items-center gap-2 bg-primary-container text-on-primary text-label-md py-2.5 px-5 rounded-xl hover:bg-primary transition-colors disabled:opacity-50"
-      >
-        <span class="material-symbols-outlined text-[18px]">{{ saving() ? 'progress_activity' : 'save' }}</span>
-        {{ editingId() ? 'Guardar cambios' : 'Crear cuenta' }}
-      </button>
-    </div>
+      <div modalFooter>
+        <button type="button" (click)="closeForm()" [disabled]="saving()" class="btn-ghost">Cancelar</button>
+        <button type="button" (click)="submit()" [disabled]="saving() || !canSubmit" class="btn-primary">
+          <span class="material-symbols-outlined text-[18px]">{{ saving() ? 'progress_activity' : 'save' }}</span>
+          {{ editingId() ? 'Guardar cambios' : 'Crear cuenta' }}
+        </button>
+      </div>
+    </app-modal>
   }
 
   <!-- Proyectos que ve una cuenta -->
   @if (projectsEditorFor(); as target) {
-    <section class="bg-surface-container-lowest border border-primary-fixed rounded-2xl ambient-shadow-sm p-4 flex flex-col gap-3">
-      <div class="flex items-start justify-between gap-2">
-        <div class="min-w-0">
-          <h3 class="text-label-md text-on-surface flex items-center gap-2">
-            <span class="material-symbols-outlined text-[20px] text-primary">folder_managed</span>
-            Proyectos de {{ target.name }}
-          </h3>
-          <p class="text-body-sm text-on-surface-variant mt-0.5">
-            Solo va a ver los proyectos tildados acá. Sin ninguno, no ve ninguno.
-          </p>
-        </div>
-        <div class="flex items-center gap-1 shrink-0">
-          @if (allProjects().length > 0) {
-            <button type="button" (click)="toggleAllProjects()" class="ticket-row-action" title="Seleccionar todos" aria-label="Seleccionar todos los proyectos">
-              <span class="material-symbols-outlined text-[20px]">select_all</span>
-            </button>
-          }
-          <button type="button" (click)="closeProjects()" class="ticket-row-action" title="Cerrar" aria-label="Cerrar">
-            <span class="material-symbols-outlined text-[20px]">close</span>
-          </button>
-        </div>
-      </div>
+    <app-modal
+      [heading]="'Proyectos de ' + target.name"
+      description="Solo va a ver los proyectos tildados acá. Sin ninguno, no ve ninguno."
+      icon="folder_managed"
+      [busy]="savingProjects()"
+      (closed)="closeProjects()"
+    >
+      @if (allProjects().length > 1) {
+        <button type="button" (click)="toggleAllProjects()" class="link-action self-start">
+          <span class="material-symbols-outlined text-[18px]">select_all</span>
+          {{ projectDraft().size === allProjects().length ? 'Quitar todos' : 'Seleccionar todos' }}
+        </button>
+      }
 
       @if (allProjects().length === 0) {
         <p class="text-body-sm text-on-surface-variant">
           Todavía no hay proyectos para asignar.
         </p>
       } @else {
-        <ul class="flex flex-col gap-2 max-h-72 overflow-y-auto">
+        <ul class="flex flex-col gap-2">
           @for (project of allProjects(); track project._id) {
             <li class="flex items-center gap-3 bg-surface border border-outline-variant rounded-xl px-3 py-2">
               <label class="inline-flex cursor-pointer p-2 -m-2 shrink-0">
@@ -234,16 +220,14 @@
         </ul>
       }
 
-      <button
-        type="button"
-        (click)="saveProjects()"
-        [disabled]="savingProjects()"
-        class="self-start inline-flex items-center gap-2 bg-primary-container text-on-primary text-label-md py-2.5 px-5 rounded-xl hover:bg-primary transition-colors disabled:opacity-50"
-      >
-        <span class="material-symbols-outlined text-[18px]">{{ savingProjects() ? 'progress_activity' : 'save' }}</span>
-        Guardar {{ projectDraft().size }} proyecto(s)
-      </button>
-    </section>
+      <div modalFooter>
+        <button type="button" (click)="closeProjects()" [disabled]="savingProjects()" class="btn-ghost">Cancelar</button>
+        <button type="button" (click)="saveProjects()" [disabled]="savingProjects()" class="btn-primary">
+          <span class="material-symbols-outlined text-[18px]">{{ savingProjects() ? 'progress_activity' : 'save' }}</span>
+          Guardar {{ projectDraft().size }} proyecto(s)
+        </button>
+      </div>
+    </app-modal>
   }
 
   <!-- Personas de los enlaces sin cuenta -->

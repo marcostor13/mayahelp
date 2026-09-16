@@ -1,8 +1,13 @@
-<div class="mb-stack-lg">
-  <h2 class="text-headline-xl text-on-surface">Categorías</h2>
-  <p class="text-body-md text-on-surface-variant mt-1">
-    Administra las categorías de tickets y artículos, y configura la respuesta automática con IA por categoría.
-  </p>
+<div class="mb-stack-lg flex items-start justify-between gap-3">
+  <div class="min-w-0">
+    <h2 class="text-headline-xl text-on-surface">Categorías</h2>
+    <p class="text-body-md text-on-surface-variant mt-1">
+      Administra las categorías de tickets y artículos, y configura la respuesta automática con IA por categoría.
+    </p>
+  </div>
+  <button type="button" (click)="openCreate()" class="ticket-icon-btn ticket-icon-btn--primary" title="Nueva categoría" aria-label="Nueva categoría">
+    <span class="material-symbols-outlined icon-fill text-[22px]">add</span>
+  </button>
 </div>
 
 <div class="flex gap-2 mb-stack-lg">
@@ -30,8 +35,8 @@
   </button>
 </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-stack-lg">
-  <div class="lg:col-span-2 bg-surface rounded-2xl shadow-sm border border-surface-container-highest overflow-hidden h-fit">
+<div class="flex flex-col gap-stack-lg">
+  <div class="bg-surface rounded-2xl shadow-sm border border-surface-container-highest overflow-hidden">
     @if (loading()) {
       <p class="p-6 text-center text-body-sm text-on-surface-variant">Cargando categorías...</p>
     } @else {
@@ -80,13 +85,13 @@
     }
   </div>
 
-  <div class="bg-surface-container-lowest rounded-2xl p-6 ambient-shadow-sm h-fit flex flex-col gap-stack-md">
-    <h3 class="text-headline-lg-mobile text-on-background flex items-center gap-2">
-      <span class="material-symbols-outlined text-primary">{{ editingId() ? 'edit' : 'add_circle' }}</span>
-      {{ editingId() ? 'Editar categoría' : 'Nueva categoría' }}
-    </h3>
-
-    <form (ngSubmit)="submit()" class="flex flex-col gap-stack-md">
+  @if (formOpen()) {
+    <app-modal
+      [heading]="editingId() ? 'Editar categoría' : 'Nueva categoría'"
+      [icon]="editingId() ? 'edit' : 'add_circle'"
+      [busy]="submitting()"
+      (closed)="closeForm()"
+    >
       <div>
         <label class="block text-label-md text-on-background mb-stack-sm" for="name">Nombre</label>
         <input
@@ -159,24 +164,12 @@
         <p class="text-body-sm text-error">{{ error() }}</p>
       }
 
-      <div class="flex gap-2">
-        <button
-          type="submit"
-          [disabled]="submitting()"
-          class="bg-primary-container text-on-primary text-label-md py-3 px-6 rounded-lg hover:bg-primary transition-colors shadow-sm disabled:opacity-60"
-        >
+      <div modalFooter>
+        <button type="button" (click)="closeForm()" [disabled]="submitting()" class="btn-ghost">Cancelar</button>
+        <button type="button" (click)="submit()" [disabled]="submitting()" class="btn-primary">
           {{ submitting() ? 'Guardando...' : editingId() ? 'Guardar cambios' : 'Crear categoría' }}
         </button>
-        @if (editingId()) {
-          <button
-            type="button"
-            (click)="cancelEdit()"
-            class="text-on-surface-variant text-label-md py-3 px-4 rounded-lg hover:bg-surface-container-low transition-colors"
-          >
-            Cancelar
-          </button>
-        }
       </div>
-    </form>
-  </div>
+    </app-modal>
+  }
 </div>

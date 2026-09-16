@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { BackupService } from '../../core/services/backup.service';
+import { Modal, ModalFooter } from '../../shared/modal/modal';
 import {
   BackupFrequency,
   BackupRunStatus,
@@ -66,7 +67,7 @@ const WEEKDAYS = [
 
 @Component({
   selector: 'app-backups',
-  imports: [FormsModule, DatePipe],
+  imports: [FormsModule, DatePipe, Modal, ModalFooter],
   templateUrl: './backups.html',
 })
 export class Backups implements OnInit {

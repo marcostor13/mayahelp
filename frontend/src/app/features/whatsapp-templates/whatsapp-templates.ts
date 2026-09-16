@@ -1,6 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
+import { Modal, ModalFooter } from '../../shared/modal/modal';
 import { WhatsAppTemplateService } from '../../core/services/whatsapp-template.service';
 import {
   CreateWhatsAppTemplatePayload,
@@ -16,7 +17,7 @@ const CATEGORY_OPTIONS: { value: WhatsAppTemplateCategory; label: string }[] = [
 
 @Component({
   selector: 'app-whatsapp-templates',
-  imports: [FormsModule],
+  imports: [FormsModule, Modal, ModalFooter],
   templateUrl: './whatsapp-templates.html',
 })
 export class WhatsAppTemplates implements OnInit {
@@ -25,6 +26,7 @@ export class WhatsAppTemplates implements OnInit {
   protected readonly loading = signal(true);
   protected readonly loadError = signal<string | null>(null);
   protected readonly submitting = signal(false);
+  protected readonly formOpen = signal(false);
   protected readonly submitError = signal<string | null>(null);
   protected readonly submitSuccess = signal<string | null>(null);
   protected readonly bodyExamples = signal<string[]>([]);
@@ -112,7 +114,9 @@ export class WhatsAppTemplates implements OnInit {
         this.submitSuccess.set(
           `Template "${template.name}" enviado a Meta para revisión (estado: ${template.status}).`,
         );
-        this.resetForm();
+        // El aviso de "enviado a Meta" se queda en la pantalla, no en el diálogo:
+        // el diálogo se cierra y si no, el mensaje se iría con él.
+        this.closeForm();
         this.submitting.set(false);
       },
       error: (err: HttpErrorResponse) => {
@@ -120,6 +124,18 @@ export class WhatsAppTemplates implements OnInit {
         this.submitting.set(false);
       },
     });
+  }
+
+  openCreate(): void {
+    this.resetForm();
+    this.submitError.set(null);
+    this.submitSuccess.set(null);
+    this.formOpen.set(true);
+  }
+
+  closeForm(): void {
+    this.formOpen.set(false);
+    this.resetForm();
   }
 
   private resetForm(): void {

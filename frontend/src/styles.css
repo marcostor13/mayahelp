@@ -1,8 +1,8 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @theme {
   /* MayaHelp design tokens (see kitui/mayahelp_system/DESIGN.md) */
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
 
   --color-surface: #f8f9ff;
   --color-surface-dim: #d0dbed;
@@ -135,18 +135,18 @@
 
 .material-symbols-outlined {
   font-variation-settings:
-    "FILL" 0,
-    "wght" 400,
-    "GRAD" 0,
-    "opsz" 24;
+    'FILL' 0,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24;
 }
 
 .icon-fill {
   font-variation-settings:
-    "FILL" 1,
-    "wght" 400,
-    "GRAD" 0,
-    "opsz" 24;
+    'FILL' 1,
+    'wght' 400,
+    'GRAD' 0,
+    'opsz' 24;
 }
 
 /* Icon-only actions used across the ticket screens (toolbar, rows, cards). */
@@ -261,4 +261,51 @@
 .custom-scrollbar::-webkit-scrollbar-thumb {
   background-color: var(--color-tertiary-fixed);
   border-radius: 9999px;
+}
+
+/*
+ * Diálogo (`app-modal`): hoja que sube desde abajo en móvil y ventana centrada en
+ * escritorio. z-70 es la capa de diálogos, encima del menú "Más" (60) y de las barras
+ * fijas (40/50), y debajo del visor de imágenes (80).
+ */
+.modal-backdrop {
+  @apply fixed inset-0 z-[70] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4;
+}
+
+/* `dvh` y no `vh`: en móvil la barra del navegador se come el alto y corta el pie. */
+.modal-card {
+  @apply flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-3xl bg-surface-container-lowest sm:rounded-3xl;
+  /* Sombra "Level 2 (High)" de DESIGN.md: la que el sistema reserva para diálogos. */
+  box-shadow:
+    0px 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Fijos arriba y abajo: en un formulario largo, guardar se alcanza sin scrollear al final. */
+.modal-header {
+  @apply flex shrink-0 items-start justify-between gap-2 border-b border-surface-container-highest px-4 py-3 sm:px-6 sm:py-4;
+}
+
+.modal-body {
+  @apply flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-4 sm:px-6;
+}
+
+.modal-footer {
+  @apply flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-surface-container-highest px-4 py-3 sm:px-6;
+  /* El teclado y la barra inferior del móvil no deben tapar los botones. */
+  @apply pb-[max(0.75rem,env(safe-area-inset-bottom))];
+}
+
+/* Botón principal de un diálogo o de un formulario. */
+.btn-primary {
+  @apply inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl bg-primary-container px-5 text-label-md text-on-primary transition-colors;
+  @apply hover:bg-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+  @apply disabled:cursor-not-allowed disabled:opacity-50;
+}
+
+/* Acción secundaria al lado de la principal (cancelar, volver). */
+.btn-ghost {
+  @apply inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-xl px-4 text-label-md text-on-surface-variant transition-colors;
+  @apply hover:bg-surface-container-high focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary;
+  @apply disabled:cursor-not-allowed disabled:opacity-50;
 }

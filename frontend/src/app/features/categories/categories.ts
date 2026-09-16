@@ -1,6 +1,7 @@
 import { Component, OnInit, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
+import { Modal, ModalFooter } from '../../shared/modal/modal';
 import { CategoryService } from '../../core/services/category.service';
 import {
   AutoReplyMode,
@@ -17,7 +18,7 @@ const AUTO_REPLY_LABELS: Record<AutoReplyMode, string> = {
 
 @Component({
   selector: 'app-categories',
-  imports: [FormsModule],
+  imports: [FormsModule, Modal, ModalFooter],
   templateUrl: './categories.html',
 })
 export class Categories implements OnInit {
@@ -27,6 +28,7 @@ export class Categories implements OnInit {
   protected readonly submitting = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly editingId = signal<string | null>(null);
+  protected readonly formOpen = signal(false);
   protected activeType: CategoryType = 'ticket';
 
   protected name = '';
@@ -60,6 +62,13 @@ export class Categories implements OnInit {
     });
   }
 
+  openCreate(): void {
+    this.editingId.set(null);
+    this.resetForm();
+    this.error.set(null);
+    this.formOpen.set(true);
+  }
+
   startEdit(category: Category): void {
     this.editingId.set(category._id);
     this.name = category.name;
@@ -68,9 +77,11 @@ export class Categories implements OnInit {
     this.description = category.description ?? '';
     this.autoReplyMode = category.autoReplyMode;
     this.error.set(null);
+    this.formOpen.set(true);
   }
 
-  cancelEdit(): void {
+  closeForm(): void {
+    this.formOpen.set(false);
     this.editingId.set(null);
     this.resetForm();
   }
@@ -104,8 +115,7 @@ export class Categories implements OnInit {
           }
           return [...categories, category];
         });
-        this.editingId.set(null);
-        this.resetForm();
+        this.closeForm();
         this.submitting.set(false);
       },
       error: (err: HttpErrorResponse) => {
@@ -126,7 +136,7 @@ export class Categories implements OnInit {
     this.categoryService.remove(category._id).subscribe(() => {
       this.categories.update((categories) => categories.filter((c) => c._id !== category._id));
       if (this.editingId() === category._id) {
-        this.cancelEdit();
+        this.closeForm();
       }
     });
   }

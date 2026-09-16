@@ -142,6 +142,38 @@ refresh token para cortar las que ya tenía abiertas.
 > tarda en cerrarse lo que dure ese token (`JWT_ACCESS_EXPIRES_IN`, 15 min por defecto);
 > como el refresh token se borra, esa sesión no se puede renovar y muere ahí.
 
+## Formularios: un solo patrón
+
+Crear y editar se hace siempre en un **diálogo** (`app-modal`, en `shared/modal/`): hoja
+que sube desde abajo en móvil y ventana centrada en escritorio. Antes cada pantalla lo
+resolvía a su manera — unas abrían una sección que empujaba la lista hacia abajo, otras
+tenían un panel fijo al costado — y en ambos casos, en una lista larga, tocabas "editar"
+y no veías que se hubiera abierto nada.
+
+El componente se encarga de lo que los overlays sueltos no hacían: se cierra con Escape
+y con clic afuera, bloquea el scroll del fondo, arranca con el foco en el primer campo,
+atrapa el tabulador adentro y devuelve el foco al botón que lo abrió. Con `[busy]` no se
+puede cerrar mientras hay un guardado en curso. El encabezado y el pie quedan fijos, así
+que el botón de guardar se alcanza siempre, aun en los formularios largos que scrollean.
+
+```html
+<app-modal heading="Editar cuenta" icon="manage_accounts" [busy]="saving()" (closed)="closeForm()">
+  ...campos...
+  <div modalFooter>
+    <button class="btn-ghost" (click)="closeForm()">Cancelar</button>
+    <button class="btn-primary" (click)="submit()">Guardar</button>
+  </div>
+</app-modal>
+```
+
+`size` acepta `sm`, `md` (default) y `lg`; los formularios de conexión de **Backups** y
+**Monitoreo**, que son largos y con campos condicionales, usan `lg`.
+
+La **página completa** queda para lo que no es un formulario suelto sino una consola con
+sub-recursos: el detalle de proyecto (enlaces públicos, repositorio, monitoreo) y el de
+ticket (comentarios, adjuntos). Ahí el diálogo estorbaría — hay que poder enlazar la URL
+y navegar dentro.
+
 ## Variables de entorno (backend)
 
 Ver `backend/.env.example`:

@@ -672,159 +672,143 @@
 
 <!-- Diálogo: implementar con Claude Code -->
 @if (implementOpen()) {
-  <div
-    class="fixed inset-0 z-[70] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4"
+  <app-modal
+    heading="Implementar con Claude Code"
+    [description]="selectedIds().size + ' ticket(s) seleccionado(s)'"
+    icon="rocket_launch"
+    [busy]="implementing()"
+    (closed)="closeImplement()"
   >
-    <div
-      class="bg-surface-container-lowest w-full sm:max-w-lg max-h-[90vh] overflow-y-auto rounded-t-3xl sm:rounded-3xl p-4 sm:p-6 flex flex-col gap-4"
-    >
-      <div class="flex items-start justify-between gap-2">
-        <div class="min-w-0">
-          <h3 class="text-headline-lg-mobile text-on-surface flex items-center gap-2">
-            <span class="material-symbols-outlined text-primary">rocket_launch</span>
-            Implementar con Claude Code
-          </h3>
-          <p class="text-body-sm text-on-surface-variant mt-0.5">
-            {{ selectedIds().size }} ticket(s) seleccionado(s)
-          </p>
+    @if (implementDone()) {
+      <div class="flex flex-col items-center gap-3 py-6 text-center">
+        <span class="material-symbols-outlined text-emerald-600 text-5xl">check_circle</span>
+        <p class="text-body-md text-on-surface">Se disparó el workflow en GitHub.</p>
+        <p class="text-body-sm text-on-surface-variant max-w-sm">
+          Claude Code va a trabajar sobre el repositorio y abrir un pull request. Podés seguir el
+          avance desde la pantalla de implementaciones.
+        </p>
+        <div class="flex flex-wrap items-center justify-center gap-3">
+          <a routerLink="/implementations" (click)="closeImplement()" class="link-action">
+            <span class="material-symbols-outlined text-[18px]">list_alt</span>
+            Ver implementaciones
+          </a>
+          <button type="button" (click)="closeImplement()" class="link-action">Cerrar</button>
         </div>
+      </div>
+    } @else {
+      <ul class="flex flex-col gap-1 max-h-32 overflow-y-auto">
+        @for (ticket of selectedTickets; track ticket._id) {
+          <li class="text-body-sm text-on-surface-variant truncate">
+            <span class="text-on-surface font-medium">{{ ticket.code }}</span> —
+            {{ ticket.subject }}
+          </li>
+        }
+      </ul>
+
+      <div>
+        <label
+          class="block text-label-xs text-on-surface-variant uppercase mb-1"
+          for="impl-project"
+        >
+          Proyecto (define el repositorio)
+        </label>
+        <select
+          id="impl-project"
+          [(ngModel)]="implementProject"
+          (ngModelChange)="loadImplementRepo()"
+          class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+        >
+          <option value="">Elegí un proyecto...</option>
+          @for (project of projects(); track project._id) {
+            <option [value]="project._id">{{ project.name }}</option>
+          }
+        </select>
+      </div>
+
+      @if (implementRepoLoading()) {
+        <p class="text-body-sm text-on-surface-variant flex items-center gap-2">
+          <span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+          Buscando el repositorio del proyecto...
+        </p>
+      } @else if (implementProject && !implementRepo()) {
+        <div class="bg-error-container rounded-xl px-3 py-2 text-body-sm text-on-error-container">
+          Este proyecto no tiene un repositorio conectado.
+          <a
+            [routerLink]="['/projects', implementProject]"
+            (click)="closeImplement()"
+            class="underline"
+          >
+            Configuralo en el proyecto </a
+          >.
+        </div>
+      } @else if (implementRepo(); as repo) {
+        <div class="bg-surface rounded-xl px-3 py-2 flex flex-col gap-1">
+          <p class="text-body-sm text-on-surface flex items-center gap-1.5 min-w-0">
+            <span class="material-symbols-outlined text-[18px] text-primary shrink-0">code</span>
+            <span class="truncate">{{ repo.owner }}/{{ repo.repo }}</span>
+            <span class="text-on-surface-variant shrink-0">· {{ repo.baseBranch }}</span>
+          </p>
+          @if (!repo.isActive) {
+            <p class="text-label-xs text-error">
+              Las implementaciones están pausadas en este proyecto.
+            </p>
+          }
+        </div>
+      }
+
+      <div>
+        <label class="block text-label-xs text-on-surface-variant uppercase mb-1" for="impl-notes">
+          Indicaciones extra (opcional)
+        </label>
+        <textarea
+          id="impl-notes"
+          [(ngModel)]="implementNotes"
+          rows="3"
+          placeholder="Ej: no toques el diseño, solo la lógica de validación."
+          class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+        ></textarea>
+      </div>
+
+      <label class="check-row items-start">
+        <input
+          type="checkbox"
+          [(ngModel)]="implementAutoMerge"
+          class="h-5 w-5 mt-0.5 rounded border border-outline-variant accent-primary cursor-pointer"
+        />
+        <span class="min-w-0">
+          <span class="block text-body-sm text-on-surface">Mergear solo cuando el CI pase</span>
+          <span class="block text-label-xs text-on-surface-variant">
+            Va directo a {{ implementRepo()?.baseBranch || 'main' }} y dispara el despliegue, sin
+            que nadie lea el diff.
+          </span>
+        </span>
+      </label>
+
+      @if (implementError()) {
+        <p class="text-body-sm text-error">{{ implementError() }}</p>
+      }
+
+      <div modalFooter>
         <button
           type="button"
           (click)="closeImplement()"
-          class="ticket-icon-btn shrink-0"
-          title="Cerrar"
-          aria-label="Cerrar"
+          [disabled]="implementing()"
+          class="btn-ghost"
         >
-          <span class="material-symbols-outlined text-[22px]">close</span>
+          Cancelar
         </button>
-      </div>
-
-      @if (implementDone()) {
-        <div class="flex flex-col items-center gap-3 py-6 text-center">
-          <span class="material-symbols-outlined text-emerald-600 text-5xl">check_circle</span>
-          <p class="text-body-md text-on-surface">Se disparó el workflow en GitHub.</p>
-          <p class="text-body-sm text-on-surface-variant max-w-sm">
-            Claude Code va a trabajar sobre el repositorio y abrir un pull request. Podés seguir el
-            avance desde la pantalla de implementaciones.
-          </p>
-          <div class="flex flex-wrap items-center justify-center gap-3">
-            <a routerLink="/implementations" (click)="closeImplement()" class="link-action">
-              <span class="material-symbols-outlined text-[18px]">list_alt</span>
-              Ver implementaciones
-            </a>
-            <button type="button" (click)="closeImplement()" class="link-action">Cerrar</button>
-          </div>
-        </div>
-      } @else {
-        <ul class="flex flex-col gap-1 max-h-32 overflow-y-auto">
-          @for (ticket of selectedTickets; track ticket._id) {
-            <li class="text-body-sm text-on-surface-variant truncate">
-              <span class="text-on-surface font-medium">{{ ticket.code }}</span> —
-              {{ ticket.subject }}
-            </li>
-          }
-        </ul>
-
-        <div>
-          <label
-            class="block text-label-xs text-on-surface-variant uppercase mb-1"
-            for="impl-project"
-          >
-            Proyecto (define el repositorio)
-          </label>
-          <select
-            id="impl-project"
-            [(ngModel)]="implementProject"
-            (ngModelChange)="loadImplementRepo()"
-            class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-          >
-            <option value="">Elegí un proyecto...</option>
-            @for (project of projects(); track project._id) {
-              <option [value]="project._id">{{ project.name }}</option>
-            }
-          </select>
-        </div>
-
-        @if (implementRepoLoading()) {
-          <p class="text-body-sm text-on-surface-variant flex items-center gap-2">
-            <span class="material-symbols-outlined text-[18px] animate-spin"
-              >progress_activity</span
-            >
-            Buscando el repositorio del proyecto...
-          </p>
-        } @else if (implementProject && !implementRepo()) {
-          <div class="bg-error-container rounded-xl px-3 py-2 text-body-sm text-on-error-container">
-            Este proyecto no tiene un repositorio conectado.
-            <a
-              [routerLink]="['/projects', implementProject]"
-              (click)="closeImplement()"
-              class="underline"
-            >
-              Configuralo en el proyecto </a
-            >.
-          </div>
-        } @else if (implementRepo(); as repo) {
-          <div class="bg-surface rounded-xl px-3 py-2 flex flex-col gap-1">
-            <p class="text-body-sm text-on-surface flex items-center gap-1.5 min-w-0">
-              <span class="material-symbols-outlined text-[18px] text-primary shrink-0">code</span>
-              <span class="truncate">{{ repo.owner }}/{{ repo.repo }}</span>
-              <span class="text-on-surface-variant shrink-0">· {{ repo.baseBranch }}</span>
-            </p>
-            @if (!repo.isActive) {
-              <p class="text-label-xs text-error">
-                Las implementaciones están pausadas en este proyecto.
-              </p>
-            }
-          </div>
-        }
-
-        <div>
-          <label
-            class="block text-label-xs text-on-surface-variant uppercase mb-1"
-            for="impl-notes"
-          >
-            Indicaciones extra (opcional)
-          </label>
-          <textarea
-            id="impl-notes"
-            [(ngModel)]="implementNotes"
-            rows="3"
-            placeholder="Ej: no toques el diseño, solo la lógica de validación."
-            class="w-full bg-surface border border-outline-variant rounded-xl px-3 py-2.5 text-body-sm text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none"
-          ></textarea>
-        </div>
-
-        <label class="check-row items-start">
-          <input
-            type="checkbox"
-            [(ngModel)]="implementAutoMerge"
-            class="h-5 w-5 mt-0.5 rounded border border-outline-variant accent-primary cursor-pointer"
-          />
-          <span class="min-w-0">
-            <span class="block text-body-sm text-on-surface">Mergear solo cuando el CI pase</span>
-            <span class="block text-label-xs text-on-surface-variant">
-              Va directo a {{ implementRepo()?.baseBranch || 'main' }} y dispara el despliegue, sin
-              que nadie lea el diff.
-            </span>
-          </span>
-        </label>
-
-        @if (implementError()) {
-          <p class="text-body-sm text-error">{{ implementError() }}</p>
-        }
-
         <button
           type="button"
           (click)="submitImplement()"
           [disabled]="!canImplement || implementing()"
-          class="inline-flex items-center justify-center gap-2 bg-primary-container text-on-primary text-label-md py-3 px-5 rounded-xl hover:bg-primary transition-colors disabled:opacity-50"
+          class="btn-primary"
         >
           <span class="material-symbols-outlined text-[18px]" [class.animate-spin]="implementing()">
             {{ implementing() ? 'progress_activity' : 'rocket_launch' }}
           </span>
           Implementar
         </button>
-      }
-    </div>
-  </div>
+      </div>
+    }
+  </app-modal>
 }

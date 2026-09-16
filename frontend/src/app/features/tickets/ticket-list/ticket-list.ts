@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
+import { Modal, ModalFooter } from '../../../shared/modal/modal';
 import { TicketService } from '../../../core/services/ticket.service';
 import { CategoryService } from '../../../core/services/category.service';
 import { ProjectService } from '../../../core/services/project.service';
@@ -111,7 +112,7 @@ const SORTABLE_COLUMNS: SortableColumn[] = [
 
 @Component({
   selector: 'app-ticket-list',
-  imports: [FormsModule, RouterLink, DatePipe],
+  imports: [FormsModule, RouterLink, DatePipe, Modal, ModalFooter],
   templateUrl: './ticket-list.html',
 })
 export class TicketList implements OnInit {

@@ -1,0 +1,47 @@
+<div class="modal-backdrop" (click)="onBackdropClick($event)">
+  <div
+    #card
+    class="modal-card {{ sizeClass() }}"
+    role="dialog"
+    aria-modal="true"
+    [attr.aria-labelledby]="headingId"
+    tabindex="-1"
+  >
+    <header class="modal-header">
+      <div class="min-w-0">
+        <h2
+          [id]="headingId"
+          class="text-headline-lg-mobile text-on-surface flex items-center gap-2"
+        >
+          @if (icon()) {
+            <span class="material-symbols-outlined text-primary shrink-0">{{ icon() }}</span>
+          }
+          <span class="truncate">{{ heading() }}</span>
+        </h2>
+        @if (description()) {
+          <p class="text-body-sm text-on-surface-variant mt-0.5">{{ description() }}</p>
+        }
+      </div>
+      <button
+        type="button"
+        (click)="requestClose()"
+        [disabled]="busy()"
+        class="ticket-icon-btn shrink-0"
+        title="Cerrar"
+        aria-label="Cerrar"
+      >
+        <span class="material-symbols-outlined text-[22px]">close</span>
+      </button>
+    </header>
+
+    <div class="modal-body">
+      <ng-content />
+    </div>
+
+    @if (footer()) {
+      <footer class="modal-footer">
+        <ng-content select="[modalFooter]" />
+      </footer>
+    }
+  </div>
+</div>

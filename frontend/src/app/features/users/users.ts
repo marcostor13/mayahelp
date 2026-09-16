@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
+import { Modal, ModalFooter } from '../../shared/modal/modal';
 import { UserAdminService } from '../../core/services/user-admin.service';
 import { ProjectService } from '../../core/services/project.service';
 import { Project } from '../../core/models/project.model';
@@ -29,7 +30,7 @@ const ROLE_BADGES: Record<Role, string> = {
 
 @Component({
   selector: 'app-users',
-  imports: [FormsModule, RouterLink, DatePipe],
+  imports: [FormsModule, RouterLink, DatePipe, Modal, ModalFooter],
   templateUrl: './users.html',
 })
 export class Users implements OnInit {
@@ -119,10 +120,12 @@ export class Users implements OnInit {
 
   openCreate(): void {
     this.resetForm();
+    this.projectsEditorFor.set(null);
     this.formOpen.set(true);
   }
 
   openEdit(user: ManagedUser): void {
+    this.projectsEditorFor.set(null);
     this.editingId.set(user._id);
     this.name = user.name;
     this.email = user.email;
@@ -301,6 +304,8 @@ export class Users implements OnInit {
 
   openProjects(user: ManagedUser): void {
     this.error.set(null);
+    // Un diálogo a la vez: dos superpuestos se pelean por el foco y por el scroll del fondo.
+    this.formOpen.set(false);
     this.projectsEditorFor.set(user);
     this.projectDraft.set(new Set(user.projects ?? []));
   }
@@ -325,9 +330,7 @@ export class Users implements OnInit {
 
   toggleAllProjects(): void {
     const all = this.allProjects().map((project) => project._id);
-    this.projectDraft.update((current) =>
-      current.size === all.length ? new Set() : new Set(all),
-    );
+    this.projectDraft.update((current) => (current.size === all.length ? new Set() : new Set(all)));
   }
 
   saveProjects(): void {

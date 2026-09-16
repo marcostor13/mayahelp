@@ -4,6 +4,7 @@ import { DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpErrorResponse } from '@angular/common/http';
 import { MonitoringService } from '../../core/services/monitoring.service';
+import { Modal, ModalFooter } from '../../shared/modal/modal';
 import {
   AlertEvents,
   AlertThresholds,
@@ -272,7 +273,7 @@ const DEFAULT_THRESHOLDS: AlertThresholds = {
 
 @Component({
   selector: 'app-monitoring-project',
-  imports: [RouterLink, DatePipe, FormsModule],
+  imports: [RouterLink, DatePipe, FormsModule, Modal, ModalFooter],
   templateUrl: './monitoring-project.html',
 })
 export class MonitoringProject implements OnInit {

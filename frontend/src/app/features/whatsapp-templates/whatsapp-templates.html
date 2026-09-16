@@ -1,12 +1,23 @@
-<div class="mb-stack-lg">
-  <h2 class="text-headline-xl text-on-surface">Templates de WhatsApp</h2>
-  <p class="text-body-md text-on-surface-variant mt-1">
-    Consulta el estado de tus templates aprobados por Meta y crea nuevos para notificaciones.
-  </p>
+<div class="mb-stack-lg flex items-start justify-between gap-3">
+  <div class="min-w-0">
+    <h2 class="text-headline-xl text-on-surface">Templates de WhatsApp</h2>
+    <p class="text-body-md text-on-surface-variant mt-1">
+      Consulta el estado de tus templates aprobados por Meta y crea nuevos para notificaciones.
+    </p>
+  </div>
+  <button type="button" (click)="openCreate()" class="ticket-icon-btn ticket-icon-btn--primary" title="Nuevo template" aria-label="Nuevo template">
+    <span class="material-symbols-outlined icon-fill text-[22px]">add_comment</span>
+  </button>
 </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-stack-lg">
-  <div class="lg:col-span-2 bg-surface rounded-2xl shadow-sm border border-surface-container-highest overflow-hidden h-fit">
+@if (submitSuccess()) {
+  <p class="mb-stack-md bg-surface-container-lowest border border-surface-container-highest rounded-2xl px-4 py-3 text-body-sm text-emerald-600">
+    {{ submitSuccess() }}
+  </p>
+}
+
+<div class="flex flex-col gap-stack-lg">
+  <div class="bg-surface rounded-2xl shadow-sm border border-surface-container-highest overflow-hidden">
     <div class="p-4 border-b border-surface-container-highest bg-surface-container-lowest">
       <h3 class="text-label-md text-on-surface flex items-center gap-2">
         <span class="material-symbols-outlined text-primary">forum</span>
@@ -61,16 +72,14 @@
     }
   </div>
 
-  <div class="bg-surface-container-lowest rounded-2xl p-6 ambient-shadow-sm h-fit flex flex-col gap-stack-md">
-    <h3 class="text-headline-lg-mobile text-on-background flex items-center gap-2">
-      <span class="material-symbols-outlined text-primary">add_comment</span>
-      Nuevo template
-    </h3>
-    <p class="text-body-sm text-on-surface-variant">
-      Se envía a Meta para revisión; puede tardar minutos u horas en aprobarse.
-    </p>
-
-    <form (ngSubmit)="submit()" class="flex flex-col gap-stack-md">
+  @if (formOpen()) {
+    <app-modal
+      heading="Nuevo template"
+      description="Se envía a Meta para revisión; puede tardar minutos u horas en aprobarse."
+      icon="add_comment"
+      [busy]="submitting()"
+      (closed)="closeForm()"
+    >
       <div>
         <label class="block text-label-md text-on-background mb-stack-sm" for="name">Nombre (snake_case)</label>
         <input
@@ -171,17 +180,13 @@
       @if (submitError()) {
         <p class="text-body-sm text-error">{{ submitError() }}</p>
       }
-      @if (submitSuccess()) {
-        <p class="text-body-sm text-emerald-600">{{ submitSuccess() }}</p>
-      }
 
-      <button
-        type="submit"
-        [disabled]="submitting()"
-        class="bg-primary-container text-on-primary text-label-md py-3 px-6 rounded-lg hover:bg-primary transition-colors shadow-sm disabled:opacity-60"
-      >
-        {{ submitting() ? 'Enviando...' : 'Crear template' }}
-      </button>
-    </form>
-  </div>
+      <div modalFooter>
+        <button type="button" (click)="closeForm()" [disabled]="submitting()" class="btn-ghost">Cancelar</button>
+        <button type="button" (click)="submit()" [disabled]="submitting()" class="btn-primary">
+          {{ submitting() ? 'Enviando...' : 'Crear template' }}
+        </button>
+      </div>
+    </app-modal>
+  }
 </div>
