@@ -58,12 +58,14 @@ export interface CreateTicketPayload {
   priority?: TicketPriority;
 }
 
-/** Un cliente solo puede mandar estos campos, y solo mientras el ticket está abierto. */
+/** Un cliente solo puede mandar los primeros, y solo mientras el ticket está abierto. */
 export interface UpdateTicketPayload {
   subject?: string;
   description?: string;
   category?: string;
   priority?: TicketPriority;
+  /** Solo admin y agente. `null` devuelve el ticket al buzón general. */
+  project?: string | null;
 }
 
 export interface TicketFilter {

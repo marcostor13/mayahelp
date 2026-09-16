@@ -12,6 +12,7 @@ import { TicketsService } from './tickets.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { BulkUpdateStatusDto } from './dto/bulk-update-status.dto';
+import { BulkUpdateProjectDto } from './dto/bulk-update-project.dto';
 import { AddCommentDto } from './dto/add-comment.dto';
 import { FilterTicketDto } from './dto/filter-ticket.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
@@ -48,6 +49,16 @@ export class TicketsController {
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.ticketsService.updateManyStatus(dto.ids, dto.status, user);
+  }
+
+  /** Clasificar el backlog: mover varios tickets a un proyecto (o sacarlos de uno). */
+  @Patch('bulk/project')
+  @Roles(Role.ADMIN, Role.AGENT)
+  updateManyProject(
+    @Body() dto: BulkUpdateProjectDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.ticketsService.updateManyProject(dto.ids, dto.project, user);
   }
 
   /**

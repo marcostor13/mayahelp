@@ -1,9 +1,11 @@
+import { of } from 'rxjs';
 import { signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TicketDetail } from './ticket-detail';
 import { TicketService } from '../../../core/services/ticket.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { CategoryService } from '../../../core/services/category.service';
+import { ProjectService } from '../../../core/services/project.service';
 import { AttachmentService } from '../../../core/services/attachment.service';
 import { ExportService } from '../../../core/services/export.service';
 import { Ticket, TicketStatus } from '../../../core/models/ticket.model';
@@ -56,6 +58,8 @@ function page(params: { role: Role; userId?: string; ticket?: Ticket | null }): 
     {} as unknown as Router,
     {} as unknown as TicketService,
     {} as unknown as CategoryService,
+    // La lista de proyectos solo se pide si la persona es del equipo.
+    { list: () => of([]) } as unknown as ProjectService,
     {} as unknown as AttachmentService,
     {} as unknown as ExportService,
     auth,

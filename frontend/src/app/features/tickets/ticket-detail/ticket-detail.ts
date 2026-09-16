@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { TicketService } from '../../../core/services/ticket.service';
+import { ProjectService } from '../../../core/services/project.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { CategoryService } from '../../../core/services/category.service';
 import { AttachmentService } from '../../../core/services/attachment.service';
@@ -17,6 +18,7 @@ import {
 } from '../../../core/models/ticket.model';
 import { Attachment } from '../../../core/models/attachment.model';
 import { Category } from '../../../core/models/category.model';
+import { Project } from '../../../core/models/project.model';
 
 const STATUS_LABELS: Record<TicketStatus, string> = {
   abierto: 'Abierto',
@@ -51,6 +53,9 @@ const PRIORITY_BADGES: Record<TicketPriority, string> = {
 })
 export class TicketDetail implements OnInit {
   protected readonly ticket = signal<Ticket | null>(null);
+  /** Para reclasificar el ticket; llegan ya acotados a los que la persona tiene. */
+  protected readonly projects = signal<Project[]>([]);
+  protected readonly projectError = signal<string | null>(null);
   protected readonly loading = signal(true);
   protected readonly notFound = signal(false);
   protected readonly sending = signal(false);
@@ -92,6 +97,7 @@ export class TicketDetail implements OnInit {
     private readonly router: Router,
     private readonly ticketService: TicketService,
     private readonly categoryService: CategoryService,
+    private readonly projectService: ProjectService,
     private readonly attachmentService: AttachmentService,
     private readonly exportService: ExportService,
     protected readonly auth: AuthService,
@@ -101,6 +107,9 @@ export class TicketDetail implements OnInit {
     const id = this.route.snapshot.paramMap.get('id')!;
     this.load(id);
     this.loadAttachments(id);
+    if (this.canManage) {
+      this.projectService.list().subscribe((projects) => this.projects.set(projects));
+    }
   }
 
   private load(id: string): void {
@@ -217,6 +226,18 @@ export class TicketDetail implements OnInit {
     this.ticketService
       .updateStatus(current._id, status)
       .subscribe((updated) => this.ticket.set(updated));
+  }
+
+  /** Clasificar el ticket. Vacío lo devuelve al buzón general. */
+  updateProject(project: string): void {
+    const current = this.ticket();
+    if (!current) return;
+    this.projectError.set(null);
+    this.ticketService.updateProject(current._id, project || null).subscribe({
+      next: (updated) => this.ticket.set(updated),
+      // Mover a un proyecto que no tenés asignado sería sacártelo de encima: la API lo rechaza.
+      error: () => this.projectError.set('No se pudo cambiar el proyecto del ticket.'),
+    });
   }
 
   updatePriority(priority: string): void {

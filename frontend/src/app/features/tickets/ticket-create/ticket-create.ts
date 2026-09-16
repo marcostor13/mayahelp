@@ -5,9 +5,12 @@ import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { TicketService } from '../../../core/services/ticket.service';
 import { CategoryService } from '../../../core/services/category.service';
+import { ProjectService } from '../../../core/services/project.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { AttachmentService } from '../../../core/services/attachment.service';
 import { AiService } from '../../../core/services/ai.service';
 import { Category } from '../../../core/models/category.model';
+import { Project } from '../../../core/models/project.model';
 import { TicketPriority } from '../../../core/models/ticket.model';
 import { MediaCapture } from '../../../shared/media-capture/media-capture';
 import { AttachmentPreviews } from '../../../shared/attachment-previews/attachment-previews';
@@ -19,6 +22,8 @@ import { AttachmentPreviews } from '../../../shared/attachment-previews/attachme
 })
 export class TicketCreate implements OnInit {
   protected readonly categories = signal<Category[]>([]);
+  /** Solo para el equipo: el cliente no clasifica. Llegan ya acotados a lo suyo. */
+  protected readonly projects = signal<Project[]>([]);
   protected readonly submitting = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly selectedFiles = signal<File[]>([]);
@@ -28,12 +33,15 @@ export class TicketCreate implements OnInit {
   protected subject = '';
   protected description = '';
   protected category = '';
+  protected project = '';
   protected priority: TicketPriority = 'media';
   protected aiFreeText = '';
 
   constructor(
     private readonly ticketService: TicketService,
     private readonly categoryService: CategoryService,
+    private readonly projectService: ProjectService,
+    protected readonly auth: AuthService,
     private readonly attachmentService: AttachmentService,
     private readonly aiService: AiService,
     private readonly router: Router,
@@ -62,8 +70,17 @@ export class TicketCreate implements OnInit {
     });
   }
 
+  /** Clasificar un ticket es del equipo; el cliente ni ve el campo. */
+  protected get canManage(): boolean {
+    const role = this.auth.currentUser()?.role;
+    return role === 'admin' || role === 'agent';
+  }
+
   ngOnInit(): void {
     this.categoryService.list('ticket').subscribe((categories) => this.categories.set(categories));
+    if (this.canManage) {
+      this.projectService.list().subscribe((projects) => this.projects.set(projects));
+    }
   }
 
   onFilesAdded(files: File[]): void {
@@ -86,6 +103,7 @@ export class TicketCreate implements OnInit {
         subject: this.subject,
         description: this.description,
         category: this.category,
+        project: this.project || undefined,
         priority: this.priority,
       })
       .subscribe({

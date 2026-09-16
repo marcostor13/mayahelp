@@ -5,6 +5,7 @@ import { UserDocument } from '../../users/schemas/user.schema';
 import { AuthenticatedUser } from '../../auth/types/authenticated-user.interface';
 import { Role } from '../enums/role.enum';
 
+const USER_ID = new Types.ObjectId().toString();
 const PROJECT_A = new Types.ObjectId();
 const PROJECT_B = new Types.ObjectId();
 
@@ -23,7 +24,7 @@ function serviceWith(projects: Types.ObjectId[] | undefined) {
 
 function requester(role: Role, isSuperAdmin = false): AuthenticatedUser {
   return {
-    userId: 'user-1',
+    userId: USER_ID,
     email: 'quien@acme.com',
     role,
     isSuperAdmin,
@@ -103,11 +104,36 @@ describe('ProjectAccessService', () => {
 });
 
 describe('ProjectAccessService — recorte de tickets', () => {
-  it('deja pasar el buzón general junto a los proyectos asignados', async () => {
+  /** Los proyectos asignados, lo propio, y el buzón general por ser del equipo. */
+  it('al equipo le suma proyectos asignados, lo propio y el buzón general', async () => {
     const service = serviceWith([PROJECT_A]);
 
     expect(await service.ticketScopeFilter(requester(Role.AGENT))).toEqual({
-      $and: [{ $or: [{ project: null }, { project: { $in: [PROJECT_A] } }] }],
+      $and: [
+        {
+          $or: [
+            { project: { $in: [PROJECT_A] } },
+            { client: new Types.ObjectId(USER_ID) },
+            { project: null },
+          ],
+        },
+      ],
+    });
+  });
+
+  /** Lo mismo menos el buzón general: clasificar es del equipo, no del cliente. */
+  it('al cliente le da sus proyectos y lo propio, sin buzón general', async () => {
+    const service = serviceWith([PROJECT_A]);
+
+    expect(await service.ticketScopeFilter(requester(Role.CLIENT))).toEqual({
+      $and: [
+        {
+          $or: [
+            { project: { $in: [PROJECT_A] } },
+            { client: new Types.ObjectId(USER_ID) },
+          ],
+        },
+      ],
     });
   });
 
@@ -119,14 +145,7 @@ describe('ProjectAccessService — recorte de tickets', () => {
     ).toEqual({});
   });
 
-  /** El cliente ya está acotado por dueño; sumarle el proyecto le escondería lo suyo. */
-  it('no recorta al cliente', async () => {
-    const service = serviceWith([]);
-
-    expect(await service.ticketScopeFilter(requester(Role.CLIENT))).toEqual({});
-  });
-
-  it('acepta un ticket sin proyecto y rechaza el de un proyecto ajeno', async () => {
+  it('acepta un ticket sin proyecto del equipo y rechaza el de un proyecto ajeno', async () => {
     const service = serviceWith([PROJECT_A]);
 
     expect(
@@ -138,6 +157,18 @@ describe('ProjectAccessService — recorte de tickets', () => {
     expect(
       await service.canAccessTicketProject(requester(Role.AGENT), PROJECT_B),
     ).toBe(false);
+  });
+
+  /** Al cliente el buzón general no le corresponde; lo suyo lo resuelve TicketsService. */
+  it('al cliente le niega un ticket sin proyecto', async () => {
+    const service = serviceWith([PROJECT_A]);
+
+    expect(
+      await service.canAccessTicketProject(requester(Role.CLIENT), null),
+    ).toBe(false);
+    expect(
+      await service.canAccessTicketProject(requester(Role.CLIENT), PROJECT_A),
+    ).toBe(true);
   });
 
   it('assertTicketAccess falla con 403 sobre un proyecto ajeno', async () => {

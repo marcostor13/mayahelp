@@ -244,6 +244,22 @@
             }
           </select>
         </div>
+        <div class="relative shrink-0">
+          <select
+            #bulkProjectSelect
+            (change)="applyBulkProject(bulkProjectSelect.value); bulkProjectSelect.value = ''"
+            [disabled]="bulkProjectUpdating()"
+            aria-label="Mover los seleccionados a un proyecto"
+            title="Mover los seleccionados a un proyecto"
+            class="h-10 bg-surface border border-outline-variant rounded-xl pl-2 pr-6 text-label-xs text-on-surface focus:border-primary focus:ring-1 focus:ring-primary outline-none disabled:opacity-50"
+          >
+            <option value="" selected disabled>Mover a proyecto</option>
+            <option value="__none__">Sin proyecto (buzón general)</option>
+            @for (option of projects(); track option._id) {
+              <option [value]="option._id">{{ option.name }}</option>
+            }
+          </select>
+        </div>
       }
       <button
         type="button"
@@ -788,6 +804,14 @@
         <p class="text-body-sm text-error">{{ implementError() }}</p>
       }
 
+    }
+
+    <!--
+      Fuera del @else a propósito: Angular solo proyecta a un slot cuando el nodo es el
+      único hijo del bloque de control (NG8011). Adentro del @else, el pie se iba al
+      cuerpo y el diálogo se quedaba sin barra de acciones.
+    -->
+    @if (!implementDone()) {
       <div modalFooter>
         <button
           type="button"

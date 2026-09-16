@@ -55,35 +55,44 @@ export class ProjectAccessService {
   }
 
   /**
-   * Cómo se acotan los tickets por proyecto:
+   * Qué tickets ve cada cuenta. Se suman tres cosas, y alcanza con una:
    *
-   * - un ticket **con** proyecto lo ve quien tenga ese proyecto asignado;
-   * - un ticket **sin** proyecto es el buzón general del equipo y lo sigue viendo todo
-   *   el mundo, como antes de que existieran las asignaciones;
-   * - al cliente no se le aplica nada de esto: ya está acotado a los tickets que abrió
-   *   él, y filtrarlos además por proyecto le escondería tickets propios.
+   * - los tickets de los proyectos que tiene asignados, los haya abierto quien sea:
+   *   es lo que hace que asignar un proyecto signifique algo;
+   * - los que abrió ella misma, siempre, tenga o no el proyecto asignado — nadie
+   *   pierde de vista un ticket propio;
+   * - los que **no** tienen proyecto, pero solo para el equipo: es el buzón general
+   *   de lo que todavía nadie clasificó. Al cliente no le corresponde.
    *
-   * Va en `$and` y no en `$or` para poder convivir con el `$or` de la búsqueda por texto.
+   * Va en `$and` para poder convivir con el `$or` de la búsqueda por texto.
    */
   async ticketScopeFilter(
     user: AuthenticatedUser,
   ): Promise<Record<string, unknown>> {
-    if (user.role === Role.CLIENT) return {};
     const ids = await this.visibleProjectIds(user);
     if (ids === null) return {};
-    return {
-      $and: [
-        { $or: [{ project: null }, { project: { $in: ids.map(toObjectId) } }] },
-      ],
-    };
+
+    const clauses: Record<string, unknown>[] = [
+      { project: { $in: ids.map(toObjectId) } },
+      { client: toObjectId(user.userId) },
+    ];
+    if (user.role !== Role.CLIENT) {
+      clauses.push({ project: null });
+    }
+    return { $and: [{ $or: clauses }] };
   }
 
-  /** La misma regla que `ticketScopeFilter`, para un ticket puntual. */
+  /**
+   * La misma regla que `ticketScopeFilter`, para un ticket puntual. El dueño del
+   * ticket queda fuera de acá: lo resuelve `TicketsService`, que es quien sabe de
+   * quién es el ticket.
+   */
   async canAccessTicketProject(
     user: AuthenticatedUser,
     projectId: string | Types.ObjectId | null | undefined,
   ): Promise<boolean> {
-    if (user.role === Role.CLIENT || !projectId) return true;
+    // Sin proyecto es el buzón general: del equipo, no del cliente.
+    if (!projectId) return user.role !== Role.CLIENT || user.isSuperAdmin;
     return this.canAccess(user, projectId);
   }
 

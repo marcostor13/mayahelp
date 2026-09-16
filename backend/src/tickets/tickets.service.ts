@@ -262,9 +262,9 @@ export class TicketsService {
     const query: QueryFilter<TicketDocument> =
       await this.access.ticketScopeFilter(requester);
 
-    if (requester.role === Role.CLIENT) {
-      query.client = requester.userId;
-    } else if (filter.client) {
+    // El cliente no fija `client` acá: el scope ya le garantiza los suyos, y fijarlo
+    // le tapaba los del proyecto que tiene asignado. Su filtro de la URL se ignora.
+    if (requester.role !== Role.CLIENT && filter.client) {
       query.client = filter.client;
     }
     if (filter.status) query.status = filter.status;
@@ -346,6 +346,11 @@ export class TicketsService {
       this.assertClientCanEdit(ticket, dto, requester);
     }
     await this.assertAccess(ticket, requester);
+    // Mover el ticket a otro proyecto pide acceso también al proyecto de destino,
+    // si no sería una forma de sacárselo de encima a quien sí lo tiene asignado.
+    if (dto.project !== undefined) {
+      await this.access.assertTicketAccess(requester, dto.project);
+    }
 
     const statusChanged = Boolean(dto.status) && dto.status !== ticket.status;
     // Foto previa solo cuando hay a quién avisarle: es una consulta extra.
@@ -413,6 +418,22 @@ export class TicketsService {
     const tickets: TicketDocument[] = [];
     for (const id of ids) {
       tickets.push(await this.update(id, { status }, requester));
+    }
+    return tickets;
+  }
+
+  /**
+   * Clasificar el backlog en tandas. Pasa por `update`, así que cada ticket vuelve a
+   * chequear el acceso al proyecto de origen y al de destino.
+   */
+  async updateManyProject(
+    ids: string[],
+    project: string | null,
+    requester: AuthenticatedUser,
+  ) {
+    const tickets: TicketDocument[] = [];
+    for (const id of ids) {
+      tickets.push(await this.update(id, { project }, requester));
     }
     return tickets;
   }
@@ -501,10 +522,10 @@ export class TicketsService {
     ticket: TicketDocument,
     requester: AuthenticatedUser,
   ) {
-    if (
-      requester.role === Role.CLIENT &&
-      refId(ticket.client) !== requester.userId
-    ) {
+    // El ticket propio se abre siempre, esté en el proyecto que esté.
+    if (refId(ticket.client) === requester.userId) return;
+
+    if (requester.role === Role.CLIENT && !ticket.project) {
       throw new ForbiddenException('No tienes permiso para ver este ticket');
     }
     await this.access.assertTicketAccess(requester, ticketProjectId(ticket));

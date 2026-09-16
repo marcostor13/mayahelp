@@ -4,6 +4,7 @@ import {
   IsOptional,
   IsString,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
 import { TicketPriority, TicketStatus } from '../../common/enums/ticket.enum';
 
@@ -33,4 +34,13 @@ export class UpdateTicketDto {
   @IsMongoId()
   @IsOptional()
   category?: string;
+
+  /**
+   * Proyecto al que pertenece el ticket. `null` lo devuelve al buzón general.
+   * No está en `CLIENT_EDITABLE_FIELDS`: clasificar es del equipo.
+   */
+  @IsMongoId()
+  @ValidateIf((_, value) => value !== null)
+  @IsOptional()
+  project?: string | null;
 }

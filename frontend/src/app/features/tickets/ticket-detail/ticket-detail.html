@@ -362,14 +362,36 @@
 
           <div>
             <dt class="text-label-xs text-on-surface-variant uppercase mb-1">Proyecto</dt>
-            <dd class="text-label-md text-on-surface flex items-center gap-1">
-              @if (t.project) {
-                <span class="material-symbols-outlined text-[16px] text-primary">folder_open</span>
-                {{ t.project.name }}
-              } @else {
-                <span class="text-on-surface-variant">Sin proyecto</span>
-              }
-            </dd>
+            @if (canManage) {
+              <dd>
+                <select
+                  [ngModel]="t.project?._id ?? ''"
+                  (ngModelChange)="updateProject($event)"
+                  aria-label="Proyecto del ticket"
+                  class="w-full bg-surface border border-outline-variant rounded-lg px-3 py-2 text-label-md text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary cursor-pointer"
+                >
+                  <option value="">Sin proyecto (buzón general)</option>
+                  @for (option of projects(); track option._id) {
+                    <option [value]="option._id">{{ option.name }}</option>
+                  }
+                </select>
+                <p class="text-label-xs text-on-surface-variant mt-1">
+                  Define quién lo ve: solo quien tenga ese proyecto asignado.
+                </p>
+                @if (projectError()) {
+                  <p class="text-label-xs text-error mt-1">{{ projectError() }}</p>
+                }
+              </dd>
+            } @else {
+              <dd class="text-label-md text-on-surface flex items-center gap-1">
+                @if (t.project) {
+                  <span class="material-symbols-outlined text-[16px] text-primary">folder_open</span>
+                  {{ t.project.name }}
+                } @else {
+                  <span class="text-on-surface-variant">Sin proyecto</span>
+                }
+              </dd>
+            }
           </div>
 
           <div>

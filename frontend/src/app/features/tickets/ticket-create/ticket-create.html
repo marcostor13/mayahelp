@@ -80,6 +80,28 @@
           </select>
         </div>
 
+        @if (canManage) {
+          <div>
+            <label class="block text-label-md text-on-background mb-stack-sm" for="proyecto">
+              Proyecto (opcional)
+            </label>
+            <select
+              id="proyecto"
+              name="proyecto"
+              [(ngModel)]="project"
+              class="w-full appearance-none bg-surface border border-outline-variant rounded-lg px-4 py-3 text-body-md text-on-background focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all cursor-pointer"
+            >
+              <option value="">Sin proyecto (buzón general)</option>
+              @for (option of projects(); track option._id) {
+                <option [value]="option._id">{{ option.name }}</option>
+              }
+            </select>
+            <p class="text-label-xs text-on-surface-variant mt-1">
+              Define quién lo ve: solo quien tenga ese proyecto asignado.
+            </p>
+          </div>
+        }
+
         <div>
           <label class="block text-label-md text-on-background mb-stack-sm" for="prioridad">Prioridad</label>
           <select

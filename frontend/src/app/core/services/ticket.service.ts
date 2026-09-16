@@ -48,6 +48,15 @@ export class TicketService {
     return this.http.patch<Ticket>(`${this.baseUrl}/${id}`, { priority });
   }
 
+  /** Clasifica el ticket; `null` lo devuelve al buzón general. */
+  updateProject(id: string, project: string | null) {
+    return this.http.patch<Ticket>(`${this.baseUrl}/${id}`, { project });
+  }
+
+  updateProjectBulk(ids: string[], project: string | null) {
+    return this.http.patch<Ticket[]>(`${this.baseUrl}/bulk/project`, { ids, project });
+  }
+
   updateStatusBulk(ids: string[], status: string) {
     return this.http.patch<Ticket[]>(`${this.baseUrl}/bulk/status`, { ids, status });
   }

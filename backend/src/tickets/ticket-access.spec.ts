@@ -195,4 +195,50 @@ describe('TicketsService.findById — recorte por proyecto', () => {
       service.findById('t1', requester(Role.CLIENT, CLIENT_ID.toString())),
     ).resolves.toBeDefined();
   });
+
+  /** Vale también para el equipo: lo propio se abre aunque el proyecto no sea suyo. */
+  it('le deja al equipo abrir un ticket propio de un proyecto ajeno', async () => {
+    const service = serviceFor(populatedTicket(CLIENT_ID, PROJECT_B), [
+      PROJECT_A,
+    ]);
+
+    await expect(
+      service.findById('t1', requester(Role.AGENT, CLIENT_ID.toString())),
+    ).resolves.toBeDefined();
+  });
+});
+
+/**
+ * Asignar un proyecto tiene que significar algo: quien lo tiene ve sus tickets, los
+ * haya abierto quien sea. Es lo que hace que la pantalla de Usuarios sirva de algo.
+ */
+describe('TicketsService.findById — el proyecto asignado manda', () => {
+  const PROJECT = new Types.ObjectId();
+
+  it('le deja al cliente abrir el ticket de un compañero en su proyecto', async () => {
+    const service = serviceFor(populatedTicket(OTHER_CLIENT_ID, PROJECT), [
+      PROJECT,
+    ]);
+
+    await expect(
+      service.findById('t1', requester(Role.CLIENT, CLIENT_ID.toString())),
+    ).resolves.toBeDefined();
+  });
+
+  it('y se lo niega si ese proyecto no se lo asignaron', async () => {
+    const service = serviceFor(populatedTicket(OTHER_CLIENT_ID, PROJECT), []);
+
+    await expect(
+      service.findById('t1', requester(Role.CLIENT, CLIENT_ID.toString())),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  /** El buzón general es del equipo: lo que nadie clasificó no le entra al cliente. */
+  it('le niega al cliente un ticket ajeno sin proyecto', async () => {
+    const service = serviceFor(populatedTicket(OTHER_CLIENT_ID), [PROJECT]);
+
+    await expect(
+      service.findById('t1', requester(Role.CLIENT, CLIENT_ID.toString())),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
 });

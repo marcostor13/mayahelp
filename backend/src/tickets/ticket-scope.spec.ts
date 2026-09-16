@@ -14,14 +14,25 @@ import { Role } from '../common/enums/role.enum';
 import { TicketStatus } from '../common/enums/ticket.enum';
 
 const CLIENT_ID = new Types.ObjectId().toString();
+const STAFF_ID = new Types.ObjectId().toString();
 const PROJECT_A = new Types.ObjectId();
 const PROJECT_B = new Types.ObjectId();
 
-/** El recorte tal cual lo arma `ProjectAccessService`. */
-function projectScope(projects: Types.ObjectId[]) {
-  return {
-    $and: [{ $or: [{ project: null }, { project: { $in: projects } }] }],
-  };
+/**
+ * El recorte tal cual lo arma `ProjectAccessService`: los proyectos asignados, lo
+ * propio, y — solo para el equipo — el buzón general de los tickets sin proyecto.
+ */
+function projectScope(
+  projects: Types.ObjectId[],
+  userId: string,
+  staff = true,
+) {
+  const clauses: Record<string, unknown>[] = [
+    { project: { $in: projects } },
+    { client: new Types.ObjectId(userId) },
+  ];
+  if (staff) clauses.push({ project: null });
+  return { $and: [{ $or: clauses }] };
 }
 const OTHER_CLIENT_ID = new Types.ObjectId().toString();
 
@@ -88,28 +99,28 @@ function accessWith(projects: Types.ObjectId[] = []): ProjectAccessService {
 }
 
 describe('TicketsService.findAll — qué ve cada rol', () => {
-  it('al cliente le muestra sus propios tickets', async () => {
-    const { service, filterFor } = capturingService();
+  it('al cliente le muestra sus propios tickets y los de sus proyectos', async () => {
+    const { service, filterFor } = capturingService([PROJECT_A]);
 
     await service.findAll({}, requester(Role.CLIENT, CLIENT_ID));
 
-    expect(filterFor()).toEqual({ client: CLIENT_ID });
+    expect(filterFor()).toEqual(projectScope([PROJECT_A], CLIENT_ID, false));
   });
 
   /** Un cliente no puede espiar los de otro pasando ?client= en la URL. */
   it('ignora el filtro de cliente que mande un cliente', async () => {
-    const { service, filterFor } = capturingService();
+    const { service, filterFor } = capturingService([]);
 
     await service.findAll(
       { client: OTHER_CLIENT_ID },
       requester(Role.CLIENT, CLIENT_ID),
     );
 
-    expect(filterFor()).toEqual({ client: CLIENT_ID });
+    expect(filterFor()).toEqual(projectScope([], CLIENT_ID, false));
   });
 
   it('le deja al cliente combinar sus filtros con el suyo propio', async () => {
-    const { service, filterFor } = capturingService();
+    const { service, filterFor } = capturingService([]);
 
     await service.findAll(
       { status: TicketStatus.ABIERTO },
@@ -117,7 +128,7 @@ describe('TicketsService.findAll — qué ve cada rol', () => {
     );
 
     expect(filterFor()).toEqual({
-      client: CLIENT_ID,
+      ...projectScope([], CLIENT_ID, false),
       status: TicketStatus.ABIERTO,
     });
   });
@@ -125,9 +136,9 @@ describe('TicketsService.findAll — qué ve cada rol', () => {
   it('al equipo no le restringe por cliente', async () => {
     const { service, filterFor } = capturingService([PROJECT_A]);
 
-    await service.findAll({}, requester(Role.AGENT, 'staff-1'));
+    await service.findAll({}, requester(Role.AGENT, STAFF_ID));
 
-    expect(filterFor()).toEqual(projectScope([PROJECT_A]));
+    expect(filterFor()).toEqual(projectScope([PROJECT_A], STAFF_ID));
   });
 
   it('y le respeta el filtro de cliente cuando lo pide', async () => {
@@ -135,52 +146,57 @@ describe('TicketsService.findAll — qué ve cada rol', () => {
 
     await service.findAll(
       { client: OTHER_CLIENT_ID },
-      requester(Role.ADMIN, 'staff-1'),
+      requester(Role.ADMIN, STAFF_ID),
     );
 
     expect(filterFor()).toEqual({
-      ...projectScope([PROJECT_A]),
+      ...projectScope([PROJECT_A], STAFF_ID),
       client: OTHER_CLIENT_ID,
     });
   });
 });
 
 /**
- * El recorte por proyecto se suma al de rol: el equipo ve los tickets de los proyectos
- * que tiene asignados, más los que no tienen proyecto (el buzón general de siempre).
+ * Asignar un proyecto tiene que significar algo: quien lo tiene ve sus tickets, los
+ * haya abierto quien sea. Los tickets sin proyecto son el buzón general del equipo.
  */
 describe('TicketsService.findAll — recorte por proyecto', () => {
-  it('acota al equipo a sus proyectos asignados y al buzón general', async () => {
+  it('le da al equipo sus proyectos asignados, lo propio y el buzón general', async () => {
     const { service, filterFor } = capturingService([PROJECT_A, PROJECT_B]);
 
-    await service.findAll({}, requester(Role.AGENT, 'staff-1'));
+    await service.findAll({}, requester(Role.AGENT, STAFF_ID));
 
-    expect(filterFor()).toEqual(projectScope([PROJECT_A, PROJECT_B]));
+    expect(filterFor()).toEqual(projectScope([PROJECT_A, PROJECT_B], STAFF_ID));
   });
 
-  it('a un agente sin asignaciones solo le deja el buzón general', async () => {
+  it('a un agente sin asignaciones le deja el buzón general y lo suyo', async () => {
     const { service, filterFor } = capturingService([]);
 
-    await service.findAll({}, requester(Role.AGENT, 'staff-1'));
+    await service.findAll({}, requester(Role.AGENT, STAFF_ID));
 
-    expect(filterFor()).toEqual(projectScope([]));
+    expect(filterFor()).toEqual(projectScope([], STAFF_ID));
   });
 
   it('al súper usuario no le recorta nada', async () => {
     const { service, filterFor } = capturingService([]);
 
-    await service.findAll({}, requester(Role.ADMIN, 'staff-1', true));
+    await service.findAll({}, requester(Role.ADMIN, STAFF_ID, true));
 
     expect(filterFor()).toEqual({});
   });
 
-  /** El cliente ya está acotado a lo suyo; recortarlo además le escondería tickets propios. */
-  it('al cliente lo deja con sus propios tickets, sin recorte por proyecto', async () => {
-    const { service, filterFor } = capturingService([]);
+  /** El buzón general es del equipo: al cliente no le entra lo que nadie clasificó. */
+  it('al cliente no le da el buzón general', async () => {
+    const { service, filterFor } = capturingService([PROJECT_A]);
 
     await service.findAll({}, requester(Role.CLIENT, CLIENT_ID));
 
-    expect(filterFor()).toEqual({ client: CLIENT_ID });
+    const clauses = (
+      filterFor()!.$and as { $or: Record<string, unknown>[] }[]
+    )[0].$or;
+
+    expect(clauses).not.toContainEqual({ project: null });
+    expect(clauses).toContainEqual({ project: { $in: [PROJECT_A] } });
   });
 
   it('deja filtrar por un proyecto asignado', async () => {
@@ -188,11 +204,11 @@ describe('TicketsService.findAll — recorte por proyecto', () => {
 
     await service.findAll(
       { project: PROJECT_A.toString() },
-      requester(Role.AGENT, 'staff-1'),
+      requester(Role.AGENT, STAFF_ID),
     );
 
     expect(filterFor()).toEqual({
-      ...projectScope([PROJECT_A]),
+      ...projectScope([PROJECT_A], STAFF_ID),
       project: PROJECT_A.toString(),
     });
   });
@@ -203,7 +219,7 @@ describe('TicketsService.findAll — recorte por proyecto', () => {
     await expect(
       service.findAll(
         { project: PROJECT_B.toString() },
-        requester(Role.AGENT, 'staff-1'),
+        requester(Role.AGENT, STAFF_ID),
       ),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });

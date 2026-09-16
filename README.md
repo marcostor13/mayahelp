@@ -103,19 +103,38 @@ consola del proyecto (enlaces públicos, repositorio, monitoreo) sigue siendo de
 
 ### Los tickets también se recortan
 
-Un ticket **con proyecto** solo lo ve quien tenga ese proyecto asignado: no aparece en la
-lista, no se abre por URL, no se edita ni se comenta, y tampoco entra en las métricas del
-dashboard ni en el export. Filtrar la lista por un proyecto ajeno responde 403 en vez de
-devolver algo vacío.
+Cada persona ve la **suma** de tres cosas, y alcanza con una:
 
-Un ticket **sin proyecto** es el buzón general y lo sigue viendo todo el equipo, como
-antes de que existieran las asignaciones. La mayoría de los tickets nace así (el proyecto
-se pone al reportar desde un enlace público o al etiquetarlo el equipo), de modo que el
-recorte no le saca de golpe el trabajo a nadie.
+1. Los tickets de los **proyectos que tiene asignados**, los haya abierto quien sea. Es
+   lo que hace que asignar un proyecto desde Usuarios signifique algo.
+2. Los tickets que **abrió ella misma**, siempre, tenga o no ese proyecto asignado. Nadie
+   pierde de vista un ticket propio.
+3. Los tickets **sin proyecto** — el buzón general de lo que todavía nadie clasificó —,
+   pero solo si es del equipo. Al cliente no le corresponde.
 
-Al **cliente** no se le aplica este recorte: ya está acotado a los tickets que abrió él,
-y filtrarlos además por proyecto le escondería tickets propios. Y el **súper usuario**,
-como siempre, los ve todos.
+El súper usuario los ve todos. Y el recorte no es solo de pantalla: un ticket fuera del
+alcance no se abre por URL, no se edita, no se comenta, no se borra, y no entra en las
+métricas del dashboard ni en el export. Filtrar la lista por un proyecto ajeno responde
+403 en vez de devolver vacío.
+
+### Clasificar: el proyecto de un ticket
+
+Un ticket entra a un proyecto de tres formas:
+
+- al crearlo, con el selector **Proyecto** del alta (solo admin y agente);
+- desde el detalle, cambiando el proyecto como se cambia el estado;
+- en tanda, seleccionando varios en la lista y usando **Mover a proyecto** — que es como
+  se clasifica el backlog que ya existe.
+
+> Los tickets que vienen de un **enlace público de observaciones** ya nacen con el
+> proyecto de ese enlace.
+
+Vale la pena tenerlo presente: **un ticket sin proyecto no le llega a nadie por tener un
+proyecto asignado**, solo por el buzón general. Si asignaste un proyecto a alguien y sigue
+sin ver "sus" tickets, casi siempre es que esos tickets todavía están sin clasificar.
+
+Mover un ticket a un proyecto pide acceso **al proyecto de destino** además de al de
+origen: si no, sería una forma de sacárselo de encima a quien sí lo tiene asignado.
 
 ## Cuentas y contraseñas
 

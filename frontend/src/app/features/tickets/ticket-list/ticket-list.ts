@@ -110,6 +110,9 @@ const SORTABLE_COLUMNS: SortableColumn[] = [
   { field: 'updatedAt', label: 'Actualizado' },
 ];
 
+/** Valor del select para devolver los tickets al buzón general. */
+const NO_PROJECT = '__none__';
+
 @Component({
   selector: 'app-ticket-list',
   imports: [FormsModule, RouterLink, DatePipe, Modal, ModalFooter],
@@ -129,6 +132,8 @@ export class TicketList implements OnInit {
   protected readonly filtersOpen = signal(false);
   protected readonly selectedIds = signal<Set<string>>(new Set());
   protected readonly bulkStatusUpdating = signal(false);
+  protected readonly bulkProjectUpdating = signal(false);
+  protected readonly bulkError = signal<string | null>(null);
 
   // --- implementación con Claude Code ---
   protected readonly implementOpen = signal(false);
@@ -308,6 +313,32 @@ export class TicketList implements OnInit {
         this.load();
       },
       error: () => this.bulkStatusUpdating.set(false),
+    });
+  }
+
+  /**
+   * Clasificar el backlog en tandas. Es la contracara del recorte por proyecto: un
+   * ticket sin proyecto vive en el buzón general y no le llega a nadie por asignación.
+   */
+  applyBulkProject(value: string): void {
+    const ids = [...this.selectedIds()];
+    if (ids.length === 0 || !value || this.bulkProjectUpdating()) return;
+    // El `value=""` del select es el placeholder deshabilitado, así que "sin proyecto"
+    // viaja con su propio valor y acá se traduce al null que espera la API.
+    const project = value === NO_PROJECT ? null : value;
+
+    this.bulkProjectUpdating.set(true);
+    this.bulkError.set(null);
+    this.ticketService.updateProjectBulk(ids, project).subscribe({
+      next: () => {
+        this.bulkProjectUpdating.set(false);
+        this.clearSelection();
+        this.load();
+      },
+      error: () => {
+        this.bulkProjectUpdating.set(false);
+        this.bulkError.set('No se pudo mover alguno de los tickets al proyecto.');
+      },
     });
   }
 
