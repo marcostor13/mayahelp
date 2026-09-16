@@ -136,6 +136,12 @@ sin ver "sus" tickets, casi siempre es que esos tickets todavía están sin clas
 Mover un ticket a un proyecto pide acceso **al proyecto de destino** además de al de
 origen: si no, sería una forma de sacárselo de encima a quien sí lo tiene asignado.
 
+En **Usuarios**, el contador de tickets de cada fila usa el mismo recorte que la lista:
+muestra lo que vos podés abrir, no el total. Cuando alguien tiene tickets en proyectos
+que no tenés asignados, al lado aparece `+N fuera de tu alcance` — así un 0 no queda como
+un misterio. Las personas de los enlaces públicos sin cuenta se listan igual: solo las de
+los proyectos que ves.
+
 ## Cuentas y contraseñas
 
 Las cuentas las crea un administrador desde **Usuarios**; no hay auto-registro con

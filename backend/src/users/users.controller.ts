@@ -45,15 +45,19 @@ export class UsersController {
 
   @Get()
   @Roles(Role.ADMIN, Role.AGENT)
-  findAll(@Query('role') role?: Role, @Query('search') search?: string) {
-    return this.usersService.findAllWithTicketCounts({ role, search });
+  findAll(
+    @CurrentUser() user: AuthenticatedUser,
+    @Query('role') role?: Role,
+    @Query('search') search?: string,
+  ) {
+    return this.usersService.findAllWithTicketCounts({ role, search }, user);
   }
 
   /** People authorized on the public links that still have no account. */
   @Get('pending-reporters')
   @Roles(Role.ADMIN)
-  pendingReporters() {
-    return this.usersService.findPendingReporters();
+  pendingReporters(@CurrentUser() user: AuthenticatedUser) {
+    return this.usersService.findPendingReporters(user);
   }
 
   @Post()
@@ -66,8 +70,11 @@ export class UsersController {
 
   @Post('from-reporters')
   @Roles(Role.ADMIN)
-  createFromReporters(@Body() dto: CreateUsersFromReportersDto) {
-    return this.usersService.createFromReporters(dto.emails);
+  createFromReporters(
+    @Body() dto: CreateUsersFromReportersDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.usersService.createFromReporters(dto.emails, user);
   }
 
   @Get(':id')

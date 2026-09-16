@@ -408,6 +408,20 @@
               {{ user.ticketsCount ?? 0 }} ticket(s)
             </span>
 
+            @if ((user.ticketsOutOfScope ?? 0) > 0) {
+              <span
+                class="text-label-xs text-on-surface-variant inline-flex items-center gap-1"
+                [title]="
+                  'Tiene ' +
+                  user.ticketsOutOfScope +
+                  ' ticket(s) más en proyectos que vos no tenés asignados. Asignate esos proyectos para verlos.'
+                "
+              >
+                <span class="material-symbols-outlined text-[16px]">visibility_off</span>
+                +{{ user.ticketsOutOfScope }} fuera de tu alcance
+              </span>
+            }
+
             <span
               class="text-label-xs text-on-surface-variant inline-flex items-center gap-1 min-w-0"
               [title]="'Proyectos visibles para ' + user.name"

@@ -21,6 +21,8 @@ export interface ManagedUser {
   projects?: string[];
   isSuperAdmin?: boolean;
   ticketsCount?: number;
+  /** Tickets suyos que quien mira no puede abrir, por ser de proyectos que no tiene. */
+  ticketsOutOfScope?: number;
   createdAt: string;
 }
 

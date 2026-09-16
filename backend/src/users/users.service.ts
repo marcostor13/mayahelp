@@ -23,6 +23,8 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { Role } from '../common/enums/role.enum';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ProjectAccessService } from '../common/project-access/project-access.service';
+import type { AuthenticatedUser } from '../auth/types/authenticated-user.interface';
 
 export interface PendingReporter {
   name: string;
@@ -67,6 +69,7 @@ export class UsersService {
     private projectModel: Model<ProjectDocument>,
     private readonly notificationsService: NotificationsService,
     private readonly configService: ConfigService,
+    private readonly access: ProjectAccessService,
   ) {}
 
   /** Correo de la cuenta dueña de la plataforma (`SUPER_ADMIN_EMAIL`). */
@@ -122,8 +125,18 @@ export class UsersService {
     return { user, temporaryPassword };
   }
 
-  /** Users list for the admin screen, with how many tickets each person opened. */
-  async findAllWithTicketCounts(params: { role?: Role; search?: string }) {
+  /**
+   * Lista de usuarios para la pantalla de admin, con cuántos tickets abrió cada uno.
+   *
+   * El conteo va con el mismo recorte que la lista de tickets: si contara todos, la
+   * pantalla prometería "5 tickets" y al entrar aparecerían cero, porque esos cinco
+   * son de un proyecto que quien mira no tiene asignado. Un número que no se puede
+   * abrir es peor que no mostrar número.
+   */
+  async findAllWithTicketCounts(
+    params: { role?: Role; search?: string },
+    requester: AuthenticatedUser,
+  ) {
     const query: QueryFilter<UserDocument> = {};
     if (params.role) query.role = params.role;
     if (params.search) {
@@ -141,20 +154,46 @@ export class UsersService {
       .lean()
       .exec();
 
-    const counts = await this.ticketModel
+    const ids = users.map((user) => user._id);
+    const scope = await this.access.ticketScopeFilter(requester);
+
+    const visible = await this.countTicketsByClient({
+      ...scope,
+      client: { $in: ids },
+    });
+    // Segunda vuelta sin recorte, solo para poder decir "hay 5 más que no ves".
+    // El súper usuario ve todo, así que ahí el recorte no esconde nada.
+    const total =
+      Object.keys(scope).length === 0
+        ? visible
+        : await this.countTicketsByClient({ client: { $in: ids } });
+
+    return users.map((user) => {
+      const key = user._id.toString();
+      const count = visible.get(key) ?? 0;
+      return {
+        ...user,
+        ticketsCount: count,
+        /**
+         * Cuántos tickets tiene que quien mira no puede abrir, por ser de proyectos
+         * que no tiene asignados. Sin este número, la pantalla mostraría un 0 sin
+         * explicación justo cuando la persona sí tiene tickets.
+         */
+        ticketsOutOfScope: (total.get(key) ?? 0) - count,
+      };
+    });
+  }
+
+  private async countTicketsByClient(
+    match: Record<string, unknown>,
+  ): Promise<Map<string, number>> {
+    const rows = await this.ticketModel
       .aggregate<{ _id: Types.ObjectId; total: number }>([
-        { $match: { client: { $in: users.map((user) => user._id) } } },
+        { $match: match },
         { $group: { _id: '$client', total: { $sum: 1 } } },
       ])
       .exec();
-    const byClient = new Map(
-      counts.map((row) => [row._id.toString(), row.total]),
-    );
-
-    return users.map((user) => ({
-      ...user,
-      ticketsCount: byClient.get(user._id.toString()) ?? 0,
-    }));
+    return new Map(rows.map((row) => [row._id.toString(), row.total]));
   }
 
   findAll(role?: Role) {
@@ -220,9 +259,14 @@ export class UsersService {
    * People pre-authorized on the public links that do not have an account yet, so the
    * admin can turn them into clients without retyping their data.
    */
-  async findPendingReporters(): Promise<PendingReporter[]> {
+  async findPendingReporters(
+    requester: AuthenticatedUser,
+  ): Promise<PendingReporter[]> {
     const links = await this.shareLinkModel
-      .find({}, 'reporters project')
+      .find(
+        await this.access.referenceFilter(requester, 'project'),
+        'reporters project',
+      )
       .populate<{ project?: { name?: string } }>('project', 'name')
       .lean()
       .exec();
@@ -257,8 +301,11 @@ export class UsersService {
   }
 
   /** Creates client accounts for the given reporter emails, skipping the ones already taken. */
-  async createFromReporters(emails: string[]): Promise<CreatedAccount[]> {
-    const pending = await this.findPendingReporters();
+  async createFromReporters(
+    emails: string[],
+    requester: AuthenticatedUser,
+  ): Promise<CreatedAccount[]> {
+    const pending = await this.findPendingReporters(requester);
     const wanted = new Set(emails.map((email) => email.toLowerCase().trim()));
     const created: CreatedAccount[] = [];
 

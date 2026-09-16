@@ -11,6 +11,7 @@ import {
 import { Project, ProjectSchema } from '../projects/schemas/project.schema';
 import { SuperAdminBootstrap } from './super-admin.bootstrap';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { ProjectAccessModule } from '../common/project-access/project-access.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
     // Para el correo con la contraseña temporal del reseteo. No es circular:
     // NotificationsModule no depende de UsersModule.
     NotificationsModule,
+    ProjectAccessModule,
   ],
   controllers: [UsersController],
   providers: [UsersService, SuperAdminBootstrap],

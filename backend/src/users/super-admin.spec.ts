@@ -7,6 +7,7 @@ import { TicketDocument } from '../tickets/schemas/ticket.schema';
 import { ProjectShareLinkDocument } from '../projects/schemas/project-share-link.schema';
 import { ProjectDocument } from '../projects/schemas/project.schema';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ProjectAccessService } from '../common/project-access/project-access.service';
 import { Role } from '../common/enums/role.enum';
 
 const OWNER_EMAIL = 'marcostor13@gmail.com';
@@ -79,6 +80,7 @@ function harness(params: {
     projectModel,
     {} as unknown as NotificationsService,
     config(),
+    {} as unknown as ProjectAccessService,
   );
   return { service, create, deleteById };
 }

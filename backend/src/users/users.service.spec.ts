@@ -8,6 +8,7 @@ import { TicketDocument } from '../tickets/schemas/ticket.schema';
 import { ProjectShareLinkDocument } from '../projects/schemas/project-share-link.schema';
 import { ProjectDocument } from '../projects/schemas/project.schema';
 import { NotificationsService } from '../notifications/notifications.service';
+import { ProjectAccessService } from '../common/project-access/project-access.service';
 import { Role } from '../common/enums/role.enum';
 
 /** Solo hace falta `superAdminEmail`; ninguno de estos casos toca la cuenta dueña. */
@@ -65,6 +66,7 @@ function harness(params: {
     {} as unknown as Model<ProjectDocument>,
     { notifyPasswordReset: notify } as unknown as NotificationsService,
     configService(),
+    {} as unknown as ProjectAccessService,
   );
   return { service, update, notify };
 }
@@ -191,6 +193,7 @@ describe('UsersService.update — baja de cuenta', () => {
       {} as unknown as Model<ProjectDocument>,
       {} as unknown as NotificationsService,
       configService(),
+      {} as unknown as ProjectAccessService,
     );
     return { service, setRefreshToken };
   }
