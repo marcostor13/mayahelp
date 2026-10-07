@@ -426,9 +426,9 @@
               </p>
             }
             @for (item of result.email; track item.to) {
-              <p class="text-body-sm text-on-surface-variant flex items-center gap-1">
-                <span class="material-symbols-outlined text-[16px]">mail</span>
-                Correo a {{ item.to }}: {{ item.sent ? 'enviado' : 'omitido (correo desactivado)' }}
+              <p class="text-body-sm flex items-start gap-1" [class.text-error]="!item.ok" [class.text-on-surface-variant]="item.ok">
+                <span class="material-symbols-outlined text-[16px] mt-0.5">{{ item.ok ? 'check_circle' : 'error' }}</span>
+                <span>Correo a {{ item.to }}{{ item.error ? ': ' + item.error : ': enviado' }}</span>
               </p>
             }
             @if (result.whatsapp.length === 0 && result.email.length === 0) {

@@ -350,7 +350,7 @@ export class NotificationsService {
    */
   async sendTestNotification(): Promise<{
     whatsapp: { to: string; ok: boolean; error?: string }[];
-    email: { to: string; sent: boolean }[];
+    email: { to: string; ok: boolean; error?: string }[];
   }> {
     const settings = await this.appSettingsService.get();
     const ticket: NotifyTicket = {
@@ -385,28 +385,33 @@ export class NotificationsService {
       whatsapp.push({ to: phone, ...result });
     }
 
-    const email: { to: string; sent: boolean }[] = [];
+    const email: { to: string; ok: boolean; error?: string }[] = [];
     for (const to of settings.email.recipients) {
-      await this.sendEmail(to, {
-        subject: '[Prueba] Notificaciones de MayaHelp',
-        content: {
-          preheader: 'Así se van a ver los avisos de tickets.',
-          badge: 'Prueba',
-          title: 'Notificaciones configuradas',
-          intro:
-            'Esta es una notificación de prueba enviada desde Ajustes. Si la estás viendo, el correo de MayaHelp funciona.',
-          accent: 'success',
-          rows: this.ticketRows(ticket, {
-            name: 'Cliente de prueba',
-            email: 'cliente@ejemplo.com',
-          }),
-          quote: ticket.description
-            ? { author: 'Cliente de prueba', text: ticket.description }
-            : undefined,
-          action: { label: 'Ir a MayaHelp', url: this.appUrl },
-        },
-      });
-      email.push({ to, sent: settings.email.enabled });
+      const content: EmailContent = {
+        preheader: 'Así se van a ver los avisos de tickets.',
+        badge: 'Prueba',
+        title: 'Notificaciones configuradas',
+        intro:
+          'Esta es una notificación de prueba enviada desde Ajustes. Si la estás viendo, el correo de MayaHelp funciona.',
+        accent: 'success',
+        rows: this.ticketRows(ticket, {
+          name: 'Cliente de prueba',
+          email: 'cliente@ejemplo.com',
+        }),
+        quote: ticket.description
+          ? { author: 'Cliente de prueba', text: ticket.description }
+          : undefined,
+        action: { label: 'Ir a MayaHelp', url: this.appUrl },
+      };
+      // Se manda aunque el correo esté apagado en los ajustes: la prueba es justamente
+      // para saber si la cuenta de envío funciona antes de prenderlo.
+      const result = await this.emailService.deliver(
+        to,
+        '[Prueba] Notificaciones de MayaHelp',
+        renderNotificationEmail(content, { appUrl: this.appUrl }),
+        renderNotificationText(content),
+      );
+      email.push({ to, ...result });
     }
 
     return { whatsapp, email };

@@ -43,5 +43,5 @@ export interface UpdateNotificationSettingsPayload {
 
 export interface NotificationTestResult {
   whatsapp: { to: string; ok: boolean; error?: string }[];
-  email: { to: string; sent: boolean }[];
+  email: { to: string; ok: boolean; error?: string }[];
 }
