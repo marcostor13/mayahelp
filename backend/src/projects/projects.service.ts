@@ -11,6 +11,7 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { CreateShareLinkDto } from './dto/create-share-link.dto';
 import { ReporterInputDto } from './dto/reporter-input.dto';
+import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class ProjectsService {
@@ -19,10 +20,18 @@ export class ProjectsService {
     private readonly projectModel: Model<ProjectDocument>,
     @InjectModel(ProjectShareLink.name)
     private readonly shareLinkModel: Model<ProjectShareLinkDocument>,
+    private readonly usersService: UsersService,
   ) {}
 
-  create(dto: CreateProjectDto, createdBy: string) {
-    return this.projectModel.create({ ...dto, createdBy });
+  /**
+   * Quien crea el proyecto pasa a verlo. Los proyectos se ven por asignación, y sin esto
+   * el proyecto nacía invisible para su creador: el detalle le respondía 403 y la lista
+   * no lo mostraba, así que parecía que no se había creado y se reintentaba.
+   */
+  async create(dto: CreateProjectDto, createdBy: string) {
+    const project = await this.projectModel.create({ ...dto, createdBy });
+    await this.usersService.addProject(createdBy, project._id);
+    return project;
   }
 
   /**

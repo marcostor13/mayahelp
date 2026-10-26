@@ -479,6 +479,13 @@ export class UsersService {
     return user.save();
   }
 
+  /** Suma un proyecto a los que ve la cuenta, sin tocar el resto de sus asignaciones. */
+  async addProject(id: string, projectId: Types.ObjectId): Promise<void> {
+    await this.userModel
+      .updateOne({ _id: id }, { $addToSet: { projects: projectId } })
+      .exec();
+  }
+
   /** Valida que los ids existan: una asignación a un proyecto borrado sería invisible. */
   private async resolveProjectIds(ids: string[]): Promise<Types.ObjectId[]> {
     const unique = [...new Set(ids)];

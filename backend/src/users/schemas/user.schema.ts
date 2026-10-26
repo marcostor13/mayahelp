@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Types } from 'mongoose';
+import { HydratedDocument, Schema as MongooseSchema, Types } from 'mongoose';
 import { Role } from '../../common/enums/role.enum';
 
 export type UserDocument = HydratedDocument<User>;
@@ -47,7 +47,10 @@ export class User {
    * por proyecto (la lista, el monitoreo y las implementaciones) se filtra por acá:
    * una cuenta sin asignaciones no ve ningún proyecto.
    */
-  @Prop({ type: [{ type: Types.ObjectId, ref: 'Project' }], default: [] })
+  @Prop({
+    type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Project' }],
+    default: [],
+  })
   projects: Types.ObjectId[];
 
   /**

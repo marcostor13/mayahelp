@@ -55,6 +55,12 @@ MONGODB_URI="mongodb+srv://..." JWT_ACCESS_SECRET="..." JWT_REFRESH_SECRET="..."
 > Ojo al comparar ids: `findById` popula `client`, así que ahí no hay un ObjectId sino
 > un documento, y su `toString()` imprime el contenido en vez del id. Para eso está
 > `refId()` en `tickets.service.ts` — usalo en cualquier comparación de referencias.
+>
+> Las referencias se declaran con `type: MongooseSchema.Types.ObjectId`, nunca con
+> `Types.ObjectId`: con el segundo `@Prop` arma el campo como `Mixed`, se guarda en texto y
+> los filtros de acceso (que comparan contra ObjectId) no lo encuentran. Un test en
+> `common/migrations` falla si algún schema vuelve a tener una referencia `Mixed`, y
+> `ReferenceIdsMigration` convierte al arrancar lo que haya quedado guardado como texto.
 
 Un **cliente** ve solo sus propios tickets (la lista y el detalle se filtran por su
 usuario, y los comentarios internos del equipo no le llegan) y puede **editar el suyo
@@ -78,6 +84,9 @@ Los proyectos no se ven por rol, se ven por **asignación**. Desde **Usuarios**,
 📁 de cada fila abre la lista de proyectos y lo que quede tildado es exactamente lo que
 esa persona ve; una cuenta sin asignaciones no ve ninguno. Vale para todos los roles: un
 administrador o un agente sin proyectos asignados tampoco ve nada.
+
+Quien **crea** un proyecto queda asignado a él en el mismo momento; si no, el proyecto
+nacería invisible para su creador (la API le respondería 403 al abrirlo).
 
 La única excepción es el **súper usuario** (`SUPER_ADMIN_EMAIL`, por defecto
 `marcostor13@gmail.com`): ve todos los proyectos existan o no asignaciones, y su cuenta no

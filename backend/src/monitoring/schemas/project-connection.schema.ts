@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Types } from 'mongoose';
+import { HydratedDocument, Schema as MongooseSchema, Types } from 'mongoose';
 
 export type ProjectConnectionDocument = HydratedDocument<ProjectConnection>;
 
@@ -133,7 +133,12 @@ export const AlertSettingsSchema = SchemaFactory.createForClass(AlertSettings);
 
 @Schema({ timestamps: true })
 export class ProjectConnection {
-  @Prop({ type: Types.ObjectId, ref: 'Project', required: true, index: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Project',
+    required: true,
+    index: true,
+  })
   project: Types.ObjectId;
 
   @Prop({ required: true, trim: true })
@@ -219,7 +224,7 @@ export class ProjectConnection {
   @Prop({ type: Object, default: {} })
   lastAlertAt: Record<string, Date>;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
   createdBy: Types.ObjectId;
 
   declare createdAt: Date;
