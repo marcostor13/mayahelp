@@ -122,7 +122,7 @@
         <p class="text-body-sm text-on-surface-variant mb-stack-sm">
           Sube archivos, usa la cámara o pega directamente una captura de pantalla desde el portapapeles.
         </p>
-        <app-media-capture (filesAdded)="onFilesAdded($event)" />
+        <app-media-capture (filesAdded)="onFilesAdded($event)" (busyChange)="compressingVideo.set($event)" />
 
         <app-attachment-previews [files]="selectedFiles()" (remove)="removeFile($event)" />
       </div>
@@ -133,10 +133,10 @@
 
       <button
         type="submit"
-        [disabled]="submitting()"
+        [disabled]="submitting() || compressingVideo()"
         class="self-start bg-primary-container text-on-primary text-label-md py-3 px-6 rounded-lg hover:bg-primary transition-colors shadow-sm disabled:opacity-60"
       >
-        {{ submitting() ? 'Enviando...' : 'Crear Ticket' }}
+        {{ submitting() ? 'Enviando...' : compressingVideo() ? 'Comprimiendo video...' : 'Crear Ticket' }}
       </button>
     </form>
   </div>

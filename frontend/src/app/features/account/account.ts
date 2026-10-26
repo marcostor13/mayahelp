@@ -55,6 +55,7 @@ export class Account implements OnInit {
   // --- nuevo ticket (mismo flujo que el enlace público) --------------------
   protected readonly composerOpen = signal(false);
   protected readonly submitting = signal(false);
+  protected readonly compressingVideo = signal(false);
   protected readonly submitError = signal<string | null>(null);
   protected readonly createdCode = signal<string | null>(null);
   protected readonly selectedFiles = signal<File[]>([]);
@@ -131,7 +132,7 @@ export class Account implements OnInit {
   }
 
   submit(): void {
-    if (!this.canSubmit) return;
+    if (!this.canSubmit || this.compressingVideo()) return;
     this.submitting.set(true);
     this.submitError.set(null);
 
