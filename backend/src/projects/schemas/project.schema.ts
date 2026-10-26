@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Types } from 'mongoose';
+import { HydratedDocument, Schema as MongooseSchema, Types } from 'mongoose';
 
 export type ProjectStatus =
   'planning' | 'in_progress' | 'on_hold' | 'completed';
@@ -20,14 +20,14 @@ export class Project {
   })
   status: ProjectStatus;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', default: null })
   client: Types.ObjectId | null;
 
   /** Optional suggestion pre-selected in the public form; the reporter always picks the final category. */
-  @Prop({ type: Types.ObjectId, ref: 'Category', default: null })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Category', default: null })
   defaultCategory: Types.ObjectId | null;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
   createdBy: Types.ObjectId;
 
   declare createdAt: Date;

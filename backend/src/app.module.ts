@@ -26,6 +26,7 @@ import { MonitoringModule } from './monitoring/monitoring.module';
 import { ImplementationsModule } from './implementations/implementations.module';
 import { BackupsModule } from './backups/backups.module';
 import { EncryptionModule } from './common/encryption/encryption.module';
+import { MigrationsModule } from './common/migrations/migrations.module';
 
 @Module({
   imports: [
@@ -56,6 +57,7 @@ import { EncryptionModule } from './common/encryption/encryption.module';
     ImplementationsModule,
     BackupsModule,
     EncryptionModule,
+    MigrationsModule,
   ],
   controllers: [AppController],
   providers: [

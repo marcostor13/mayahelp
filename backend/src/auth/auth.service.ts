@@ -7,6 +7,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { UserDocument } from '../users/schemas/user.schema';
+import { Role } from '../common/enums/role.enum';
 
 export interface TokenPair {
   accessToken: string;
@@ -21,8 +22,15 @@ export class AuthService {
     private readonly configService: ConfigService,
   ) {}
 
+  /** Quien se registra solo puede ser cliente; los demás roles los da un admin. */
   async register(dto: RegisterDto) {
-    const user = await this.usersService.create(dto);
+    const user = await this.usersService.create({
+      name: dto.name,
+      email: dto.email,
+      password: dto.password,
+      company: dto.company,
+      role: Role.CLIENT,
+    });
     const tokens = await this.issueTokens(user);
     return { user: this.sanitizeUser(user), ...tokens };
   }

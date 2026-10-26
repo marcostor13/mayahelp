@@ -94,7 +94,7 @@
 
           <div>
             <label class="block text-label-md text-on-background mb-stack-sm">Adjuntos (opcional, máx. {{ maxFiles }})</label>
-            <app-media-capture (filesAdded)="onFilesAdded($event)" />
+            <app-media-capture (filesAdded)="onFilesAdded($event)" (busyChange)="compressingVideo.set($event)" />
 
             <app-attachment-previews [files]="selectedFiles()" (remove)="removeFile($event)" />
           </div>
@@ -123,10 +123,10 @@
           <button
             type="submit"
             form="observation-form"
-            [disabled]="submitting() || !canSubmit"
+            [disabled]="submitting() || compressingVideo() || !canSubmit"
             class="w-full bg-primary-container text-on-primary text-label-md py-3.5 px-4 rounded-xl hover:bg-primary transition-colors shadow-sm disabled:opacity-50"
           >
-            {{ submitting() ? 'Enviando...' : 'Enviar observación' }}
+            {{ submitting() ? 'Enviando...' : compressingVideo() ? 'Comprimiendo video...' : 'Enviar observación' }}
           </button>
         }
       </div>

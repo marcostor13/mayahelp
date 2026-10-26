@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Types } from 'mongoose';
+import { HydratedDocument, Schema as MongooseSchema, Types } from 'mongoose';
 
 export type AttachmentDocument = HydratedDocument<Attachment>;
 
@@ -7,13 +7,18 @@ export type AttachmentKind = 'image' | 'video' | 'audio' | 'document';
 
 @Schema({ timestamps: true })
 export class Attachment {
-  @Prop({ type: Types.ObjectId, ref: 'Ticket', required: true, index: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Ticket',
+    required: true,
+    index: true,
+  })
   ticket: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, default: null })
+  @Prop({ type: MongooseSchema.Types.ObjectId, default: null })
   commentId: Types.ObjectId | null;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
   uploadedBy: Types.ObjectId;
 
   @Prop({ required: true, trim: true })

@@ -1,12 +1,12 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Types } from 'mongoose';
+import { HydratedDocument, Schema as MongooseSchema, Types } from 'mongoose';
 import { TicketPriority, TicketStatus } from '../../common/enums/ticket.enum';
 
 export type TicketDocument = HydratedDocument<Ticket>;
 
 @Schema()
 export class TicketComment {
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
   author: Types.ObjectId;
 
   @Prop({ required: true, trim: true })
@@ -35,17 +35,21 @@ export class Ticket {
   @Prop({ required: true, trim: true })
   description: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
   client: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: 'Category', required: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Category',
+    required: true,
+  })
   category: Types.ObjectId;
 
   /** Set when the ticket was filed against a project (staff-tagged, or via a public observation link). */
-  @Prop({ type: Types.ObjectId, ref: 'Project', default: null })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Project', default: null })
   project: Types.ObjectId | null;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', default: null })
+  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', default: null })
   assignedAgent: Types.ObjectId | null;
 
   @Prop({ type: String, enum: TicketStatus, default: TicketStatus.ABIERTO })

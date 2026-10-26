@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { HydratedDocument, Types } from 'mongoose';
+import { HydratedDocument, Schema as MongooseSchema, Types } from 'mongoose';
 import { ConnectionStatus } from './project-connection.schema';
 
 export type MonitorCheckDocument = HydratedDocument<MonitorCheck>;
@@ -10,14 +10,19 @@ export type CheckMetrics = Record<string, number | string | boolean | null>;
 @Schema({ timestamps: { createdAt: 'checkedAt', updatedAt: false } })
 export class MonitorCheck {
   @Prop({
-    type: Types.ObjectId,
+    type: MongooseSchema.Types.ObjectId,
     ref: 'ProjectConnection',
     required: true,
     index: true,
   })
   connection: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: 'Project', required: true, index: true })
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Project',
+    required: true,
+    index: true,
+  })
   project: Types.ObjectId;
 
   @Prop({ type: String, enum: ConnectionStatus, required: true })

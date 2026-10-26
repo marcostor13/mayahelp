@@ -73,9 +73,10 @@ export class PublicService {
       throw new BadRequestException('Categoría inválida.');
     }
 
-    const client = await this.usersService.findOrCreateClient(
+    const client = await this.usersService.findOrInviteClient(
       reporter.email,
       reporter.name,
+      project.name,
     );
 
     const ticket = await this.ticketsService.createFromExternalSource({

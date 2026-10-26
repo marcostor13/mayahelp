@@ -55,6 +55,12 @@ MONGODB_URI="mongodb+srv://..." JWT_ACCESS_SECRET="..." JWT_REFRESH_SECRET="..."
 > Ojo al comparar ids: `findById` popula `client`, así que ahí no hay un ObjectId sino
 > un documento, y su `toString()` imprime el contenido en vez del id. Para eso está
 > `refId()` en `tickets.service.ts` — usalo en cualquier comparación de referencias.
+>
+> Las referencias se declaran con `type: MongooseSchema.Types.ObjectId`, nunca con
+> `Types.ObjectId`: con el segundo `@Prop` arma el campo como `Mixed`, se guarda en texto y
+> los filtros de acceso (que comparan contra ObjectId) no lo encuentran. Un test en
+> `common/migrations` falla si algún schema vuelve a tener una referencia `Mixed`, y
+> `ReferenceIdsMigration` convierte al arrancar lo que haya quedado guardado como texto.
 
 Un **cliente** ve solo sus propios tickets (la lista y el detalle se filtran por su
 usuario, y los comentarios internos del equipo no le llegan) y puede **editar el suyo
@@ -79,11 +85,21 @@ Los proyectos no se ven por rol, se ven por **asignación**. Desde **Usuarios**,
 esa persona ve; una cuenta sin asignaciones no ve ninguno. Vale para todos los roles: un
 administrador o un agente sin proyectos asignados tampoco ve nada.
 
+Quien **crea** un proyecto queda asignado a él en el mismo momento; si no, el proyecto
+nacería invisible para su creador (la API le respondería 403 al abrirlo).
+
 La única excepción es el **súper usuario** (`SUPER_ADMIN_EMAIL`, por defecto
 `marcostor13@gmail.com`): ve todos los proyectos existan o no asignaciones, y su cuenta no
 se puede desactivar, bajar de rol ni eliminar. Es una sola: al arrancar, la API le pone el
 flag a esa cuenta (y la deja como admin activo) y se lo saca a cualquier otra que lo tenga.
-Si todavía no existe, se promueve sola en cuanto se cree desde Usuarios.
+Si todavía no existe, se promueve sola en cuanto su dueño se registra en `/register`: en
+un entorno nuevo conviene hacerlo apenas se despliega, porque el registro no verifica el
+correo.
+
+Ningún otro admin puede tomar esa cuenta: no puede editarla (cambiarle el correo le sacaba
+el flag), ni ponerle ese correo a otra cuenta, ni crearla desde Usuarios. Si otro admin la
+resetea, la contraseña temporal va **solo** al correo del súper usuario y no aparece en
+pantalla; si ese correo no sale, la contraseña no cambia.
 
 El filtro no es solo de pantalla: la API lo aplica en todo lo que cuelga de un proyecto
 —la lista y el detalle de proyectos, sus enlaces públicos, el monitoreo y las
@@ -127,7 +143,9 @@ Un ticket entra a un proyecto de tres formas:
   se clasifica el backlog que ya existe.
 
 > Los tickets que vienen de un **enlace público de observaciones** ya nacen con el
-> proyecto de ese enlace.
+> proyecto de ese enlace. Si quien reporta todavía no tiene cuenta, se le crea una de
+> cliente y le llega por correo una contraseña temporal que tiene que cambiar al entrar:
+> así el botón "Ver el ticket" del correo de confirmación le sirve de algo.
 
 Vale la pena tenerlo presente: **un ticket sin proyecto no le llega a nadie por tener un
 proyecto asignado**, solo por el buzón general. Si asignaste un proyecto a alguien y sigue
@@ -144,9 +162,10 @@ los proyectos que ves.
 
 ## Cuentas y contraseñas
 
-Las cuentas las crea un administrador desde **Usuarios**; no hay auto-registro con
-contraseña elegida por el cliente. Al crear una cuenta la API genera una contraseña
-temporal y la muestra una sola vez en pantalla.
+Las cuentas las crea un administrador desde **Usuarios**: la API genera una contraseña
+temporal y la muestra una sola vez en pantalla. También existe el registro público
+(`/register`, enlazado desde el login), pero solo crea **clientes**: la API rechaza con 400
+cualquier `role` o `projects` que venga en el pedido.
 
 Desde la misma pantalla, el botón 🔒 de cada fila **resetea la cuenta**:
 

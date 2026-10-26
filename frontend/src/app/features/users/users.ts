@@ -42,6 +42,7 @@ export class Users implements OnInit {
   protected readonly loading = signal(true);
   protected readonly saving = signal(false);
   protected readonly error = signal<string | null>(null);
+  protected readonly notice = signal<string | null>(null);
   protected readonly formOpen = signal(false);
   protected readonly editingId = signal<string | null>(null);
   /** Temporary passwords are shown once, right after creating or resetting the accounts. */
@@ -262,9 +263,18 @@ export class Users implements OnInit {
     if (!confirmed) return;
 
     this.error.set(null);
+    this.notice.set(null);
     this.resettingId.set(user._id);
     this.userAdminService.resetPassword(user._id).subscribe({
       next: (result) => {
+        this.resettingId.set(null);
+        if (!result.temporaryPassword) {
+          this.notice.set(
+            `Le enviamos una contraseña temporal por correo a ${result.user.email}. ` +
+              'La del súper usuario no se muestra acá.',
+          );
+          return;
+        }
         this.credentialsMode.set('reset');
         this.createdAccounts.set([
           {
@@ -275,7 +285,6 @@ export class Users implements OnInit {
             emailSent: result.emailSent,
           },
         ]);
-        this.resettingId.set(null);
       },
       error: (err: HttpErrorResponse) => {
         this.error.set(
@@ -285,6 +294,11 @@ export class Users implements OnInit {
         this.resettingId.set(null);
       },
     });
+  }
+
+  /** La cuenta del súper usuario solo la edita su dueño; la API rechaza al resto. */
+  protected canEdit(user: ManagedUser): boolean {
+    return !user.isSuperAdmin || this.auth.currentUser()?.isSuperAdmin === true;
   }
 
   remove(user: ManagedUser): void {

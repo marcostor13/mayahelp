@@ -1,9 +1,11 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
+  ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -34,8 +36,11 @@ export interface PendingReporter {
 
 export interface ResetPasswordResult {
   user: UserDocument;
-  /** Shown once to the admin, as a fallback for when the email does not go out. */
-  temporaryPassword: string;
+  /**
+   * Shown once to the admin, as a fallback for when the email does not go out. Missing
+   * when another admin resets the super admin: that one only travels by email.
+   */
+  temporaryPassword?: string;
   emailSent: boolean;
 }
 
@@ -84,6 +89,18 @@ export class UsersService {
     return configured !== '' && email.toLowerCase().trim() === configured;
   }
 
+  /**
+   * Ese correo da el flag de súper usuario, así que solo el súper usuario puede ponerlo
+   * en una cuenta: en manos de otro admin era la forma de quedarse con la cuenta dueña.
+   */
+  private assertMayUseEmail(email: string, requester: AuthenticatedUser): void {
+    if (this.isSuperAdminEmail(email) && !requester.isSuperAdmin) {
+      throw new ForbiddenException(
+        'Ese correo es el de la cuenta del súper usuario.',
+      );
+    }
+  }
+
   async create(dto: CreateUserDto): Promise<UserDocument> {
     const { user } = await this.createWithPassword(dto);
     return user;
@@ -92,11 +109,14 @@ export class UsersService {
   /**
    * Creates the account and reports the generated password when the caller did not
    * provide one (admin flow), so it can be shared with the person exactly once.
+   * `requester` is the admin creating it from the Users screen.
    */
   async createWithPassword(
     dto: CreateUserDto,
+    requester?: AuthenticatedUser,
   ): Promise<{ user: UserDocument; temporaryPassword?: string }> {
     const email = dto.email.toLowerCase().trim();
+    if (requester) this.assertMayUseEmail(email, requester);
     const existing = await this.userModel.findOne({ email });
     if (existing) {
       throw new ConflictException('Ya existe una cuenta con ese correo');
@@ -238,6 +258,42 @@ export class UsersService {
     return user;
   }
 
+  /**
+   * Como `findOrCreateClient`, pero la cuenta nueva recibe su contraseña temporal por
+   * correo y tiene que cambiarla al entrar. Es para quien reporta por un enlace público:
+   * el correo del ticket trae "Ver el ticket", que pide iniciar sesión, y con una
+   * contraseña que nadie conocía ese botón terminaba en "Credenciales inválidas".
+   */
+  async findOrInviteClient(
+    email: string,
+    name: string,
+    projectName: string,
+  ): Promise<UserDocument> {
+    const existing = await this.findByEmail(email);
+    if (existing) {
+      return existing;
+    }
+    const { user, temporaryPassword } = await this.createWithPassword({
+      name,
+      email,
+      role: Role.CLIENT,
+    });
+    user.mustChangePassword = true;
+    await user.save();
+
+    const emailSent = await this.notificationsService.notifyAccountCreated(
+      { name: user.name, email: user.email },
+      temporaryPassword!,
+      projectName,
+    );
+    if (!emailSent) {
+      this.logger.warn(
+        `No se pudo enviar la contraseña temporal a ${user.email}; un admin puede resetearla desde Usuarios.`,
+      );
+    }
+    return user;
+  }
+
   async findOrCreateAiAgent(): Promise<UserDocument> {
     const existing = await this.userModel.findOne({ isAiAgent: true }).exec();
     if (existing) {
@@ -311,6 +367,10 @@ export class UsersService {
 
     for (const reporter of pending) {
       if (!wanted.has(reporter.email)) continue;
+      // La temporal vuelve al admin: la de la cuenta dueña no puede salir por acá.
+      if (this.isSuperAdminEmail(reporter.email) && !requester.isSuperAdmin) {
+        continue;
+      }
       const { user, temporaryPassword } = await this.createWithPassword({
         name: reporter.name,
         email: reporter.email,
@@ -332,15 +392,67 @@ export class UsersService {
    * se la manda por correo. La devuelve además al admin porque el envío es
    * best-effort (si Resend falla, el correo se pierde y hay que dictarla a mano).
    */
-  async resetPassword(id: string): Promise<ResetPasswordResult> {
+  async resetPassword(
+    id: string,
+    requester: AuthenticatedUser,
+  ): Promise<ResetPasswordResult> {
     const target = await this.findById(id);
     if (target.isAiAgent) {
       throw new BadRequestException(
         'La cuenta del agente IA no tiene acceso por contraseña',
       );
     }
+    if (target.isSuperAdmin && !requester.isSuperAdmin) {
+      return this.resetSuperAdminByEmail(target);
+    }
 
     const temporaryPassword = generatePassword();
+    const user = await this.applyTemporaryPassword(id, temporaryPassword);
+
+    const emailSent = await this.notificationsService.notifyPasswordReset(
+      { name: user.name, email: user.email },
+      temporaryPassword,
+    );
+    if (!emailSent) {
+      this.logger.warn(
+        `No se pudo enviar la contraseña temporal a ${user.email}; el admin la ve en pantalla.`,
+      );
+    }
+
+    return { user, temporaryPassword, emailSent };
+  }
+
+  /**
+   * Otro admin puede pedir el reseteo del súper usuario (no hay "olvidé mi contraseña",
+   * así que es la única forma de recuperarla), pero la temporal va solo a su correo: si
+   * volviera en la respuesta, ese admin se quedaba con la cuenta dueña. El correo sale
+   * antes de tocar nada; si falla, la contraseña de siempre sigue sirviendo.
+   */
+  private async resetSuperAdminByEmail(
+    target: UserDocument,
+  ): Promise<ResetPasswordResult> {
+    const temporaryPassword = generatePassword();
+    const emailSent = await this.notificationsService.notifyPasswordReset(
+      { name: target.name, email: target.email },
+      temporaryPassword,
+    );
+    if (!emailSent) {
+      throw new ServiceUnavailableException(
+        'No se pudo enviar el correo al súper usuario, así que su contraseña no cambió. Intenta de nuevo más tarde.',
+      );
+    }
+    const user = await this.applyTemporaryPassword(
+      target.id,
+      temporaryPassword,
+    );
+    return { user, emailSent };
+  }
+
+  /** Guarda la temporal hasheada, pide cambiarla al entrar y corta las sesiones abiertas. */
+  private async applyTemporaryPassword(
+    id: string,
+    temporaryPassword: string,
+  ): Promise<UserDocument> {
     const passwordHash = await bcrypt.hash(temporaryPassword, 10);
     // $unset del refresh token: las sesiones abiertas no se pueden renovar.
     const user = await this.userModel
@@ -356,18 +468,7 @@ export class UsersService {
     if (!user) {
       throw new NotFoundException('Usuario no encontrado');
     }
-
-    const emailSent = await this.notificationsService.notifyPasswordReset(
-      { name: user.name, email: user.email },
-      temporaryPassword,
-    );
-    if (!emailSent) {
-      this.logger.warn(
-        `No se pudo enviar la contraseña temporal a ${user.email}; el admin la ve en pantalla.`,
-      );
-    }
-
-    return { user, temporaryPassword, emailSent };
+    return user;
   }
 
   /** Cambio de contraseña por la propia persona; limpia el flag del reseteo. */
@@ -397,9 +498,21 @@ export class UsersService {
     return user.save();
   }
 
-  async update(id: string, dto: UpdateUserDto): Promise<UserDocument> {
+  async update(
+    id: string,
+    dto: UpdateUserDto,
+    requester: AuthenticatedUser,
+  ): Promise<UserDocument> {
     const user = await this.findById(id);
     const { notifyByEmail, notifyByWhatsApp, email, projects, ...rest } = dto;
+
+    // La cuenta dueña la edita solo su dueño: cambiarle el correo le saca el flag, y
+    // desde ahí otro admin podía resetearla y quedarse con ella.
+    if (user.isSuperAdmin && !requester.isSuperAdmin) {
+      throw new ForbiddenException(
+        'Solo el súper usuario puede editar su propia cuenta.',
+      );
+    }
 
     // El dueño de la plataforma no se puede bajar de rol ni dar de baja desde acá.
     if (user.isSuperAdmin) {
@@ -420,6 +533,7 @@ export class UsersService {
     }
 
     if (email && email.toLowerCase() !== user.email) {
+      this.assertMayUseEmail(email, requester);
       const taken = await this.userModel.findOne({
         email: email.toLowerCase(),
         _id: { $ne: user._id },
@@ -477,6 +591,13 @@ export class UsersService {
     const user = await this.findById(id);
     user.projects = await this.resolveProjectIds(projectIds);
     return user.save();
+  }
+
+  /** Suma un proyecto a los que ve la cuenta, sin tocar el resto de sus asignaciones. */
+  async addProject(id: string, projectId: Types.ObjectId): Promise<void> {
+    await this.userModel
+      .updateOne({ _id: id }, { $addToSet: { projects: projectId } })
+      .exec();
   }
 
   /** Valida que los ids existan: una asignación a un proyecto borrado sería invisible. */

@@ -20,6 +20,7 @@ export class ObservationForm implements OnInit {
   protected readonly project = signal<PublicProjectInfo | null>(null);
   protected readonly selectedFiles = signal<File[]>([]);
   protected readonly submitting = signal(false);
+  protected readonly compressingVideo = signal(false);
   protected readonly submitError = signal<string | null>(null);
   protected readonly ticketCode = signal<string | null>(null);
   protected readonly maxFiles = MAX_FILES;
@@ -80,6 +81,7 @@ export class ObservationForm implements OnInit {
 
   submit(): void {
     this.submitError.set(null);
+    if (this.compressingVideo()) return;
     if (!this.reporterId || !this.description || !this.category) {
       this.submitError.set('Completa todos los campos requeridos.');
       return;
@@ -100,10 +102,34 @@ export class ObservationForm implements OnInit {
           this.ticketCode.set(result.code);
           this.submitting.set(false);
         },
-        error: () => {
-          this.submitError.set('No se pudo enviar tu observación. Intenta de nuevo.');
+        error: (err: HttpErrorResponse) => {
+          this.submitError.set(submitErrorMessage(err));
           this.submitting.set(false);
         },
       });
   }
+}
+
+/**
+ * El motivo concreto cuando se conoce: con un "intenta de nuevo" a secas la persona
+ * reintentaba con el mismo adjunto y volvía a fallar.
+ */
+function submitErrorMessage(err: HttpErrorResponse): string {
+  if (err.status === 0) {
+    return 'No hay conexión con el servidor. Revisa tu internet e intenta de nuevo.';
+  }
+  if (err.status === 413) {
+    return 'Uno de los adjuntos supera el límite de 25 MB. Quítalo e intenta de nuevo.';
+  }
+  if (err.status === 410) {
+    return 'Este enlace ya no está disponible.';
+  }
+  const message = (err.error as { message?: unknown } | null)?.message;
+  if (err.status === 400 && typeof message === 'string') {
+    // El backend lista todos los tipos MIME permitidos: no es para mostrarle a nadie.
+    return message.startsWith('Tipo de archivo no permitido')
+      ? 'Uno de los adjuntos tiene un formato que no se puede enviar. Quítalo e intenta de nuevo.'
+      : message;
+  }
+  return 'No se pudo enviar tu observación. Intenta de nuevo.';
 }

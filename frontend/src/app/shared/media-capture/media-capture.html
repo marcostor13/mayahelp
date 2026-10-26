@@ -54,6 +54,37 @@
     </span>
   </div>
 
+  <p class="size-limit-hint text-body-sm text-on-surface-variant flex items-start gap-1.5">
+    <span class="material-symbols-outlined text-[18px]">info</span>
+    <span>
+      Cada archivo puede pesar hasta <strong class="font-semibold">25 MB</strong>. Los videos más
+      pesados se comprimen aquí mismo antes de adjuntarse.
+    </span>
+  </p>
+
+  @if (compressing(); as job) {
+    <div class="compression-status flex flex-col gap-2 rounded-lg bg-surface-container-low px-3 py-2.5" role="status">
+      <div class="flex items-center gap-2 text-body-sm text-on-surface">
+        <span class="material-symbols-outlined text-primary text-[18px] animate-spin">progress_activity</span>
+        <span class="min-w-0 flex-1 truncate">Comprimiendo "{{ job.name }}"… {{ job.percent }}%</span>
+        <button type="button" (click)="cancelCompression()" class="text-label-md text-primary hover:underline">
+          Cancelar
+        </button>
+      </div>
+      <div
+        class="h-1.5 overflow-hidden rounded-full bg-surface-container-high"
+        role="progressbar"
+        aria-label="Progreso de la compresión"
+        [attr.aria-valuenow]="job.percent"
+        aria-valuemin="0"
+        aria-valuemax="100"
+      >
+        <div class="h-full rounded-full bg-primary transition-[width]" [style.width.%]="job.percent"></div>
+      </div>
+      <p class="text-body-sm text-on-surface-variant">Puede tardar un par de minutos. No cierres esta página.</p>
+    </div>
+  }
+
   @if (pasteNotice()) {
     <p class="text-body-sm text-primary flex items-center gap-1.5">
       <span class="material-symbols-outlined text-[18px]">check_circle</span>
@@ -62,7 +93,10 @@
   }
 
   @if (error()) {
-    <p class="text-body-sm text-error">{{ error() }}</p>
+    <p class="text-body-sm text-error flex items-start gap-1.5" role="alert">
+      <span class="material-symbols-outlined text-[18px]">error</span>
+      <span>{{ error() }}</span>
+    </p>
   }
 
   <canvas #canvas class="hidden"></canvas>

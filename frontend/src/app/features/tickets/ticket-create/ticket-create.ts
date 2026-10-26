@@ -25,6 +25,7 @@ export class TicketCreate implements OnInit {
   /** Solo para el equipo: el cliente no clasifica. Llegan ya acotados a lo suyo. */
   protected readonly projects = signal<Project[]>([]);
   protected readonly submitting = signal(false);
+  protected readonly compressingVideo = signal(false);
   protected readonly error = signal<string | null>(null);
   protected readonly selectedFiles = signal<File[]>([]);
   protected readonly generating = signal(false);
@@ -93,6 +94,7 @@ export class TicketCreate implements OnInit {
 
   submit(): void {
     this.error.set(null);
+    if (this.compressingVideo()) return;
     if (!this.subject || !this.description || !this.category) {
       this.error.set('Completa todos los campos requeridos.');
       return;
