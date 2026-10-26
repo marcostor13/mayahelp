@@ -551,6 +551,31 @@ export class NotificationsService {
     });
   }
 
+  /** La cuenta que se crea sola al reportar por un enlace público de un proyecto. */
+  async notifyAccountCreated(
+    recipient: { name: string; email: string },
+    temporaryPassword: string,
+    projectName: string,
+  ): Promise<boolean> {
+    const content: EmailContent = {
+      preheader: 'Tu acceso a MayaHelp para seguir tus tickets.',
+      badge: 'Cuenta creada',
+      title: `Hola ${recipient.name}, ya tenés cuenta en MayaHelp`,
+      intro: `Te creamos una cuenta al registrar tu observación en ${projectName}, para que puedas seguir tus tickets. Entrá con la contraseña temporal de abajo: apenas ingreses te vamos a pedir que elijas una propia.`,
+      accent: 'primary',
+      rows: [
+        { label: 'Correo', value: recipient.email },
+        { label: 'Contraseña temporal', value: temporaryPassword },
+      ],
+      action: { label: 'Entrar a MayaHelp', url: `${this.appUrl}/login` },
+    };
+
+    return this.sendEmail(recipient.email, {
+      subject: 'Tu cuenta de MayaHelp',
+      content,
+    });
+  }
+
   /** Reports whether the mail actually went out; EmailService never throws. */
   private async sendEmail(to: string, body: EmailBody): Promise<boolean> {
     return this.emailService.send(

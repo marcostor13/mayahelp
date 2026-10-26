@@ -238,6 +238,42 @@ export class UsersService {
     return user;
   }
 
+  /**
+   * Como `findOrCreateClient`, pero la cuenta nueva recibe su contraseña temporal por
+   * correo y tiene que cambiarla al entrar. Es para quien reporta por un enlace público:
+   * el correo del ticket trae "Ver el ticket", que pide iniciar sesión, y con una
+   * contraseña que nadie conocía ese botón terminaba en "Credenciales inválidas".
+   */
+  async findOrInviteClient(
+    email: string,
+    name: string,
+    projectName: string,
+  ): Promise<UserDocument> {
+    const existing = await this.findByEmail(email);
+    if (existing) {
+      return existing;
+    }
+    const { user, temporaryPassword } = await this.createWithPassword({
+      name,
+      email,
+      role: Role.CLIENT,
+    });
+    user.mustChangePassword = true;
+    await user.save();
+
+    const emailSent = await this.notificationsService.notifyAccountCreated(
+      { name: user.name, email: user.email },
+      temporaryPassword!,
+      projectName,
+    );
+    if (!emailSent) {
+      this.logger.warn(
+        `No se pudo enviar la contraseña temporal a ${user.email}; un admin puede resetearla desde Usuarios.`,
+      );
+    }
+    return user;
+  }
+
   async findOrCreateAiAgent(): Promise<UserDocument> {
     const existing = await this.userModel.findOne({ isAiAgent: true }).exec();
     if (existing) {

@@ -136,7 +136,9 @@ Un ticket entra a un proyecto de tres formas:
   se clasifica el backlog que ya existe.
 
 > Los tickets que vienen de un **enlace público de observaciones** ya nacen con el
-> proyecto de ese enlace.
+> proyecto de ese enlace. Si quien reporta todavía no tiene cuenta, se le crea una de
+> cliente y le llega por correo una contraseña temporal que tiene que cambiar al entrar:
+> así el botón "Ver el ticket" del correo de confirmación le sirve de algo.
 
 Vale la pena tenerlo presente: **un ticket sin proyecto no le llega a nadie por tener un
 proyecto asignado**, solo por el buzón general. Si asignaste un proyecto a alguien y sigue
