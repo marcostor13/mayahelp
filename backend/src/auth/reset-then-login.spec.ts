@@ -11,8 +11,18 @@ import { ProjectDocument } from '../projects/schemas/project.schema';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ProjectAccessService } from '../common/project-access/project-access.service';
 import { Role } from '../common/enums/role.enum';
+import type { AuthenticatedUser } from './types/authenticated-user.interface';
 
 const EMAIL = 'ana@acme.com';
+
+/** Otro admin del equipo: puede administrar cuentas, pero no la del dueño. */
+const ADMIN: AuthenticatedUser = {
+  userId: 'admin-2',
+  email: 'admin@acme.com',
+  role: Role.ADMIN,
+  isSuperAdmin: false,
+  mustChangePassword: false,
+};
 
 /**
  * Una "base" mínima que guarda de verdad el hash que le escriben, para poder encadenar
@@ -75,10 +85,10 @@ describe('Reseteo y login encadenados', () => {
     const { userModel } = fakeDb();
     const { users, auth } = services(userModel);
 
-    const { temporaryPassword } = await users.resetPassword('u1');
+    const { temporaryPassword } = await users.resetPassword('u1', ADMIN);
     const result = await auth.login({
       email: EMAIL,
-      password: temporaryPassword,
+      password: temporaryPassword!,
     });
 
     expect(result.user.email).toBe(EMAIL);
@@ -90,10 +100,10 @@ describe('Reseteo y login encadenados', () => {
     const { userModel } = fakeDb();
     const { users, auth } = services(userModel);
 
-    const { temporaryPassword } = await users.resetPassword('u1');
+    const { temporaryPassword } = await users.resetPassword('u1', ADMIN);
     const result = await auth.login({
       email: EMAIL,
-      password: temporaryPassword,
+      password: temporaryPassword!,
     });
 
     expect(result.user.mustChangePassword).toBe(true);
@@ -106,7 +116,7 @@ describe('Reseteo y login encadenados', () => {
     // comparar contra un hash inventado.
     stored.passwordHash = await bcrypt.hash('la-vieja', 10);
 
-    await users.resetPassword('u1');
+    await users.resetPassword('u1', ADMIN);
 
     await expect(
       auth.login({ email: EMAIL, password: 'la-vieja' }),
@@ -118,7 +128,7 @@ describe('Reseteo y login encadenados', () => {
     const { userModel } = fakeDb();
     const { users, auth } = services(userModel);
 
-    const { temporaryPassword } = await users.resetPassword('u1');
+    const { temporaryPassword } = await users.resetPassword('u1', ADMIN);
 
     await expect(
       auth.login({ email: EMAIL, password: `${temporaryPassword} ` }),

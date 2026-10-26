@@ -58,7 +58,8 @@ export interface CreatedUserResponse {
 
 export interface ResetPasswordResponse {
   user: { id: string; name: string; email: string };
-  temporaryPassword: string;
+  /** No viene cuando otro admin resetea al súper usuario: esa solo va a su correo. */
+  temporaryPassword?: string;
   /** False si Resend falló o no está configurado: hay que pasarla a mano. */
   emailSent: boolean;
 }

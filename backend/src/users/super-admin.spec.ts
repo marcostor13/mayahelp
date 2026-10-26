@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Model, Types } from 'mongoose';
 import { UsersService } from './users.service';
@@ -9,10 +9,27 @@ import { ProjectDocument } from '../projects/schemas/project.schema';
 import { NotificationsService } from '../notifications/notifications.service';
 import { ProjectAccessService } from '../common/project-access/project-access.service';
 import { Role } from '../common/enums/role.enum';
+import type { AuthenticatedUser } from '../auth/types/authenticated-user.interface';
 
 const OWNER_EMAIL = 'marcostor13@gmail.com';
 const PROJECT_A = new Types.ObjectId();
 const PROJECT_B = new Types.ObjectId();
+
+/** Otro admin del equipo: puede administrar cuentas, pero no la del dueño. */
+const ADMIN: AuthenticatedUser = {
+  userId: 'admin-2',
+  email: 'admin@acme.com',
+  role: Role.ADMIN,
+  isSuperAdmin: false,
+  mustChangePassword: false,
+};
+
+const OWNER: AuthenticatedUser = {
+  ...ADMIN,
+  userId: 'owner',
+  email: OWNER_EMAIL,
+  isSuperAdmin: true,
+};
 
 function config() {
   return {
@@ -124,7 +141,7 @@ describe('UsersService — súper usuario', () => {
     });
 
     await expect(
-      service.update('user-1', { role: Role.AGENT }),
+      service.update('user-1', { role: Role.AGENT }, OWNER),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
@@ -134,8 +151,52 @@ describe('UsersService — súper usuario', () => {
     });
 
     await expect(
-      service.update('user-1', { isActive: false }),
+      service.update('user-1', { isActive: false }, OWNER),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  /**
+   * Cambiarle el correo le sacaba el flag; desde ahí otro admin la reseteaba, recibía
+   * la temporal y se quedaba con la cuenta dueña.
+   */
+  it('otro admin no puede editar la cuenta del súper usuario', async () => {
+    const { service } = harness({
+      found: userDoc({ isSuperAdmin: true, role: Role.ADMIN }),
+    });
+
+    await expect(
+      service.update('user-1', { email: 'otro@acme.com' }, ADMIN),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      service.update('user-1', { name: 'Otro nombre' }, ADMIN),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('el súper usuario sí edita su propia cuenta', async () => {
+    const owner = userDoc({ isSuperAdmin: true, role: Role.ADMIN });
+    const { service } = harness({ found: owner });
+
+    const saved = await service.update('user-1', { phone: '999' }, OWNER);
+
+    expect(saved.phone).toBe('999');
+  });
+
+  it('otro admin no puede ponerle a una cuenta el correo del súper usuario', async () => {
+    const { service } = harness({ found: userDoc() });
+
+    await expect(
+      service.update('user-1', { email: OWNER_EMAIL }, ADMIN),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  /** El alta desde Usuarios le devuelve la temporal a quien la pide. */
+  it('otro admin no puede crear la cuenta del súper usuario', async () => {
+    const { service, create } = harness({});
+
+    await expect(
+      service.createWithPassword({ name: 'Marcos', email: OWNER_EMAIL }, ADMIN),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(create).not.toHaveBeenCalled();
   });
 
   it('no deja eliminar al súper usuario', async () => {

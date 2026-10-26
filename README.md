@@ -92,7 +92,14 @@ La única excepción es el **súper usuario** (`SUPER_ADMIN_EMAIL`, por defecto
 `marcostor13@gmail.com`): ve todos los proyectos existan o no asignaciones, y su cuenta no
 se puede desactivar, bajar de rol ni eliminar. Es una sola: al arrancar, la API le pone el
 flag a esa cuenta (y la deja como admin activo) y se lo saca a cualquier otra que lo tenga.
-Si todavía no existe, se promueve sola en cuanto se cree desde Usuarios.
+Si todavía no existe, se promueve sola en cuanto su dueño se registra en `/register`: en
+un entorno nuevo conviene hacerlo apenas se despliega, porque el registro no verifica el
+correo.
+
+Ningún otro admin puede tomar esa cuenta: no puede editarla (cambiarle el correo le sacaba
+el flag), ni ponerle ese correo a otra cuenta, ni crearla desde Usuarios. Si otro admin la
+resetea, la contraseña temporal va **solo** al correo del súper usuario y no aparece en
+pantalla; si ese correo no sale, la contraseña no cambia.
 
 El filtro no es solo de pantalla: la API lo aplica en todo lo que cuelga de un proyecto
 —la lista y el detalle de proyectos, sus enlaces públicos, el monitoreo y las
@@ -155,9 +162,10 @@ los proyectos que ves.
 
 ## Cuentas y contraseñas
 
-Las cuentas las crea un administrador desde **Usuarios**; no hay auto-registro con
-contraseña elegida por el cliente. Al crear una cuenta la API genera una contraseña
-temporal y la muestra una sola vez en pantalla.
+Las cuentas las crea un administrador desde **Usuarios**: la API genera una contraseña
+temporal y la muestra una sola vez en pantalla. También existe el registro público
+(`/register`, enlazado desde el login), pero solo crea **clientes**: la API rechaza con 400
+cualquier `role` o `projects` que venga en el pedido.
 
 Desde la misma pantalla, el botón 🔒 de cada fila **resetea la cuenta**:
 

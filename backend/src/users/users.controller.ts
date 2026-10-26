@@ -62,9 +62,12 @@ export class UsersController {
 
   @Post()
   @Roles(Role.ADMIN)
-  async create(@Body() dto: CreateUserDto) {
+  async create(
+    @Body() dto: CreateUserDto,
+    @CurrentUser() requester: AuthenticatedUser,
+  ) {
     const { user, temporaryPassword } =
-      await this.usersService.createWithPassword(dto);
+      await this.usersService.createWithPassword(dto, requester);
     return { user, temporaryPassword };
   }
 
@@ -85,8 +88,12 @@ export class UsersController {
 
   @Patch(':id')
   @Roles(Role.ADMIN)
-  update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
-    return this.usersService.update(id, dto);
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateUserDto,
+    @CurrentUser() requester: AuthenticatedUser,
+  ) {
+    return this.usersService.update(id, dto, requester);
   }
 
   /**
@@ -102,14 +109,18 @@ export class UsersController {
   /**
    * Resetea la cuenta: contraseña temporal por correo, sesiones abiertas cerradas y
    * cambio obligatorio al entrar. La temporal vuelve en la respuesta porque el envío
-   * es best-effort y el admin puede necesitar pasarla por otra vía.
+   * es best-effort y el admin puede necesitar pasarla por otra vía. La del súper
+   * usuario no vuelve si la pide otro admin: esa va solo a su correo.
    */
   @Post(':id/reset-password')
   @Roles(Role.ADMIN)
   @HttpCode(HttpStatus.OK)
-  async resetPassword(@Param('id') id: string) {
+  async resetPassword(
+    @Param('id') id: string,
+    @CurrentUser() requester: AuthenticatedUser,
+  ) {
     const { user, temporaryPassword, emailSent } =
-      await this.usersService.resetPassword(id);
+      await this.usersService.resetPassword(id, requester);
     return {
       user: { id: user.id, name: user.name, email: user.email },
       temporaryPassword,

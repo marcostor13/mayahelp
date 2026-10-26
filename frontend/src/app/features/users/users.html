@@ -96,6 +96,13 @@
     <p class="text-body-sm text-error">{{ error() }}</p>
   }
 
+  @if (notice()) {
+    <p class="text-body-sm text-primary flex items-center gap-1.5" role="status">
+      <span class="material-symbols-outlined text-[18px]">mark_email_read</span>
+      {{ notice() }}
+    </p>
+  }
+
   <!-- Formulario de alta / edición -->
   @if (formOpen()) {
     <app-modal
@@ -385,7 +392,14 @@
               >
                 <span class="material-symbols-outlined text-[20px]">folder_managed</span>
               </button>
-              <button type="button" (click)="openEdit(user)" class="ticket-row-action" title="Editar" aria-label="Editar usuario">
+              <button
+                type="button"
+                (click)="openEdit(user)"
+                [disabled]="!canEdit(user)"
+                class="ticket-row-action disabled:opacity-40 disabled:cursor-not-allowed"
+                [title]="canEdit(user) ? 'Editar' : 'Solo el súper usuario puede editar su cuenta'"
+                aria-label="Editar usuario"
+              >
                 <span class="material-symbols-outlined text-[20px]">edit</span>
               </button>
               @if (!user.isAiAgent) {
@@ -447,8 +461,9 @@
               <input
                 type="checkbox"
                 [checked]="user.notifications?.email ?? true"
+                [disabled]="!canEdit(user)"
                 (change)="toggleNotification(user, 'email')"
-                class="h-5 w-5 rounded border border-outline-variant accent-primary cursor-pointer"
+                class="h-5 w-5 rounded border border-outline-variant accent-primary cursor-pointer disabled:cursor-not-allowed"
               />
               <span class="text-label-xs text-on-surface inline-flex items-center gap-1">
                 <span class="material-symbols-outlined text-[16px]">mail</span>
@@ -460,8 +475,9 @@
               <input
                 type="checkbox"
                 [checked]="user.notifications?.whatsapp ?? true"
+                [disabled]="!canEdit(user)"
                 (change)="toggleNotification(user, 'whatsapp')"
-                class="h-5 w-5 rounded border border-outline-variant accent-primary cursor-pointer"
+                class="h-5 w-5 rounded border border-outline-variant accent-primary cursor-pointer disabled:cursor-not-allowed"
               />
               <span class="text-label-xs text-on-surface inline-flex items-center gap-1">
                 <span class="material-symbols-outlined text-[16px]">chat</span>
