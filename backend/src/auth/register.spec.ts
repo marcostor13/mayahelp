@@ -4,7 +4,6 @@ import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { UsersService } from '../users/users.service';
-import { UserDocument } from '../users/schemas/user.schema';
 import { Role } from '../common/enums/role.enum';
 
 /** La misma configuración que `main.ts`: lo que no está en el DTO devuelve 400. */
@@ -48,7 +47,7 @@ describe('Registro público', () => {
       name: 'Ana',
       email: 'ana@acme.com',
       role: Role.CLIENT,
-    } as unknown as UserDocument);
+    });
     const usersService = {
       create,
       setRefreshTokenHash: () => Promise.resolve(),
