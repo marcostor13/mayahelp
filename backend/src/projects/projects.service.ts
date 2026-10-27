@@ -69,12 +69,18 @@ export class ProjectsService {
     return project;
   }
 
+  /**
+   * También lo saca de las asignaciones: si el id queda colgado en una cuenta, el editor
+   * de proyectos de Usuarios lo devuelve al guardar y el backend lo rechaza porque ya no
+   * existe, así que a esa persona no se le podía cambiar ningún proyecto más.
+   */
   async remove(id: string): Promise<void> {
     const result = await this.projectModel.findByIdAndDelete(id).exec();
     if (!result) {
       throw new NotFoundException('Proyecto no encontrado');
     }
     await this.shareLinkModel.deleteMany({ project: id }).exec();
+    await this.usersService.removeProjectFromAll(result._id);
   }
 
   async createShareLink(
