@@ -242,3 +242,67 @@ describe('TicketsService.findById — el proyecto asignado manda', () => {
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 });
+
+/**
+ * El alta del cliente no tiene selector de proyecto: su ticket nace sin clasificar.
+ * Que el buzón general no sea suyo para leer no puede impedirle abrir el propio —
+ * eso dejaba a todos los clientes sin poder crear tickets (403).
+ */
+describe('TicketsService.create — el cliente no clasifica', () => {
+  const PROJECT = new Types.ObjectId();
+  const OTHER_PROJECT = new Types.ObjectId();
+
+  function creating(assignedProjects: Types.ObjectId[]) {
+    const service = serviceFor(populatedTicket(CLIENT_ID), assignedProjects);
+    const persist = jest
+      .spyOn(
+        service as unknown as { persistTicket: () => Promise<unknown> },
+        'persistTicket',
+      )
+      .mockResolvedValue({});
+    return { service, persist };
+  }
+
+  const dto = {
+    subject: 'No descarga el reporte',
+    description: 'El botón de descarga se queda cargando.',
+    category: new Types.ObjectId().toString(),
+  };
+
+  it('le deja abrir un ticket sin proyecto, aunque no tenga ninguno asignado', async () => {
+    const { service, persist } = creating([]);
+
+    await expect(
+      service.create(dto, requester(Role.CLIENT, CLIENT_ID.toString())),
+    ).resolves.toBeDefined();
+    expect(persist).toHaveBeenCalledWith(
+      expect.objectContaining({
+        clientId: CLIENT_ID.toString(),
+        projectId: undefined,
+      }),
+    );
+  });
+
+  it('le deja cargarlo en un proyecto suyo', async () => {
+    const { service } = creating([PROJECT]);
+
+    await expect(
+      service.create(
+        { ...dto, project: PROJECT.toString() },
+        requester(Role.CLIENT, CLIENT_ID.toString()),
+      ),
+    ).resolves.toBeDefined();
+  });
+
+  it('pero no en uno que no tiene asignado', async () => {
+    const { service, persist } = creating([PROJECT]);
+
+    await expect(
+      service.create(
+        { ...dto, project: OTHER_PROJECT.toString() },
+        requester(Role.CLIENT, CLIENT_ID.toString()),
+      ),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(persist).not.toHaveBeenCalled();
+  });
+});
