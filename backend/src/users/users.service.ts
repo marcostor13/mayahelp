@@ -600,6 +600,13 @@ export class UsersService {
       .exec();
   }
 
+  /** Saca un proyecto borrado de todas las cuentas que lo tenían asignado. */
+  async removeProjectFromAll(projectId: Types.ObjectId): Promise<void> {
+    await this.userModel
+      .updateMany({ projects: projectId }, { $pull: { projects: projectId } })
+      .exec();
+  }
+
   /** Valida que los ids existan: una asignación a un proyecto borrado sería invisible. */
   private async resolveProjectIds(ids: string[]): Promise<Types.ObjectId[]> {
     const unique = [...new Set(ids)];
