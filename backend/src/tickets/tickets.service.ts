@@ -106,7 +106,13 @@ export class TicketsService {
     if (!clientId) {
       throw new ForbiddenException('Debes indicar el cliente del ticket');
     }
-    await this.access.assertTicketAccess(requester, dto.project);
+    // El cliente no clasifica (el alta ni le muestra el selector): su ticket entra sin
+    // proyecto, al buzón general, y lo sigue viendo porque es suyo. El buzón general le
+    // está vedado para leer lo ajeno, no para abrir lo propio. Si igual manda un
+    // proyecto, tiene que ser uno de los que tiene asignados.
+    if (requester.role !== Role.CLIENT || dto.project) {
+      await this.access.assertTicketAccess(requester, dto.project);
+    }
     return this.persistTicket({
       subject: dto.subject?.trim() || subjectFromDescription(dto.description),
       description: dto.description,
